@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** Mockup in progress (D2 approved, next: D3)
+**Phase:** D2 wired up (live screen); next: D3 mockup
 **Last Updated:** 2026-02-19
-**Last Session:** D2 persona critique run (3.2/5 → revised); all 4 MUST FIX items applied and pushed to dev; D2 approved for next tier
+**Last Session:** D2 wired to real API + SQLite. Created full src/ layer: constants, utils, api, db, sync, store, and PatientSearchScreen. Mockup at mockups/D2PatientSearchScreen.tsx preserved as reference.
 
 ---
 
@@ -41,7 +41,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | File | Session | Notes |
 |---|---|---|---|
-| D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` | 2026-02-19 | Static mockup; four states: empty, has-data, no-match, offline. Persona critique score 3.2/5. All 4 MUST FIX items applied. SHOULD FIX items logged below. Approved — proceed to D3. |
+| D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. |
 
 ## Screens Pending
 All remaining screens from screen-inventory.md (next: D3 — Patient Detail / History)
@@ -112,4 +112,10 @@ e.g.
 _To be filled in when development starts._
 
 ## Dependency Versions
-_To be filled in when development starts._
+Packages required by the D2 live screen (add to package.json if not present):
+- `expo-sqlite` (^14.x — async API with useSQLiteContext)
+- `expo-crypto` (^13.x — randomUUID)
+- `@tanstack/react-query` (^5.x)
+- `@react-native-community/netinfo` (^11.x)
+- `@react-navigation/native` (^6.x)
+- `zustand` (^4.x)
