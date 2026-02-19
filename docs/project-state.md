@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** Mockup in progress (D2 built, pending persona review)
+**Phase:** Mockup in progress (D2 approved, next: D3)
 **Last Updated:** 2026-02-19
-**Last Session:** D2 Patient Search static mockup built — three states (empty, has-data, offline)
+**Last Session:** D2 persona critique run (3.2/5 → revised); all 4 MUST FIX items applied and pushed to dev; D2 approved for next tier
 
 ---
 
@@ -41,10 +41,10 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | File | Session | Notes |
 |---|---|---|---|
-| D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` | 2026-02-19 | Static mockup; three states: empty, has-data, offline. Awaiting persona review. |
+| D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` | 2026-02-19 | Static mockup; four states: empty, has-data, no-match, offline. Persona critique score 3.2/5. All 4 MUST FIX items applied. SHOULD FIX items logged below. Approved — proceed to D3. |
 
 ## Screens Pending
-All screens from screen-inventory.md
+All remaining screens from screen-inventory.md (next: D3 — Patient Detail / History)
 
 ---
 
@@ -54,7 +54,12 @@ _None currently — add here as they arise during development._
 ---
 
 ## Known Technical Debt
-_None yet._
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| FAB `bottom: 320` is hardcoded — fragile across screen heights | D2 | D2 persona critique — SHOULD FIX | Needs proper flex positioning before production build |
+| No combined offline + searching state | D2 | D2 persona critique — SHOULD FIX | Mockup can be offline or searching, not both simultaneously; composite state needed |
+| No name search — mobile-only lookup frustrates staff and tech-savvy doctors | D2 | D2 persona critique — SHOULD FIX | Locked design decision (mobile as primary key); flag for product discussion before D3 build |
 
 ---
 
