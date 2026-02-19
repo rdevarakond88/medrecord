@@ -21,6 +21,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | AWS ap-south-1 (Mumbai) for all storage | DPDP data localisation expectation |
 | OCR is async, never blocks UI | Core UX principle — speed > features |
 | Google Vision API (primary), Tesseract (fallback) | Vision API better accuracy on handwriting |
+| S3 image storage deferred to v2 — images stored on device local filesystem only for now. Swap requires changing one storage handler function and one config value. | — |
 
 ---
 
