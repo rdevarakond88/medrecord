@@ -55,7 +55,7 @@ _None yet._
 
 ## GitHub Repository
 
-**Repo URL:** _(fill in once created — e.g. https://github.com/your-username/medrecord)_
+**Repo URL:** https://github.com/rdevarakond88/medrecord
 **Primary branch:** `main`
 **Branch strategy:**
 - `main` — stable, reviewed code only
