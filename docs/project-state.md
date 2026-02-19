@@ -3,8 +3,8 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## Current Status
 **Phase:** Pre-development (documentation complete, mockups not started)
-**Last Updated:** —
-**Last Session:** —
+**Last Updated:** 2026-02-19
+**Last Session:** PM pre-flight review for Doctor Visit Flow (D2, D5, D6, D7)
 
 ---
 
@@ -22,6 +22,18 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | OCR is async, never blocks UI | Core UX principle — speed > features |
 | Google Vision API (primary), Tesseract (fallback) | Vision API better accuracy on handwriting |
 | S3 image storage deferred to v2 — images stored on device local filesystem only for now. Swap requires changing one storage handler function and one config value. | — |
+| D7 (Document Scanner) defaults to manual tap-to-capture; auto-capture deferred to v2 | Auto-capture is unreliable on low-end Android under inconsistent clinic lighting |
+| D5 (New Patient Form) must hash Aadhaar at the form submission boundary — raw Aadhaar must never travel through the call stack or reach any storage layer | UIDAI compliance; data minimisation; extends existing SHA-256 hash decision |
+
+---
+
+## Build Constraints — Doctor Visit Flow (D2, D5, D6, D7)
+_Carry these into every build/mockup session for these screens._
+
+- **D2 (Patient Search):** Offline SQLite search is the primary implementation path, not a fallback. Write the SQLite path first. The network path layers on top. Show offline state variant as a first-class design state.
+- **D6 (New Visit):** Must include an explicit "consent not yet established" state variant in the mockup. Do not build D6 as if patient consent is always pre-granted — D9 (Consent Request Flow) will wire up later, but D6 must acknowledge the state exists.
+- **D6 (New Visit):** Validate against the product-vision.md success metric: doctor completes a visit record in under 60 seconds. If the screen requires more than 3 taps to reach a submittable state, redesign before persona review.
+- **D7 (Document Scanner):** Include a simple exposure/readability indicator before capture (e.g. too dark / good / overexposed). Do not rely on OCR feedback — this is basic camera exposure feedback only. Required for inconsistent clinic lighting conditions.
 
 ---
 
