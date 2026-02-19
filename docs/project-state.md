@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** Pre-development (documentation complete, mockups not started)
+**Phase:** Mockup in progress (D2 built, pending persona review)
 **Last Updated:** 2026-02-19
-**Last Session:** PM pre-flight review for Doctor Visit Flow (D2, D5, D6, D7)
+**Last Session:** D2 Patient Search static mockup built — three states (empty, has-data, offline)
 
 ---
 
@@ -38,7 +38,10 @@ _Carry these into every build/mockup session for these screens._
 ---
 
 ## Screens Built
-_None yet._
+
+| Screen | File | Session | Notes |
+|---|---|---|---|
+| D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` | 2026-02-19 | Static mockup; three states: empty, has-data, offline. Awaiting persona review. |
 
 ## Screens Pending
 All screens from screen-inventory.md
