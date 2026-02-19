@@ -5,9 +5,10 @@
  * Spec:     docs/ui-ux-spec.md → D2
  * Constraints: docs/project-state.md → Build Constraints (D2)
  *
- * Three states rendered:
+ * Four states rendered:
  *   'empty'    — No search query; recent patients visible
  *   'has-data' — Partial phone typed; match found + "not found" create prompt
+ *   'no-match' — Full number typed; no patient record found; create-new CTA prominent
  *   'offline'  — No network; local SQLite cache only; amber banner active
  *
  * No real API calls. All data is static.
@@ -46,7 +47,7 @@ const C = {
 // ─────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────
-type ScreenState = 'empty' | 'has-data' | 'offline';
+type ScreenState = 'empty' | 'has-data' | 'no-match' | 'offline';
 
 interface Patient {
   id: string;
@@ -105,6 +106,9 @@ const RECENT_PATIENTS: Patient[] = [
 
 // Search result shown in 'has-data' state (partial number typed: 7654321)
 const SEARCH_MATCH: Patient = RECENT_PATIENTS[2];
+
+// Full number typed in 'no-match' state — no patient record exists for this number
+const SEARCH_TYPED_NO_MATCH = '9012345678';
 
 // ─────────────────────────────────────────────────────────────
 // Root component
@@ -180,9 +184,9 @@ function Header() {
 // Search bar
 // ─────────────────────────────────────────────────────────────
 function SearchBar({ screenState }: { screenState: ScreenState }) {
-  const isTyping   = screenState === 'has-data';
+  const isTyping   = screenState === 'has-data' || screenState === 'no-match';
   const isOffline  = screenState === 'offline';
-  const typedValue = '7654321'; // digits typed in "has-data" state
+  const typedValue = screenState === 'no-match' ? SEARCH_TYPED_NO_MATCH : '7654321';
 
   return (
     <View style={styles.searchWrap}>
@@ -219,6 +223,7 @@ function SearchBar({ screenState }: { screenState: ScreenState }) {
 function ContentArea({ screenState }: { screenState: ScreenState }) {
   if (screenState === 'empty')    return <EmptyState />;
   if (screenState === 'has-data') return <HasDataState />;
+  if (screenState === 'no-match') return <NoMatchState />;
   if (screenState === 'offline')  return <OfflineState />;
   return null;
 }
@@ -234,6 +239,7 @@ function EmptyState() {
             key={p.id}
             patient={p}
             showDivider={idx < RECENT_PATIENTS.length - 1}
+            maskMobile
           />
         ))}
       </View>
@@ -270,7 +276,32 @@ function HasDataState() {
   );
 }
 
-// ── State 3: Offline — SQLite local search only ───────────────
+// ── State 3: No match — full number typed, no record found ────
+// MUST FIX: missing state — doctor needs a clear next action when search yields 0 results
+function NoMatchState() {
+  return (
+    <View style={styles.section}>
+      <View style={styles.noMatchCard}>
+        <Text style={styles.noMatchIcon}>🔍</Text>
+        <Text style={styles.noMatchHeading}>No patient found</Text>
+        <Text style={styles.noMatchSub}>
+          No record matches {formatMobile(SEARCH_TYPED_NO_MATCH)}.{'\n'}
+          Is this a new patient?
+        </Text>
+        <TouchableOpacity
+          style={styles.noMatchCreateBtn}
+          accessibilityLabel="Create new patient"
+          accessibilityRole="button"
+          activeOpacity={0.85}
+        >
+          <Text style={styles.noMatchCreateBtnText}>+ Create New Patient</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ── State 4: Offline — SQLite local search only ───────────────
 function OfflineState() {
   return (
     <View style={styles.section}>
@@ -296,6 +327,7 @@ function OfflineState() {
             patient={p}
             showDivider={idx < RECENT_PATIENTS.length - 1}
             showSyncStatus    // show cloud/local badge in offline state
+            maskMobile
           />
         ))}
       </View>
@@ -310,9 +342,10 @@ interface PatientRowProps {
   patient: Patient;
   showDivider: boolean;
   showSyncStatus?: boolean;
+  maskMobile?: boolean;  // true in list views — hides digits to protect PII in shared clinic spaces
 }
 
-function PatientRow({ patient, showDivider, showSyncStatus = false }: PatientRowProps) {
+function PatientRow({ patient, showDivider, showSyncStatus = false, maskMobile = false }: PatientRowProps) {
   return (
     <TouchableOpacity
       style={[styles.patientRow, showDivider && styles.patientRowDivider]}
@@ -345,7 +378,7 @@ function PatientRow({ patient, showDivider, showSyncStatus = false }: PatientRow
             </View>
           )}
         </View>
-        <Text style={styles.patientMobile}>{formatMobile(patient.mobile)}</Text>
+        <Text style={styles.patientMobile}>{formatMobile(patient.mobile, maskMobile)}</Text>
         <Text style={styles.patientVisit}>Last visit: {patient.lastVisitDate}</Text>
       </View>
 
@@ -472,7 +505,7 @@ function DevStateSwitcher({
   active:    ScreenState;
   onSwitch:  (s: ScreenState) => void;
 }) {
-  const states: ScreenState[] = ['empty', 'has-data', 'offline'];
+  const states: ScreenState[] = ['empty', 'has-data', 'no-match', 'offline'];
   return (
     <View style={styles.devSwitcher}>
       <Text style={styles.devSwitcherLabel}>Mockup state →</Text>
@@ -513,8 +546,11 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-function formatMobile(mobile: string): string {
+function formatMobile(mobile: string, mask = false): string {
   // +91 XXXXX XXXXX  (Indian standard display)
+  // mask=true: shows only last 5 digits — used in list views to protect PII visible to
+  // bystanders in a shared clinic waiting area (MUST FIX — flagged by persona critique)
+  if (mask) return `+91 ••••• ${mobile.slice(5)}`;
   return `+91 ${mobile.slice(0, 5)} ${mobile.slice(5)}`;
 }
 
@@ -663,9 +699,10 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   clearBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    // MUST FIX: was 28×28px — below the 48×48px minimum touch target (ui-ux-spec.md)
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: C.border,
     alignItems: 'center',
     justifyContent: 'center',
@@ -940,11 +977,12 @@ const styles = StyleSheet.create({
     marginBottom: -2,
   },
   fabLabel: {
-    fontSize: 8,
+    // MUST FIX: was fontSize: 8 — unreadable; FAB was functionally icon-only
+    fontSize: 10,
     fontWeight: '700',
     color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
-    lineHeight: 10,
+    lineHeight: 12,
     letterSpacing: 0.3,
   },
 
@@ -993,5 +1031,48 @@ const styles = StyleSheet.create({
     backgroundColor: C.primaryBlue,
     borderBottomLeftRadius: 2,
     borderBottomRightRadius: 2,
+  },
+
+  // ── No match state (MUST FIX — new state for zero search results) ────────
+  noMatchCard: {
+    backgroundColor: C.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 24,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  noMatchIcon: {
+    fontSize: 32,
+    marginBottom: 12,
+  },
+  noMatchHeading: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: C.textPrimary,
+    marginBottom: 6,
+  },
+  noMatchSub: {
+    fontSize: 13,
+    color: C.textSecondary,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 20,
+  },
+  noMatchCreateBtn: {
+    backgroundColor: C.primaryBlue,
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    minWidth: 200,
+    alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  noMatchCreateBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
