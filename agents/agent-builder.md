@@ -87,6 +87,7 @@ When asked to build a mockup (no real data yet):
 - Any security decision with multiple valid approaches → present options
 - Any offline edge case not covered in `offline-sync-spec.md` → flag it
 - Any performance concern on low-end Android (< 2GB RAM) → flag it
+- If a MUST FIX item from a persona critique is technically not feasible or conflicts with the spec, do not skip it silently. Flag it clearly with: BLOCKED: [item] — [reason]. Do not proceed past it without explicit confirmation.
 
 ## Output Format
 Always produce:
