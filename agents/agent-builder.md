@@ -107,10 +107,13 @@ Before this session ends, always perform the following steps **without being ask
    (e.g. `reviews/D3-build-notes.md`). Skip this step if there is nothing
    beyond the committed code itself.
 
-2. **Update `docs/project-state.md`** — Record:
-   - What was built and the current status (complete / in progress / blocked)
-   - Any architectural decisions made or locked this session
-   - Any new technical debt or open issues introduced
+2. **Update `docs/project-state.md`** by:
+   - Moving completed items to Screens Built (not appending a new entry)
+   - Updating existing open questions (not adding duplicates)
+   - Adding new decisions to Decisions Made table only if genuinely new
+   - Updating Known Technical Debt by closing resolved items and adding new ones only if genuinely new
+
+   The file should always feel like one clean snapshot of current reality — not a log of everything that ever happened.
 
 3. **Commit and push to GitHub** — Stage all new and modified files, commit to the
    `dev` branch using the project convention (e.g. `[D3] Screen complete`),
