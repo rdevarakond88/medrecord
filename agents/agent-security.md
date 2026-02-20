@@ -42,6 +42,7 @@ You review:
 - [ ] Every endpoint checks JWT validity before processing
 - [ ] Role is checked (doctor vs patient) on every endpoint
 - [ ] Consent check performed before any cross-doctor patient data is returned
+- [ ] Consent signal is verified end to end — confirm it is received from server, written to local storage, and correctly read by every downstream screen that depends on it. Presence of a consent check in code is not sufficient — trace the full data flow.
 - [ ] Soft-deleted records excluded from all queries
 - [ ] No patient data in error messages or logs
 
