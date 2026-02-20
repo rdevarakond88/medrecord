@@ -151,3 +151,26 @@ These are patterns that consistently cause problems in React Native offline apps
 6. **JWT refresh during sync** — if a long sync batch is running and the access token expires mid-batch, individual requests fail silently. Check: does the API client intercept 401s and refresh the token, then retry the failed request?
 
 7. **Empty OCR text treated as success** — OCR job completes, returns empty string, `ocr_status` is set to `success`, but the search index has an empty entry. Check: does the OCR handler treat empty string as `failed` or `skipped`?
+
+---
+
+## End-of-Session Protocol
+
+Before this session ends, always perform the following steps **without being asked**:
+
+1. **Save the test plan to `reviews/`** — Write the completed test plan to
+   `reviews/{ScreenID}-qa-test-plan.md` (e.g. `reviews/D3-qa-test-plan.md`).
+   If a plan for this screen already exists, save as
+   `reviews/{ScreenID}-qa-test-plan-v2.md` (increment version as needed).
+
+2. **Update `docs/project-state.md`** — Record:
+   - What was tested and the QA verdict
+   - Any new bugs or edge cases added to Known Technical Debt
+   - Any issues resolved (mark CLOSED with date)
+
+3. **Commit and push to GitHub** — Stage all new and modified files, commit to the
+   `dev` branch using the project convention (e.g. `[D3] QA test plan complete`),
+   and push to `origin dev`.
+
+4. **Confirm the commit hash** — Output the short commit hash so it can be traced
+   in the repo history.

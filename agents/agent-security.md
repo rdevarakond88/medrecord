@@ -137,3 +137,26 @@ If you find any of these, halt all further development and flag immediately:
 4. Cross-patient data leakage (one doctor's query returning another doctor's patients)
 5. Consent check entirely absent on a cross-doctor data endpoint
 6. Personal data (names, phone numbers) written to console.log in any environment
+
+---
+
+## End-of-Session Protocol
+
+Before this session ends, always perform the following steps **without being asked**:
+
+1. **Save the audit report to `reviews/`** — Write the completed audit to
+   `reviews/{ScreenID}-security-audit.md` (e.g. `reviews/D3-security-audit.md`).
+   If a report for this screen already exists, save as
+   `reviews/{ScreenID}-security-audit-v2.md` (increment version as needed).
+
+2. **Update `docs/project-state.md`** — Record:
+   - What was audited and the overall verdict
+   - Any new CRITICAL or HIGH findings added to Known Technical Debt
+   - Any issues resolved (mark CLOSED with date)
+
+3. **Commit and push to GitHub** — Stage all new and modified files, commit to the
+   `dev` branch using the project convention (e.g. `[D3] Security audit complete`),
+   and push to `origin dev`.
+
+4. **Confirm the commit hash** — Output the short commit hash so it can be traced
+   in the repo history.

@@ -94,3 +94,27 @@ Always produce:
 - The complete file(s) — never partial snippets unless explicitly asked
 - A brief summary (3–5 lines) of what was built and any decisions made
 - Any follow-up questions if something was unclear
+
+---
+
+## End-of-Session Protocol
+
+Before this session ends, always perform the following steps **without being asked**:
+
+1. **Save any design notes or session output to `reviews/`** — If this session
+   produced a decision log, architecture note, or build summary worth preserving,
+   save it to `reviews/{ScreenID}-build-notes.md`
+   (e.g. `reviews/D3-build-notes.md`). Skip this step if there is nothing
+   beyond the committed code itself.
+
+2. **Update `docs/project-state.md`** — Record:
+   - What was built and the current status (complete / in progress / blocked)
+   - Any architectural decisions made or locked this session
+   - Any new technical debt or open issues introduced
+
+3. **Commit and push to GitHub** — Stage all new and modified files, commit to the
+   `dev` branch using the project convention (e.g. `[D3] Screen complete`),
+   and push to `origin dev`.
+
+4. **Confirm the commit hash** — Output the short commit hash so it can be traced
+   in the repo history.

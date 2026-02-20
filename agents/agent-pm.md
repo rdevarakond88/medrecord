@@ -121,3 +121,26 @@ WOULD CAUSE UNINSTALL WITHIN WEEK 1:
 DEFER TO V1.1 (do not delay launch for these):
 - [Feature or fix]
 ```
+
+---
+
+## End-of-Session Protocol
+
+Before this session ends, always perform the following steps **without being asked**:
+
+1. **Save the PM review to `reviews/`** — Write the completed review to
+   `reviews/{ScreenID}-pm-review.md` (e.g. `reviews/D3-pm-review.md`).
+   If a review for this screen already exists, save as
+   `reviews/{ScreenID}-pm-review-v2.md` (increment version as needed).
+
+2. **Update `docs/project-state.md`** — Record:
+   - The PM verdict (launch-ready / blocked / conditional)
+   - Any scope or priority decisions made this session
+   - Any new open questions or risks introduced
+
+3. **Commit and push to GitHub** — Stage all new and modified files, commit to the
+   `dev` branch using the project convention (e.g. `[D3] PM review complete`),
+   and push to `origin dev`.
+
+4. **Confirm the commit hash** — Output the short commit hash so it can be traced
+   in the repo history.
