@@ -3,7 +3,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## Current Status
 **Phase:** D2 wired up (live screen); next: D3 mockup
-**Last Updated:** 2026-02-19
+**Last Updated:** 2026-02-19 (repo confirmed standalone)
 **Last Session:** D2 wired to real API + SQLite. Created full src/ layer: constants, utils, api, db, sync, store, and PatientSearchScreen. Mockup at mockups/D2PatientSearchScreen.tsx preserved as reference.
 
 ---
@@ -77,6 +77,7 @@ _None currently — add here as they arise during development._
 ## GitHub Repository
 
 **Repo URL:** https://github.com/rdevarakond88/medrecord
+**Visibility:** Private — standalone repository, not a fork, not connected to any other project
 **Primary branch:** `main`
 **Branch strategy:**
 - `main` — stable, reviewed code only
