@@ -24,11 +24,13 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
     -- synced_at is null for locally-created patients not yet pushed.
     CREATE TABLE IF NOT EXISTS patients (
       local_id        TEXT PRIMARY KEY,
+      doctor_id       TEXT NOT NULL DEFAULT '',
       server_id       TEXT,
       mobile_number   TEXT NOT NULL UNIQUE,
       name            TEXT,
       date_of_birth   TEXT,
       gender          TEXT,
+      consent_granted INTEGER NOT NULL DEFAULT 0,
       last_visit_date TEXT,
       synced_at       TEXT,
       created_at      TEXT NOT NULL,
@@ -39,6 +41,8 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
       ON patients (mobile_number);
     CREATE INDEX IF NOT EXISTS idx_patient_last_visit
       ON patients (last_visit_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_patient_doctor
+      ON patients (doctor_id);
 
     -- Offline write queue.
     -- Every write operation (create/update) is enqueued here before the
@@ -71,4 +75,22 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
       mapped_at   TEXT NOT NULL
     );
   `);
+
+  // Migration: add new columns to existing databases that predate this schema.
+  // SQLite throws if the column already exists, so each ALTER is wrapped
+  // in its own try/catch — this is a no-op on fresh installs.
+  try {
+    await db.execAsync(
+      `ALTER TABLE patients ADD COLUMN doctor_id TEXT NOT NULL DEFAULT '';`,
+    );
+  } catch {
+    // Column already exists — safe to ignore.
+  }
+  try {
+    await db.execAsync(
+      `ALTER TABLE patients ADD COLUMN consent_granted INTEGER NOT NULL DEFAULT 0;`,
+    );
+  } catch {
+    // Column already exists — safe to ignore.
+  }
 }

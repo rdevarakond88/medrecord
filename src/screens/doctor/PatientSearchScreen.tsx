@@ -91,7 +91,7 @@ export default function PatientSearchScreen() {
 
   // ── Load recent patients once on mount ────────────────────
   useEffect(() => {
-    getRecentPatients(db).then(setRecentPatients);
+    getRecentPatients(db, user!.id).then(setRecentPatients);
   }, [db]);
 
   // ── SQLite search on every query change ──────────────────
@@ -101,8 +101,8 @@ export default function PatientSearchScreen() {
       setLocalResults([]);
       return;
     }
-    searchPatientsByMobile(db, query).then(setLocalResults);
-  }, [db, query]);
+    searchPatientsByMobile(db, query, user!.id).then(setLocalResults);
+  }, [db, query, user]);
 
   // ── Server lookup via React Query ────────────────────────
   // Enabled only at exactly 10 digits while online.
@@ -122,15 +122,17 @@ export default function PatientSearchScreen() {
     if (!serverPatient) return;
 
     upsertPatientFromServer(db, {
+      doctor_id:       user!.id,
       server_id:       serverPatient.id,
       mobile_number:   serverPatient.mobile_number,
       name:            serverPatient.name,
       date_of_birth:   serverPatient.date_of_birth,
       gender:          serverPatient.gender,
+      consent_granted: serverPatient.consent_granted,
       last_visit_date: serverPatient.last_visit_date,
     }).then(() => {
       // Refresh local results so the cached patient appears immediately
-      searchPatientsByMobile(db, query).then(setLocalResults);
+      searchPatientsByMobile(db, query, user!.id).then(setLocalResults);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverPatient]);
@@ -165,6 +167,7 @@ export default function PatientSearchScreen() {
       navigation.navigate('PatientDetail', {
         patientLocalId:  patient.local_id,
         patientServerId: patient.server_id,
+        consentGranted:  patient.consent_granted,
       });
     },
     [navigation],
