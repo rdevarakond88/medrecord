@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D2 complete — all agents run; next: D3 mockup
-**Last Updated:** 2026-02-19
-**Last Session:** All D2 agent reviews complete. Security audit: BLOCKED (1 critical, 4 high issues). Persona critique: 3.2/5 — below 3.5 threshold. QA test plan produced: 3 critical bugs, 5 high, 5 medium, 9 edge cases. Full QA plan saved at `reviews/D2-qa-test-plan.md`. D2 is NOT merged to main — critical bugs must be fixed first. Do not start D3 until C-1, C-2, C-3 in Known Technical Debt are resolved.
+**Phase:** D2 complete — bugs fixed, security re-audit passed; next: D3 mockup
+**Last Updated:** 2026-02-20
+**Last Session:** C-1, C-2, C-3 critical bugs fixed and pushed to `dev`. Security re-audit (`reviews/D2-security-audit-v2.md`) verdict: **Clear to merge to dev**. D2 is complete. Do **not** merge to `main` until H-2 (certificate pinning) and H-3 (offline audit log) are resolved — both are pre-v1 launch blockers flagged in the v2 audit.
 
 ---
 
@@ -41,7 +41,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | File | Session | Notes |
 |---|---|---|---|
-| D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit (BLOCKED — 1 critical, 4 high), persona critique (3.2/5 — below threshold), QA test plan complete (`reviews/D2-qa-test-plan.md`). **Do not merge to main until C-1/C-2/C-3 bugs are fixed.** |
+| D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit v1 (BLOCKED), persona critique (3.2/5), QA test plan (`reviews/D2-qa-test-plan.md`). **C-1/C-2/C-3 fixed** (2026-02-20): doctor-scoped patients table, `consent_granted` stored + forwarded, `useLogout` hook clears SQLite + React Query on logout. Security re-audit v2 passed (`reviews/D2-security-audit-v2.md`). **Complete — on `dev`. Do not merge to `main` until H-2 + H-3 resolved.** |
 
 ## Screens Pending
 All remaining screens from screen-inventory.md (next: D3 — Patient Detail / History)
@@ -52,9 +52,9 @@ All remaining screens from screen-inventory.md (next: D3 — Patient Detail / Hi
 
 | Question | Screen | Source | Status |
 |---|---|---|---|
-| Should `consent_granted` be stored in local SQLite and passed to D3 via nav params, or should D3 always re-fetch fresh from server on open? | D2→D3 | QA C-2 / Security H-1 | Unresolved — answer determines D3 data contract |
-| Should the `patients` table be scoped per `doctor_id` (filtered) or wiped entirely on logout? Wiping loses offline-only patients if doctor logs out mid-session. | D2 | QA C-1 / Security C-1 | Unresolved — answer required before C-1 fix |
-| Should offline patient access audit logs be written to SQLite and synced in v1, or deferred to v2? | D2 | QA E-9 / Security H-3 | Unresolved — healthcare compliance decision |
+| Should `consent_granted` be stored in local SQLite and passed to D3 via nav params, or should D3 always re-fetch fresh from server on open? | D2→D3 | QA C-2 / Security H-1 | **Resolved 2026-02-20** — stored in SQLite, passed in PatientDetail nav params as `consentGranted`. D3 re-fetches fresh on open but uses this as the initial gate signal. |
+| Should the `patients` table be scoped per `doctor_id` (filtered) or wiped entirely on logout? Wiping loses offline-only patients if doctor logs out mid-session. | D2 | QA C-1 / Security C-1 | **Resolved 2026-02-20** — scoped per `doctor_id`. `clearDoctorPatients(db, doctorId)` deletes only the logged-out doctor's rows. Other doctors' offline-only patients are preserved. |
+| Should offline patient access audit logs be written to SQLite and synced in v1, or deferred to v2? | D2 | QA E-9 / Security H-3 | Unresolved — healthcare compliance decision (tracked as H-3 pre-merge blocker above) |
 
 ---
 
@@ -64,17 +64,24 @@ All remaining screens from screen-inventory.md (next: D3 — Patient Detail / Hi
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **C-1:** `clearAuth()` does not clear SQLite `patients` table → cross-doctor data leakage on shared clinic devices | D2 | Security audit C-1 / QA C-1 | On logout, run `DELETE FROM patients`. Also requires `doctor_id` scoping on `getRecentPatients`. |
-| **C-2:** `consent_granted` fetched from server but never stored in local schema; D3 receives no consent signal and may silently show records to an unconsented doctor | D2→D3 | Security audit H-1 / QA C-2 | Add `consent_granted` column to patients table; write in `upsertPatientFromServer`; pass to D3 in nav params. |
-| **C-3:** React Query `QueryClient` not cleared on logout; stale patient + consent data from Doctor A served to Doctor B's session | D2 | Security audit H-4 / QA C-3 | Call `queryClient.clear()` inside `clearAuth()`. |
+| ~~**C-1:** `clearAuth()` does not clear SQLite `patients` table → cross-doctor data leakage on shared clinic devices~~ | D2 | Security audit C-1 / QA C-1 | **CLOSED 2026-02-20** — `doctor_id` column added; `clearDoctorPatients()` + `useLogout` hook wipe SQLite on logout. |
+| ~~**C-2:** `consent_granted` fetched from server but never stored in local schema; D3 receives no consent signal~~ | D2→D3 | Security audit H-1 / QA C-2 | **CLOSED 2026-02-20** — `consent_granted` column added to schema + `LocalPatient`; written in upsert; passed in PatientDetail nav params. |
+| ~~**C-3:** React Query `QueryClient` not cleared on logout; stale patient + consent data from Doctor A served to Doctor B's session~~ | D2 | Security audit H-4 / QA C-3 | **CLOSED 2026-02-20** — `queryClient.clear()` is step 3 of the `useLogout` sequence. |
+
+### HIGH — Must fix before merging D2 to main
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **H-2:** Certificate pinning not implemented — `apiFetch` uses bare `fetch()` with no SPKI pin; MITM possible on shared clinic WiFi | D2 | Security audit v2 H-2 | Required before merge to main. Use `expo-build-properties` OkHttp interceptor (Android) + NSURLSession delegate (iOS), or `react-native-ssl-pinning`. Pin leaf cert + one intermediate. |
+| **H-3:** Offline patient access generates no audit log — `getRecentPatients` and `searchPatientsByMobile` return PII with zero audit trail when offline | D2 | Security audit v2 H-3 | Required before merge to main. Add `audit_events` SQLite table; call `logLocalAccess()` after each read; flush to server audit log on reconnect via `POST /sync`. |
 
 ### HIGH — Fix before D3 build
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **H-1:** `getRecentPatients` not scoped to `doctor_id`; returns any doctor's patients on a shared device | D2 | Security audit M-3 / QA H-1 | Add `doctor_id TEXT NOT NULL` column to patients table; filter `WHERE doctor_id = ?`. Depends on C-1 schema work. |
-| **H-2:** Auth errors (401) from `lookupPatient` silently swallowed by React Query; no user feedback on expired session | D2 | Security audit M-1 / QA H-2 | Add `isError` handler in `ContentArea`; implement 401 interceptor with JWT refresh + retry in `apiFetch`. |
-| **H-3:** No validation on first digit of Indian mobile number (valid: 6–9); numbers starting 0–5 trigger server lookup and may create invalid patient records | D2 | Security audit M-2 / QA H-3 | Block `useQuery` and show inline error if first digit < 6. |
+| ~~**H-1:** `getRecentPatients` not scoped to `doctor_id`; returns any doctor's patients on a shared device~~ | D2 | Security audit M-3 / QA H-1 | **CLOSED 2026-02-20** — resolved as part of C-1 fix. |
+| **H-2 (UX):** Auth errors (401) from `lookupPatient` silently swallowed by React Query; no user feedback on expired session | D2 | Security audit M-1 / QA H-2 | Add `isError` handler in `ContentArea`; implement 401 interceptor with JWT refresh + retry in `apiFetch`. |
+| **H-3 (UX):** No validation on first digit of Indian mobile number (valid: 6–9); numbers starting 0–5 trigger server lookup and may create invalid patient records | D2 | Security audit M-2 / QA H-3 | Block `useQuery` and show inline error if first digit < 6. |
 | **H-4:** No auth guard on D2 mount; `getRecentPatients` runs before `token` is confirmed non-null | D2 | Security audit L-3 / QA H-4 | Guard mount effect with `if (!token) return;`. Add root-level nav guard for unauthenticated state. |
 | **H-5:** `useNetworkStatus` returns `true` when `isInternetReachable` is `null` (unconfirmed); triggers false server lookups on captive portal / no-internet WiFi | D2 | QA H-5 | Change condition to `isConnected === true && isInternetReachable === true`. |
 
@@ -96,8 +103,8 @@ All remaining screens from screen-inventory.md (next: D3 — Patient Detail / Hi
 | FAB `bottom: 320` is hardcoded — fragile across screen heights | D2 | Persona critique | Needs proper flex positioning before production build |
 | No combined offline + searching state | D2 | Persona critique | Mockup handles offline or searching but not both simultaneously; composite state needed |
 | No name search — mobile-only lookup frustrates staff and tech-savvy doctors | D2 | Persona critique | Locked design decision (mobile as primary key); flag for product discussion before D3 build |
-| Certificate pinning absent from API client | D2 | Security audit H-2 | Low priority for v1; required before public launch |
-| Offline patient access generates no audit log | D2 | Security audit H-3 / QA E-9 | Deferred pending open question above |
+| Certificate pinning absent from API client | D2 | Security audit H-2 | Tracked above as pre-merge blocker. |
+| Offline patient access generates no audit log | D2 | Security audit H-3 / QA E-9 | Tracked above as pre-merge blocker. |
 
 ---
 
