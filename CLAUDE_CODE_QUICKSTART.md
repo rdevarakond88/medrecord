@@ -130,6 +130,23 @@ A screen is done when:
 
 ---
 
+## Infrastructure / Tooling Sessions
+
+For any session that isn't building a screen (e.g. setup, bug fixes, tooling changes), use this end-of-session prompt instead of Step 7:
+
+```
+This was an infrastructure session. Before we finish:
+1. Update docs/project-state.md:
+   - Add any new tooling/setup under Environment Setup Notes
+   - Add any new bugs found to Known Technical Debt
+   - Update Dependency Versions if packages changed
+   - Update Current Status / Last Session
+2. Commit all changed files to dev branch: [describe what changed]
+3. Push and confirm commit hash
+```
+
+---
+
 ## End of Every Session — Mandatory GitHub Sync
 
 Before closing any Claude Code session, always run this prompt:

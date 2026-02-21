@@ -4,7 +4,9 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 ## Current Status
 **Phase:** D2 complete — bugs fixed, security re-audit passed; next: D3 mockup
 **Last Updated:** 2026-02-20
-**Last Session:** C-1, C-2, C-3 critical bugs fixed and pushed to `dev`. Security re-audit (`reviews/D2-security-audit-v2.md`) verdict: **Clear to merge to dev**. D2 is complete. Do **not** merge to `main` until H-2 (certificate pinning) and H-3 (offline audit log) are resolved — both are pre-v1 launch blockers flagged in the v2 audit.
+**Last Session:** Infrastructure/tooling session (2026-02-20). Expo project scaffolded, WSL2 networking debugged, pure-HTML web preview established at `web-preview/D2.html` served by Python on port 3000. Two preview bugs fixed: (1) physical keyboard focus restored after keypad button clicks via `activeElement.blur()`; (2) FAB overlap with "Create New" button resolved by moving FAB into flex row between scroll zone and keypad. Preview file moved from `dist/` (gitignored) to `web-preview/` (tracked). `package.json` web script updated. `CLAUDE_CODE_QUICKSTART.md` updated with Infrastructure Session workflow pattern.
+
+Previous session: C-1, C-2, C-3 critical bugs fixed and pushed to `dev`. Security re-audit (`reviews/D2-security-audit-v2.md`) verdict: **Clear to merge to dev**. D2 is complete. Do **not** merge to `main` until H-2 (certificate pinning) and H-3 (offline audit log) are resolved — both are pre-v1 launch blockers flagged in the v2 audit.
 
 ---
 
@@ -100,6 +102,8 @@ All remaining screens from screen-inventory.md (next: D3 — Patient Detail / Hi
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
+| ~~Web preview keyboard input requires click-first-to-focus workaround~~ | web-preview | Infrastructure session 2026-02-20 | **CLOSED 2026-02-20** — `document.activeElement.blur()` added at end of `keyPress()` in `web-preview/D2.html`; physical keyboard works immediately after any button click. |
+| ~~Web preview FAB overlap in has-data state~~ | web-preview | Infrastructure session 2026-02-20 | **CLOSED 2026-02-20** — FAB moved from `position:absolute` to `.fab-row` flex container between scroll zone and keypad in `web-preview/D2.html`. |
 | FAB `bottom: 320` is hardcoded — fragile across screen heights | D2 | Persona critique | Needs proper flex positioning before production build |
 | No combined offline + searching state | D2 | Persona critique | Mockup handles offline or searching but not both simultaneously; composite state needed |
 | No name search — mobile-only lookup frustrates staff and tech-savvy doctors | D2 | Persona critique | Locked design decision (mobile as primary key); flag for product discussion before D3 build |
@@ -155,10 +159,26 @@ e.g.
 ---
 
 ## Environment Setup Notes
-_To be filled in when development starts._
+
+### Web Preview (WSL2 Windows)
+- Pure-HTML preview tool at `web-preview/D2.html` — NOT an Expo build
+- Expo web bundle approach abandoned: react-native-web + Metro dev server
+  fails silently on WSL2 (lazy module loading + WebSocket issues)
+- Run preview: `npm run web` → open http://localhost:3000/D2.html
+- Expo SDK 54 / React 19 / RN 0.81.5 installed (package.json)
+- app.json: web.bundler=metro, web.output=single
 
 ## Dependency Versions
-Packages required by the D2 live screen (add to package.json if not present):
+
+### Expo / React Native (installed)
+- `expo` ~54.0.33
+- `react` 19.1.0
+- `react-dom` 19.1.0
+- `react-native` 0.81.5
+- `react-native-web` ~0.21.2
+- `@expo/metro-runtime` ~6.1.2
+
+### Required by D2 live screen (add to package.json if not present)
 - `expo-sqlite` (^14.x — async API with useSQLiteContext)
 - `expo-crypto` (^13.x — randomUUID)
 - `@tanstack/react-query` (^5.x)
