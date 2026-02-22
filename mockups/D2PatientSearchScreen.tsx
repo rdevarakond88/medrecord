@@ -20,10 +20,12 @@ import {
   View,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   ScrollView,
   StyleSheet,
   SafeAreaView,
   StatusBar,
+  Keyboard,
   Animated,
 } from 'react-native';
 
@@ -160,44 +162,52 @@ export default function D2PatientSearchScreen() {
       {/* ── Global offline banner — visible only when offline ── */}
       {screenState === 'offline' && <OfflineBanner />}
 
-      <View style={styles.screen}>
-        {/* ── Scrollable upper zone ── */}
-        <ScrollView
-          style={styles.scrollZone}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Header />
-          <SearchBar
-            query={query}
-            mobileError={mobileError}
-            isFocused={isFocused}
-            onFocus={() => setIsFocused(true)}
-            onClear={handleClear}
-            screenState={screenState}
-          />
-          <ContentArea screenState={screenState} />
-        </ScrollView>
+      {/*
+        TouchableWithoutFeedback catches taps on any non-interactive area
+        (header, greeting, space between patient rows, offline banner area).
+        Inner TouchableOpacity elements (keypad keys, search bar, patient rows)
+        handle their own touches and do NOT propagate up here.
+      */}
+      <TouchableWithoutFeedback onPress={() => { setIsFocused(false); Keyboard.dismiss(); }}>
+        <View style={styles.screen}>
+          {/* ── Scrollable upper zone ── */}
+          <ScrollView
+            style={styles.scrollZone}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Header />
+            <SearchBar
+              query={query}
+              mobileError={mobileError}
+              isFocused={isFocused}
+              onFocus={() => setIsFocused(true)}
+              onClear={handleClear}
+              screenState={screenState}
+            />
+            <ContentArea screenState={screenState} />
+          </ScrollView>
 
-        {/* ── FAB row — sits between scroll zone and keypad; never overlaps keys ── */}
-        <View style={styles.fabRow}>
-          {screenState !== 'has-data' && (
-            <TouchableOpacity
-              style={styles.fab}
-              accessibilityLabel="New Patient"
-              accessibilityRole="button"
-              activeOpacity={0.85}
-            >
-              <Text style={styles.fabPlus}>+</Text>
-              <Text style={styles.fabLabel}>New{'\n'}Patient</Text>
-            </TouchableOpacity>
-          )}
+          {/* ── FAB row — sits between scroll zone and keypad; never overlaps keys ── */}
+          <View style={styles.fabRow}>
+            {screenState !== 'has-data' && (
+              <TouchableOpacity
+                style={styles.fab}
+                accessibilityLabel="New Patient"
+                accessibilityRole="button"
+                activeOpacity={0.85}
+              >
+                <Text style={styles.fabPlus}>+</Text>
+                <Text style={styles.fabLabel}>New{'\n'}Patient</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* ── Numeric keypad — replaces system keyboard ── */}
+          <NumericKeypad onKeyPress={handleKeyPress} />
         </View>
-
-        {/* ── Numeric keypad — replaces system keyboard ── */}
-        <NumericKeypad onKeyPress={handleKeyPress} />
-      </View>
+      </TouchableWithoutFeedback>
 
       {/* ── Bottom tab bar ── */}
       <BottomTabBar />
@@ -256,7 +266,11 @@ function SearchBar({
         <Text style={styles.searchIcon}>🔍</Text>
 
         {isTyping ? (
-          <Text style={styles.searchTyped}>{query}</Text>
+          // Row keeps text + cursor inline; flex:0 on text lets cursor sit flush after it
+          <View style={styles.searchTypedRow}>
+            <Text style={[styles.searchTyped, { flex: 0 }]}>{query}</Text>
+            {isFocused && <BlinkingCursor />}
+          </View>
         ) : isFocused ? (
           <BlinkingCursor />
         ) : (
@@ -769,11 +783,17 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginLeft: 4,
   },
+  // Row wrapping typed digits + cursor; fills available bar width
+  searchTypedRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   cursor: {
     fontSize: 22,
     fontWeight: '300',
     color: C.primaryBlue,
-    flex: 1,
+    // No flex — takes natural width so it sits flush after last digit
   },
   searchIcon: {
     fontSize: 18,
