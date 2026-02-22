@@ -39,11 +39,11 @@
   .search-icon { font-size: 18px; flex-shrink: 0; }
   .search-text { flex: 1; font-size: 22px; font-weight: 500; color: #1A202C; letter-spacing: 2px; }
   .search-placeholder { flex: 1; font-size: 16px; color: #CBD5E0; }
-  .search-bar.focused .search-placeholder::after {
+  .search-bar.focused .search-placeholder::before {
     content: '|';
     color: #1A6DB5;
     animation: blink 1s step-end infinite;
-    margin-left: 1px;
+    margin-right: 2px;
   }
   @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
   .clear-btn { width: 44px; height: 44px; border-radius: 22px; background: #E2E8F0; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748B; font-weight: 600; flex-shrink: 0; }
@@ -410,14 +410,15 @@
 
     var bar = document.getElementById('searchBar');
     var hasQ = query.length > 0;
-    bar.className = 'search-bar' + (hasQ ? ' active' : '') + (currentState === 'offline' ? ' offline' : '');
+    // Keep active class (blue border) for entire duration the keypad is in use
+    bar.className = 'search-bar active' + (currentState === 'offline' ? ' offline' : '');
     document.getElementById('searchPlaceholder').style.display = hasQ ? 'none' : 'inline';
     document.getElementById('searchTyped').style.display = hasQ ? 'inline' : 'none';
     document.getElementById('searchTyped').textContent = query;
     document.getElementById('clearBtn').style.display = hasQ ? 'flex' : 'none';
 
-    // Remove focused class once typing starts (cursor replaced by digits)
-    document.getElementById('searchBar').classList.remove('focused');
+    // Restore blinking cursor when backspace empties the field; hide when digits present
+    if (!hasQ) { bar.classList.add('focused'); }
 
     // Bug 1 fix: return focus to document so physical keyboard keeps working
     if (document.activeElement && document.activeElement !== document.body) {
