@@ -38,6 +38,7 @@
   .search-bar.offline { border-color: #FCD34D; background: #FFFDF5; }
   .search-icon { font-size: 18px; flex-shrink: 0; }
   .search-text { flex: 1; font-size: 22px; font-weight: 500; color: #1A202C; letter-spacing: 2px; }
+  .search-bar.active .search-text::after { content: '|'; color: #1A6DB5; animation: blink 1s step-end infinite; margin-left: 1px; }
   .search-placeholder { flex: 1; font-size: 16px; color: #CBD5E0; }
   .search-bar.focused .search-placeholder::before {
     content: '|';
@@ -92,8 +93,7 @@
 
   /* ── FAB row ── */
   .fab-row { display: flex; justify-content: flex-end; padding: 0 16px 8px; flex-shrink: 0; }
-  /* Hide FAB only when inline results card is visible — CSS is the source of truth */
-  .app-frame[data-state="has-data"] .fab-row { display: none !important; }
+  /* FAB always visible — it is the sole create CTA across all states */
 
   /* ── FAB ── */
   .fab { width: 64px; height: 64px; border-radius: 32px; background: #1A6DB5; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(26,109,181,0.4); }
@@ -236,9 +236,8 @@
           <div class="not-found-banner">
             <div class="not-found-left">
               <div class="not-found-heading">Not the right patient?</div>
-              <div class="not-found-sub">Finish typing to see more results, or create a new record.</div>
+              <div class="not-found-sub">Finish typing to see more results, or tap + to create a new record.</div>
             </div>
-            <button class="create-btn-sm">Create<br>New</button>
           </div>
         </div>
       </div>
@@ -386,9 +385,7 @@
     // Offline banner
     document.getElementById('offlineBanner').style.display = s === 'offline' ? 'flex' : 'none';
 
-    // Show FAB in all states except has-data (where inline card is the create CTA)
-    document.getElementById('fabRow').style.display =
-      (s === 'has-data') ? 'none' : 'flex';
+    document.getElementById('fabRow').style.display = 'flex';
 
     // Search bar appearance
     var typed = stateSearchText[s];
