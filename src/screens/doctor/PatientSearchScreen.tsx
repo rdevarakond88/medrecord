@@ -50,6 +50,7 @@ import { formatMobile, initials, formatDateForDisplay } from '../../utils/format
 import { useNetworkStatus } from '../../utils/useNetworkStatus';
 import { useAuthStore } from '../../store/useAuthStore';
 import { lookupPatient } from '../../api/patients';
+import { ApiError } from '../../api/apiClient';
 import {
   LocalPatient,
   getRecentPatients,
@@ -89,32 +90,55 @@ export default function PatientSearchScreen() {
   const [query, setQuery]                   = useState('');
   const [recentPatients, setRecentPatients] = useState<LocalPatient[]>([]);
   const [localResults, setLocalResults]     = useState<LocalPatient[]>([]);
+  const [mobileError, setMobileError]       = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  // ── Auth guard — redirect immediately if no token ─────────
+  // Prevents any patient data rendering before auth is confirmed.
+  useEffect(() => {
+    if (!token || !user) {
+      navigation.replace('Login');
+    }
+  }, [token, user, navigation]);
 
   // ── Load recent patients once on mount ────────────────────
   useEffect(() => {
-    getRecentPatients(db, user!.id).then(setRecentPatients);
-  }, [db]);
+    if (!token || !user) return;
+    getRecentPatients(db, user.id).then(setRecentPatients);
+  }, [db, token, user]);
 
   // ── SQLite search on every query change ──────────────────
   // Fires immediately from 3 digits to give instant local feedback.
   useEffect(() => {
+    if (!user) return;
     if (query.length < 3) {
       setLocalResults([]);
       return;
     }
-    searchPatientsByMobile(db, query, user!.id).then(setLocalResults);
+    searchPatientsByMobile(db, query, user.id).then(setLocalResults);
   }, [db, query, user]);
 
   // ── Server lookup via React Query ────────────────────────
   // Enabled only at exactly 10 digits while online.
   // retry: false — a 404 is a valid "not found", not a transient failure.
-  const { data: serverPatient, isLoading: serverLoading } = useQuery({
+  const { data: serverPatient, isLoading: serverLoading, isError, error } = useQuery({
     queryKey: ['patient-lookup', query],
     queryFn:  () => lookupPatient(query, token!),
     enabled:  isOnline && query.length === 10 && !!token,
     staleTime: 30_000,
     retry:    false,
   });
+
+  // ── Handle 401 — session expired ─────────────────────────
+  // Show feedback message and redirect to Login after 2 seconds.
+  useEffect(() => {
+    if (!isError || !error) return;
+    if (error instanceof ApiError && error.status === 401) {
+      setSessionExpired(true);
+      const timer = setTimeout(() => navigation.replace('Login'), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isError, error, navigation]);
 
   // ── Cache server result back to SQLite ───────────────────
   // Runs after a successful server lookup so the patient is available
@@ -155,15 +179,26 @@ export default function PatientSearchScreen() {
   const handleKeyPress = useCallback(
     (key: string) => {
       if (key === '⌫') {
-        setQuery((q) => q.slice(0, -1));
+        setQuery((q) => {
+          const next = q.slice(0, -1);
+          if (next.length === 0) setMobileError(null);
+          return next;
+        });
+      } else if (query.length === 0 && key < '6') {
+        // Indian mobile numbers start with 6–9. Reject 0–5 on first digit.
+        setMobileError('Mobile numbers start with 6–9');
       } else if (query.length < 10) {
+        setMobileError(null);
         setQuery((q) => q + key);
       }
     },
     [query.length],
   );
 
-  const handleClear = useCallback(() => setQuery(''), []);
+  const handleClear = useCallback(() => {
+    setQuery('');
+    setMobileError(null);
+  }, []);
 
   // ── Web keyboard support (Expo web preview only) ─────────
   // The custom keypad replaces the system keyboard on mobile.
@@ -205,8 +240,11 @@ export default function PatientSearchScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
 
+      {/* ── Session expired banner — shown on 401, auto-redirects in 2s ── */}
+      {sessionExpired && <SessionExpiredBanner />}
+
       {/* ── Global offline banner — only visible when offline ── */}
-      {!isOnline && <OfflineBanner />}
+      {!isOnline && !sessionExpired && <OfflineBanner />}
 
       <View style={styles.screen}>
         {/* ── Scrollable upper zone ── */}
@@ -226,6 +264,7 @@ export default function PatientSearchScreen() {
             query={query}
             isOnline={isOnline}
             onClear={handleClear}
+            mobileError={mobileError}
           />
 
           <ContentArea
@@ -297,10 +336,12 @@ function SearchBar({
   query,
   isOnline,
   onClear,
+  mobileError,
 }: {
-  query:    string;
-  isOnline: boolean;
-  onClear:  () => void;
+  query:        string;
+  isOnline:     boolean;
+  onClear:      () => void;
+  mobileError?: string | null;
 }) {
   const isTyping = query.length > 0;
 
@@ -310,6 +351,7 @@ function SearchBar({
         styles.searchBar,
         isTyping  && styles.searchBarActive,
         !isOnline && styles.searchBarOffline,
+        !!mobileError && styles.searchBarError,
       ]}>
         <Text style={styles.searchIcon}>🔍</Text>
 
@@ -330,6 +372,10 @@ function SearchBar({
           </TouchableOpacity>
         )}
       </View>
+
+      {!!mobileError && (
+        <Text style={styles.mobileErrorText}>{mobileError}</Text>
+      )}
     </View>
   );
 }
@@ -664,6 +710,19 @@ function BottomTabBar() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Session expired banner — shown on 401; auto-redirects in 2s
+// ─────────────────────────────────────────────────────────────
+function SessionExpiredBanner() {
+  return (
+    <View style={styles.sessionExpiredBanner}>
+      <Text style={styles.sessionExpiredText}>
+        Your session has expired. Please log in again.
+      </Text>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // Offline banner — amber bar at top of screen
 // ─────────────────────────────────────────────────────────────
 function OfflineBanner() {
@@ -769,6 +828,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  // ── Session expired banner ────────────────────────────────
+  sessionExpiredBanner: {
+    backgroundColor: '#FEF2F2',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FECACA',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  sessionExpiredText: {
+    color: '#991B1B',
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+
   // ── Search bar ────────────────────────────────────────────
   searchWrap: {
     paddingHorizontal: 20,
@@ -795,6 +869,15 @@ const styles = StyleSheet.create({
   searchBarOffline: {
     borderColor: '#FCD34D',
     backgroundColor: '#FFFDF5',
+  },
+  searchBarError: {
+    borderColor: Colors.error,
+  },
+  mobileErrorText: {
+    fontSize: 12,
+    color: Colors.error,
+    marginTop: 6,
+    marginLeft: 4,
   },
   searchIcon: {
     fontSize: 18,

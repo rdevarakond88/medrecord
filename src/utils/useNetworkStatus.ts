@@ -12,14 +12,16 @@ import { useState, useEffect } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 
 export function useNetworkStatus(): boolean {
-  const [isOnline, setIsOnline] = useState(true);
+  // Start offline until NetInfo confirms connectivity — avoids false-positive
+  // server lookups on captive portals where isInternetReachable is null.
+  const [isOnline, setIsOnline] = useState(false);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
-      // isInternetReachable can be null when unknown — treat null as online
-      // to avoid incorrectly blocking the server path on startup.
+      // Require both flags to be explicitly true. null isInternetReachable
+      // (unconfirmed — captive portal, no-internet WiFi) is treated as offline.
       const reachable =
-        state.isConnected === true && state.isInternetReachable !== false;
+        state.isConnected === true && state.isInternetReachable === true;
       setIsOnline(reachable);
     });
     return unsubscribe;
