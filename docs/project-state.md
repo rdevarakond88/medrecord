@@ -2,13 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D2 complete — bugs fixed, security re-audit passed; next: D3 mockup
-**Last Updated:** 2026-02-20
-**Last Session:** Infrastructure/tooling session (2026-02-20). Fixed two remaining D2 preview UX bugs: (1) FAB now hidden in has-data/no-match states via `setState()` — FAB only shown in empty + offline states; (2) clicking search bar adds `focused` class + blinking cursor animation, cleared on first keypress, restored by clear button; `activateSearch()` added. Created `web-preview/index.html` so `http://localhost:3000/` redirects to D2.html instead of showing directory listing.
-
-Previous infrastructure session (2026-02-20): Expo project scaffolded, WSL2 networking debugged, pure-HTML web preview established at `web-preview/D2.html` served by Python on port 3000. Two preview bugs fixed: (1) physical keyboard focus restored after keypad button clicks via `activeElement.blur()`; (2) FAB overlap with "Create New" button resolved by moving FAB into flex row between scroll zone and keypad. Preview file moved from `dist/` (gitignored) to `web-preview/` (tracked). `package.json` web script updated. `CLAUDE_CODE_QUICKSTART.md` updated with Infrastructure Session workflow pattern.
-
-Previous session: C-1, C-2, C-3 critical bugs fixed and pushed to `dev`. Security re-audit (`reviews/D2-security-audit-v2.md`) verdict: **Clear to merge to dev**. D2 is complete. Do **not** merge to `main` until H-2 (certificate pinning) and H-3 (offline audit log) are resolved — both are pre-v1 launch blockers flagged in the v2 audit.
+**Phase:** D2 genuinely complete — all debt items closed; next: D3 Patient Detail / History
+**Last Updated:** 2026-02-22
+**Last Session:** D2 debt clearance session (2026-02-22). Closed all remaining open debt items: button overlap visibility logic (6a58a97), search bar focus indicator — cursor left-aligned, border retained on backspace, cursor after typed digits (5a95bed, 634c50c), 401 session-expired banner + auto-redirect (273c9b0), first-digit mobile validation (273c9b0), auth guard on D2 mount (273c9b0), captive portal false positive in `useNetworkStatus` (273c9b0). Only H-2 (certificate pinning) and H-3 (offline audit log) remain open — both are pre-v1 merge-to-main blockers, not D3 blockers. **Next: D3 mockup.**
 
 ---
 
@@ -45,7 +41,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | File | Session | Notes |
 |---|---|---|---|
-| D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit v1 (BLOCKED), persona critique (3.2/5), QA test plan (`reviews/D2-qa-test-plan.md`). **C-1/C-2/C-3 fixed** (2026-02-20): doctor-scoped patients table, `consent_granted` stored + forwarded, `useLogout` hook clears SQLite + React Query on logout. Security re-audit v2 passed (`reviews/D2-security-audit-v2.md`). **Complete — on `dev`. Do not merge to `main` until H-2 + H-3 resolved.** |
+| D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit v1 (BLOCKED), persona critique (3.2/5), QA test plan (`reviews/D2-qa-test-plan.md`). C-1/C-2/C-3 fixed (2026-02-20). Security re-audit v2 passed. All HIGH debt items closed (2026-02-22): 401 feedback, first-digit validation, auth guard, captive portal fix, button overlap, search bar focus. **All debt closed. On `dev`. Do not merge to `main` until H-2 + H-3 resolved.** |
 
 ## Screens Pending
 All remaining screens from screen-inventory.md (next: D3 — Patient Detail / History)
