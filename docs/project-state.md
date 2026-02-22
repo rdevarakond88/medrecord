@@ -4,7 +4,9 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 ## Current Status
 **Phase:** D2 complete — bugs fixed, security re-audit passed; next: D3 mockup
 **Last Updated:** 2026-02-20
-**Last Session:** Infrastructure/tooling session (2026-02-20). Expo project scaffolded, WSL2 networking debugged, pure-HTML web preview established at `web-preview/D2.html` served by Python on port 3000. Two preview bugs fixed: (1) physical keyboard focus restored after keypad button clicks via `activeElement.blur()`; (2) FAB overlap with "Create New" button resolved by moving FAB into flex row between scroll zone and keypad. Preview file moved from `dist/` (gitignored) to `web-preview/` (tracked). `package.json` web script updated. `CLAUDE_CODE_QUICKSTART.md` updated with Infrastructure Session workflow pattern.
+**Last Session:** Infrastructure/tooling session (2026-02-20). Fixed two remaining D2 preview UX bugs: (1) FAB now hidden in has-data/no-match states via `setState()` — FAB only shown in empty + offline states; (2) clicking search bar adds `focused` class + blinking cursor animation, cleared on first keypress, restored by clear button; `activateSearch()` added. Created `web-preview/index.html` so `http://localhost:3000/` redirects to D2.html instead of showing directory listing.
+
+Previous infrastructure session (2026-02-20): Expo project scaffolded, WSL2 networking debugged, pure-HTML web preview established at `web-preview/D2.html` served by Python on port 3000. Two preview bugs fixed: (1) physical keyboard focus restored after keypad button clicks via `activeElement.blur()`; (2) FAB overlap with "Create New" button resolved by moving FAB into flex row between scroll zone and keypad. Preview file moved from `dist/` (gitignored) to `web-preview/` (tracked). `package.json` web script updated. `CLAUDE_CODE_QUICKSTART.md` updated with Infrastructure Session workflow pattern.
 
 Previous session: C-1, C-2, C-3 critical bugs fixed and pushed to `dev`. Security re-audit (`reviews/D2-security-audit-v2.md`) verdict: **Clear to merge to dev**. D2 is complete. Do **not** merge to `main` until H-2 (certificate pinning) and H-3 (offline audit log) are resolved — both are pre-v1 launch blockers flagged in the v2 audit.
 
@@ -103,8 +105,10 @@ All remaining screens from screen-inventory.md (next: D3 — Patient Detail / Hi
 | Item | Screen | Source | Notes |
 |---|---|---|---|
 | ~~Web preview keyboard input requires click-first-to-focus workaround~~ | web-preview | Infrastructure session 2026-02-20 | **CLOSED 2026-02-20** — `document.activeElement.blur()` added at end of `keyPress()` in `web-preview/D2.html`; physical keyboard works immediately after any button click. |
-| ~~Web preview FAB overlap in has-data state~~ | web-preview | Infrastructure session 2026-02-20 | **CLOSED 2026-02-20** — FAB moved from `position:absolute` to `.fab-row` flex container between scroll zone and keypad in `web-preview/D2.html`. |
-| FAB `bottom: 320` is hardcoded — fragile across screen heights | D2 | Persona critique | Needs proper flex positioning before production build |
+| ~~Web preview FAB overlap in has-data state~~ | web-preview | Infrastructure session 2026-02-20 | **CLOSED 2026-02-20** (session 2) — FAB hidden in has-data/no-match states via `setState()`; only visible in empty + offline states. Prior fix (flex row placement) was structural but FAB still appeared on screen. |
+| ~~Web preview search bar click has no visual feedback~~ | web-preview | Infrastructure session 2026-02-20 | **CLOSED 2026-02-20** — `activateSearch()` adds `focused` class on click; blinking `|` cursor shown via CSS `::after` pseudo-element; cleared on first keypress, restored on clear. |
+| ~~Web preview root URL shows directory listing~~ | web-preview | Infrastructure session 2026-02-20 | **CLOSED 2026-02-20** — `web-preview/index.html` added with meta-refresh redirect to `D2.html`; `http://localhost:3000/` now redirects automatically. |
+| Button overlap — root cause is duplicate new patient buttons visible simultaneously. Fix is visibility logic not positioning: show inline card when results exist, show FAB only when no results or empty state. Never show both together. | D2 | Persona critique | Visibility logic fix required before production build |
 | No combined offline + searching state | D2 | Persona critique | Mockup handles offline or searching but not both simultaneously; composite state needed |
 | No name search — mobile-only lookup frustrates staff and tech-savvy doctors | D2 | Persona critique | Locked design decision (mobile as primary key); flag for product discussion before D3 build |
 | Certificate pinning absent from API client | D2 | Security audit H-2 | Tracked above as pre-merge blocker. |
@@ -164,7 +168,7 @@ e.g.
 - Pure-HTML preview tool at `web-preview/D2.html` — NOT an Expo build
 - Expo web bundle approach abandoned: react-native-web + Metro dev server
   fails silently on WSL2 (lazy module loading + WebSocket issues)
-- Run preview: `npm run web` → open http://localhost:3000/D2.html
+- Run preview: `npm run web` → open http://localhost:3000/ (redirects to D2.html) or http://localhost:3000/D2.html directly
 - Expo SDK 54 / React 19 / RN 0.81.5 installed (package.json)
 - app.json: web.bundler=metro, web.output=single
 
