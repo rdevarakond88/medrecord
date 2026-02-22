@@ -15,7 +15,7 @@
  * Toggle between states with the dev switcher at the top of screen.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
+  Animated,
 } from 'react-native';
 
 // ─────────────────────────────────────────────────────────────
@@ -114,26 +115,51 @@ const SEARCH_TYPED_NO_MATCH = '9012345678';
 // Root component
 // ─────────────────────────────────────────────────────────────
 export default function D2PatientSearchScreen() {
-  const [screenState, setScreenState] = useState<ScreenState>('empty');
+  const [manualState, setManualState] = useState<ScreenState>('empty');
+  const [query, setQuery]             = useState('');
+  const [mobileError, setMobileError] = useState<string | null>(null);
+  const [isFocused, setIsFocused]     = useState(false);
+
+  // Derive screen state from live query; fall back to dev switcher when idle
+  const screenState: ScreenState = query.length > 0
+    ? (query.length === 10 ? 'no-match' : 'has-data')
+    : manualState;
+
+  const handleKeyPress = (key: string) => {
+    setIsFocused(true);
+    if (key === '⌫') {
+      setQuery((q) => {
+        const next = q.slice(0, -1);
+        if (next.length === 0) setMobileError(null);
+        return next;
+      });
+    } else if (query.length === 0 && key < '6') {
+      setMobileError('Mobile numbers start with 6–9');
+    } else if (query.length < 10) {
+      setMobileError(null);
+      setQuery((q) => q + key);
+    }
+  };
+
+  const handleClear = () => { setQuery(''); setMobileError(null); setIsFocused(true); };
+
+  const handleSwitch = (s: ScreenState) => {
+    setManualState(s);
+    setQuery('');
+    setMobileError(null);
+    setIsFocused(false);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={C.background} />
 
       {/* ── Dev state switcher — remove before production ── */}
-      <DevStateSwitcher active={screenState} onSwitch={setScreenState} />
+      <DevStateSwitcher active={screenState} onSwitch={handleSwitch} />
 
       {/* ── Global offline banner — visible only when offline ── */}
       {screenState === 'offline' && <OfflineBanner />}
 
-      {/*
-        Layout:
-          Header
-          Search bar
-          Search result / recent list   ← scrollable
-          Numeric keypad                ← visually anchored below search
-          FAB + Tab bar                 ← fixed at bottom
-      */}
       <View style={styles.screen}>
         {/* ── Scrollable upper zone ── */}
         <ScrollView
@@ -143,28 +169,35 @@ export default function D2PatientSearchScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Header />
-          <SearchBar screenState={screenState} />
+          <SearchBar
+            query={query}
+            mobileError={mobileError}
+            isFocused={isFocused}
+            onFocus={() => setIsFocused(true)}
+            onClear={handleClear}
+            screenState={screenState}
+          />
           <ContentArea screenState={screenState} />
         </ScrollView>
 
-        {/* ── Numeric keypad — replaces system keyboard ── */}
-        <NumericKeypad />
-      </View>
+        {/* ── FAB row — sits between scroll zone and keypad; never overlaps keys ── */}
+        <View style={styles.fabRow}>
+          {screenState !== 'has-data' && (
+            <TouchableOpacity
+              style={styles.fab}
+              accessibilityLabel="New Patient"
+              accessibilityRole="button"
+              activeOpacity={0.85}
+            >
+              <Text style={styles.fabPlus}>+</Text>
+              <Text style={styles.fabLabel}>New{'\n'}Patient</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
-      {/* ── FAB — New Patient ── */}
-      {/* Shown in empty, no-match, offline states only. Hidden in has-data */}
-      {/* to prevent two create CTAs appearing simultaneously. */}
-      {screenState !== 'has-data' && (
-        <TouchableOpacity
-          style={styles.fab}
-          accessibilityLabel="New Patient"
-          accessibilityRole="button"
-          activeOpacity={0.85}
-        >
-          <Text style={styles.fabPlus}>+</Text>
-          <Text style={styles.fabLabel}>New{'\n'}Patient</Text>
-        </TouchableOpacity>
-      )}
+        {/* ── Numeric keypad — replaces system keyboard ── */}
+        <NumericKeypad onKeyPress={handleKeyPress} />
+      </View>
 
       {/* ── Bottom tab bar ── */}
       <BottomTabBar />
@@ -187,23 +220,45 @@ function Header() {
 // ─────────────────────────────────────────────────────────────
 // Search bar
 // ─────────────────────────────────────────────────────────────
-function SearchBar({ screenState }: { screenState: ScreenState }) {
-  const isTyping   = screenState === 'has-data' || screenState === 'no-match';
-  const isOffline  = screenState === 'offline';
-  const typedValue = screenState === 'no-match' ? SEARCH_TYPED_NO_MATCH : '7654321';
+function SearchBar({
+  query,
+  mobileError,
+  isFocused,
+  onFocus,
+  onClear,
+  screenState,
+}: {
+  query:       string;
+  mobileError: string | null;
+  isFocused:   boolean;
+  onFocus:     () => void;
+  onClear:     () => void;
+  screenState: ScreenState;
+}) {
+  const isTyping  = query.length > 0;
+  const isOffline = screenState === 'offline';
+  const showActive = isFocused || isTyping;
 
   return (
-    <View style={styles.searchWrap}>
+    <TouchableOpacity
+      style={styles.searchWrap}
+      onPress={onFocus}
+      activeOpacity={1}
+      accessibilityLabel="Search by mobile number"
+      accessibilityRole="search"
+    >
       <View style={[
         styles.searchBar,
-        isTyping  && styles.searchBarActive,
-        isOffline && styles.searchBarOffline,
+        showActive    && styles.searchBarActive,
+        isOffline     && styles.searchBarOffline,
+        !!mobileError && styles.searchBarError,
       ]}>
         <Text style={styles.searchIcon}>🔍</Text>
 
         {isTyping ? (
-          /* Typed digits displayed */
-          <Text style={styles.searchTyped}>{typedValue}</Text>
+          <Text style={styles.searchTyped}>{query}</Text>
+        ) : isFocused ? (
+          <BlinkingCursor />
         ) : (
           <Text style={styles.searchPlaceholder}>Search by mobile number</Text>
         )}
@@ -211,13 +266,39 @@ function SearchBar({ screenState }: { screenState: ScreenState }) {
         {isTyping && (
           <TouchableOpacity
             style={styles.clearBtn}
+            onPress={onClear}
             accessibilityLabel="Clear search"
           >
             <Text style={styles.clearBtnText}>✕</Text>
           </TouchableOpacity>
         )}
       </View>
-    </View>
+      {!!mobileError && (
+        <Text style={styles.mobileErrorText}>{mobileError}</Text>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Blinking cursor — shown in search bar when focused, no text typed yet
+// ─────────────────────────────────────────────────────────────
+function BlinkingCursor() {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, []);
+
+  return (
+    <Animated.Text style={[styles.cursor, { opacity }]}>|</Animated.Text>
   );
 }
 
@@ -395,19 +476,20 @@ const KEYPAD_ROWS = [
   ['',  '0', '⌫'],
 ] as const;
 
-function NumericKeypad() {
+function NumericKeypad({ onKeyPress }: { onKeyPress: (key: string) => void }) {
   return (
     <View style={styles.keypad}>
       {KEYPAD_ROWS.map((row, rIdx) => (
         <View key={rIdx} style={styles.keypadRow}>
           {row.map((key, kIdx) => {
-            const isEmpty    = key === '';
+            const isEmpty     = key === '';
             const isBackspace = key === '⌫';
             return (
               <TouchableOpacity
                 key={kIdx}
                 style={[styles.keypadKey, isEmpty && styles.keypadKeyBlank]}
                 disabled={isEmpty}
+                onPress={() => onKeyPress(key)}
                 activeOpacity={0.6}
                 accessibilityLabel={
                   isBackspace ? 'Delete' : isEmpty ? undefined : `Digit ${key}`
@@ -678,6 +760,21 @@ const styles = StyleSheet.create({
     borderColor: '#FCD34D',
     backgroundColor: '#FFFDF5',
   },
+  searchBarError: {
+    borderColor: '#DC2626',
+  },
+  mobileErrorText: {
+    fontSize: 12,
+    color: '#DC2626',
+    marginTop: 6,
+    marginLeft: 4,
+  },
+  cursor: {
+    fontSize: 22,
+    fontWeight: '300',
+    color: C.primaryBlue,
+    flex: 1,
+  },
   searchIcon: {
     fontSize: 18,
     marginRight: 10,
@@ -945,20 +1042,27 @@ const styles = StyleSheet.create({
     color: C.textSecondary,
   },
 
+  // ── FAB row — flex row anchored between scroll zone and keypad ───
+  // No absolute positioning; FAB can never overlap keypad keys regardless
+  // of screen height. Row reserves space even when FAB is hidden so the
+  // keypad position does not shift between states.
+  fabRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    minHeight: 80,   // matches FAB height (64) + 8+8 padding
+    alignItems: 'center',
+  },
+
   // ── FAB — New Patient ─────────────────────────────────────
   fab: {
-    position: 'absolute',
-    // Sits above the keypad, anchored right
-    // Bottom = tabBar(72) + keypad(~236) + 12 gap — approximated for mockup
-    bottom: 320,
-    right: 16,
     width: 64,
     height: 64,
     borderRadius: 32,
     backgroundColor: C.primaryBlue,
     alignItems: 'center',
     justifyContent: 'center',
-    // FAB shadow
     shadowColor: C.primaryBlue,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,

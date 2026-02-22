@@ -3,21 +3,22 @@
   "version": "1.0.0",
   "main": "App.tsx",
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --host lan",
     "web": "python3 -m http.server 3000 --directory web-preview --bind 0.0.0.0",
-    "android": "expo start --android",
-    "ios": "expo start --ios"
+    "android": "expo start --android --host lan",
+    "ios": "expo start --ios --host lan"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~6.1.2",
     "expo": "~54.0.33",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
-    "react-native-web": "~0.21.2",
-    "@expo/metro-runtime": "~6.1.2"
+    "react-native-web": "~0.21.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@expo/ngrok": "^4.1.3",
     "@types/react": "~19.1.10",
     "typescript": "^5.3.3"
   }
