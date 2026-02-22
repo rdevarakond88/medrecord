@@ -39,6 +39,7 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
@@ -145,6 +146,10 @@ export default function PatientSearchScreen() {
   const showLoading  = isFullNumber && serverLoading && !hasResults;
   // Show "no match" only once both local and server have returned nothing
   const showNoMatch  = isFullNumber && !serverLoading && !hasResults;
+  // FAB visible when there are no inline results — no-match and empty states
+  // use the FAB as the sole create CTA. Has-data hides FAB in favour of the
+  // inline "Not the right patient?" card.
+  const showFab      = !isTyping || showNoMatch;
 
   // ── Keypad ───────────────────────────────────────────────
   const handleKeyPress = useCallback(
@@ -159,6 +164,25 @@ export default function PatientSearchScreen() {
   );
 
   const handleClear = useCallback(() => setQuery(''), []);
+
+  // ── Web keyboard support (Expo web preview only) ─────────
+  // The custom keypad replaces the system keyboard on mobile.
+  // On web, physical keyboard events must drive the same state.
+  // Uses functional setQuery so the effect is stable (runs once).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        setQuery((q) => (q.length < 10 ? q + e.key : q));
+      } else if (e.key === 'Backspace') {
+        setQuery((q) => q.slice(0, -1));
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // ── Navigation ───────────────────────────────────────────
   // D3 (PatientDetail) and D5 (NewPatientForm) are the next screens to build.
@@ -223,16 +247,20 @@ export default function PatientSearchScreen() {
       </View>
 
       {/* ── FAB — New Patient ── */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={handleCreateNew}
-        accessibilityLabel="New Patient"
-        accessibilityRole="button"
-        activeOpacity={0.85}
-      >
-        <Text style={styles.fabPlus}>+</Text>
-        <Text style={styles.fabLabel}>New{'\n'}Patient</Text>
-      </TouchableOpacity>
+      {/* Shown in empty + no-match states only. Hidden when inline results card */}
+      {/* is visible (has-data state) to prevent two create CTAs simultaneously. */}
+      {showFab && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={handleCreateNew}
+          accessibilityLabel="New Patient"
+          accessibilityRole="button"
+          activeOpacity={0.85}
+        >
+          <Text style={styles.fabPlus}>+</Text>
+          <Text style={styles.fabLabel}>New{'\n'}Patient</Text>
+        </TouchableOpacity>
+      )}
 
       {/* ── Bottom tab bar ── */}
       <BottomTabBar />
@@ -343,7 +371,7 @@ function ContentArea(props: ContentAreaProps) {
   }
 
   if (showNoMatch) {
-    return <NoMatchSection mobile={query} onCreateNew={onCreateNew} />;
+    return <NoMatchSection mobile={query} />;
   }
 
   // Results found (from local SQLite, possibly updated from server cache)
@@ -461,13 +489,8 @@ function SearchLoadingSection() {
 }
 
 // ── Section: no match (10 digits, local + server both empty) ───
-function NoMatchSection({
-  mobile,
-  onCreateNew,
-}: {
-  mobile:      string;
-  onCreateNew: () => void;
-}) {
+// Create CTA is the FAB — do not add a second button here.
+function NoMatchSection({ mobile }: { mobile: string }) {
   return (
     <View style={styles.section}>
       <View style={styles.noMatchCard}>
@@ -475,17 +498,8 @@ function NoMatchSection({
         <Text style={styles.noMatchHeading}>No patient found</Text>
         <Text style={styles.noMatchSub}>
           No record matches {formatMobile(mobile)}.{'\n'}
-          Is this a new patient?
+          Is this a new patient? Tap + to create a new record.
         </Text>
-        <TouchableOpacity
-          style={styles.noMatchCreateBtn}
-          onPress={onCreateNew}
-          accessibilityLabel="Create new patient"
-          accessibilityRole="button"
-          activeOpacity={0.85}
-        >
-          <Text style={styles.noMatchCreateBtnText}>+ Create New Patient</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );

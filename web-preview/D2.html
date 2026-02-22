@@ -39,6 +39,13 @@
   .search-icon { font-size: 18px; flex-shrink: 0; }
   .search-text { flex: 1; font-size: 22px; font-weight: 500; color: #1A202C; letter-spacing: 2px; }
   .search-placeholder { flex: 1; font-size: 16px; color: #CBD5E0; }
+  .search-bar.focused .search-placeholder::after {
+    content: '|';
+    color: #1A6DB5;
+    animation: blink 1s step-end infinite;
+    margin-left: 1px;
+  }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
   .clear-btn { width: 44px; height: 44px; border-radius: 22px; background: #E2E8F0; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748B; font-weight: 600; flex-shrink: 0; }
 
   /* ── Section ── */
@@ -85,6 +92,8 @@
 
   /* ── FAB row ── */
   .fab-row { display: flex; justify-content: flex-end; padding: 0 16px 8px; flex-shrink: 0; }
+  /* Hide FAB only when inline results card is visible — CSS is the source of truth */
+  .app-frame[data-state="has-data"] .fab-row { display: none !important; }
 
   /* ── FAB ── */
   .fab { width: 64px; height: 64px; border-radius: 32px; background: #1A6DB5; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(26,109,181,0.4); }
@@ -119,7 +128,7 @@
 </head>
 <body>
 
-<div class="app-frame" id="app">
+<div class="app-frame" id="app" data-state="empty">
 
   <!-- Dev switcher -->
   <div class="dev">
@@ -147,7 +156,7 @@
 
       <!-- Search bar -->
       <div class="search-wrap">
-        <div class="search-bar" id="searchBar">
+        <div class="search-bar" id="searchBar" onclick="activateSearch()">
           <span class="search-icon">🔍</span>
           <span class="search-placeholder" id="searchPlaceholder">Search by mobile number</span>
           <span class="search-text" id="searchTyped" style="display:none"></span>
@@ -240,8 +249,7 @@
           <div class="no-match-card">
             <div class="no-match-icon">🔍</div>
             <div class="no-match-heading">No patient found</div>
-            <div class="no-match-sub">No record matches +91 90123 45678.<br>Is this a new patient?</div>
-            <button class="create-btn-lg">+ Create New Patient</button>
+            <div class="no-match-sub">No record matches +91 90123 45678.<br>Is this a new patient? Tap + to create a new record.</div>
           </div>
         </div>
       </div>
@@ -301,7 +309,7 @@
     </div><!-- /scroll -->
 
     <!-- FAB row — between scroll and keypad to avoid overlap with has-data content -->
-    <div class="fab-row">
+    <div class="fab-row" id="fabRow">
       <button class="fab" aria-label="New Patient">
         <span class="fab-plus">+</span>
         <span class="fab-label">New<br>Patient</span>
@@ -364,6 +372,9 @@
   var stateSearchText = { 'empty': '', 'has-data': '7654321', 'no-match': '9012345678', 'offline': '' };
 
   function setState(s) {
+    // Drive FAB visibility via CSS (data-state attribute) — must be first
+    document.getElementById('app').dataset.state = s;
+
     // Hide all states
     document.querySelectorAll('.state').forEach(function(el){ el.classList.remove('visible'); });
     document.getElementById('state-' + s).classList.add('visible');
@@ -375,10 +386,15 @@
     // Offline banner
     document.getElementById('offlineBanner').style.display = s === 'offline' ? 'flex' : 'none';
 
+    // Show FAB in all states except has-data (where inline card is the create CTA)
+    document.getElementById('fabRow').style.display =
+      (s === 'has-data') ? 'none' : 'flex';
+
     // Search bar appearance
     var typed = stateSearchText[s];
     var bar = document.getElementById('searchBar');
     bar.className = 'search-bar' + (typed ? ' active' : '') + (s === 'offline' ? ' offline' : '');
+    bar.classList.remove('focused');
     document.getElementById('searchPlaceholder').style.display = typed ? 'none' : 'inline';
     document.getElementById('searchTyped').style.display = typed ? 'inline' : 'none';
     document.getElementById('searchTyped').textContent = typed;
@@ -400,10 +416,17 @@
     document.getElementById('searchTyped').textContent = query;
     document.getElementById('clearBtn').style.display = hasQ ? 'flex' : 'none';
 
+    // Remove focused class once typing starts (cursor replaced by digits)
+    document.getElementById('searchBar').classList.remove('focused');
+
     // Bug 1 fix: return focus to document so physical keyboard keeps working
     if (document.activeElement && document.activeElement !== document.body) {
       document.activeElement.blur();
     }
+  }
+
+  function activateSearch() {
+    document.getElementById('searchBar').classList.add('active', 'focused');
   }
 
   function clearSearch() {
@@ -413,6 +436,8 @@
     document.getElementById('searchPlaceholder').style.display = 'inline';
     document.getElementById('searchTyped').style.display = 'none';
     document.getElementById('clearBtn').style.display = 'none';
+    // Restore blinking cursor after clearing
+    bar.classList.add('focused');
   }
 
   // Physical keyboard support

@@ -152,15 +152,19 @@ export default function D2PatientSearchScreen() {
       </View>
 
       {/* ── FAB — New Patient ── */}
-      <TouchableOpacity
-        style={styles.fab}
-        accessibilityLabel="New Patient"
-        accessibilityRole="button"
-        activeOpacity={0.85}
-      >
-        <Text style={styles.fabPlus}>+</Text>
-        <Text style={styles.fabLabel}>New{'\n'}Patient</Text>
-      </TouchableOpacity>
+      {/* Shown in empty, no-match, offline states only. Hidden in has-data */}
+      {/* to prevent two create CTAs appearing simultaneously. */}
+      {screenState !== 'has-data' && (
+        <TouchableOpacity
+          style={styles.fab}
+          accessibilityLabel="New Patient"
+          accessibilityRole="button"
+          activeOpacity={0.85}
+        >
+          <Text style={styles.fabPlus}>+</Text>
+          <Text style={styles.fabLabel}>New{'\n'}Patient</Text>
+        </TouchableOpacity>
+      )}
 
       {/* ── Bottom tab bar ── */}
       <BottomTabBar />
@@ -277,7 +281,7 @@ function HasDataState() {
 }
 
 // ── State 3: No match — full number typed, no record found ────
-// MUST FIX: missing state — doctor needs a clear next action when search yields 0 results
+// Create CTA is the FAB — do not add a second button here.
 function NoMatchState() {
   return (
     <View style={styles.section}>
@@ -286,16 +290,8 @@ function NoMatchState() {
         <Text style={styles.noMatchHeading}>No patient found</Text>
         <Text style={styles.noMatchSub}>
           No record matches {formatMobile(SEARCH_TYPED_NO_MATCH)}.{'\n'}
-          Is this a new patient?
+          Is this a new patient? Tap + to create a new record.
         </Text>
-        <TouchableOpacity
-          style={styles.noMatchCreateBtn}
-          accessibilityLabel="Create new patient"
-          accessibilityRole="button"
-          activeOpacity={0.85}
-        >
-          <Text style={styles.noMatchCreateBtnText}>+ Create New Patient</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
