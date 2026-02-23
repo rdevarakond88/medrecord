@@ -30,6 +30,7 @@ Build: `dev` branch — commits 14b6894, 5aa5ff1
 |---|---|---|---|
 | 12 | 401 session expired — red banner shown + redirect to Login after 2s | 🔶 Deferred | Fix written in `PatientSearchScreen.tsx`. `SessionExpiredBanner` renders on `ApiError.status === 401`; 2s timer then `navigation.replace('Login')`. Needs registered Login route to verify end-to-end. Verify during D1 session. |
 | 13 | Auth guard on D2 mount — unauthenticated user cannot see screen | 🔶 Deferred | Fix written in `PatientSearchScreen.tsx` line 244. Synchronous `if (!token \|\| !user) return null` guard added before JSX (2026-02-23); `useEffect` redirect to Login follows. Needs registered Login route + NavigationContainer to verify. **Verify during D1 session:** (1) blank screen for one frame — no greeting, no patient list, no keypad visible; (2) immediate redirect to Login; (3) no patient data visible at any point. |
+| 15 | First-run empty state — no patients yet, "Tap + to add the first one" shown | 🔶 Deferred | Mockup "empty" state shows recent patients as designed — "empty" refers to an empty search bar, not an empty patient list. True first-run empty state is handled correctly in live screen `PatientSearchScreen.tsx` lines 451–457: renders "No patients yet. Tap + to add the first one." when `patients.length === 0`. Verify when D1 session wires up live screen. |
 
 ## Deferred — needs real device WiFi test
 

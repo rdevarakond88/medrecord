@@ -4,7 +4,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 ## Current Status
 **Phase:** D2 complete and real-device verified — next: D3 Patient Detail / History
 **Last Updated:** 2026-02-23
-**Last Session:** D2 auth guard investigation (2026-02-23). Identified two issues: (1) `App.tsx` renders the mockup directly — no navigation stack exists yet, so D2 is reachable without login at the app-entry level; (2) the auth guard in `PatientSearchScreen.tsx` was a `useEffect` only, meaning one frame of UI rendered before the redirect fired. Fixed (2) by adding a synchronous `if (!token || !user) return null` at line 244 (after all hooks, before JSX). App.tsx comment updated to document the structural gap. Checklist items 12, 13, 14 added as deferred. Verification of item 13 (auth guard end-to-end) deferred to D1 session — needs registered Login route + NavigationContainer. Committed 3bc3475. **Next: D3 mockup.**
+**Last Session:** D2 auth guard investigation + empty state clarification (2026-02-23). Auth guard: identified that `App.tsx` renders the mockup directly (no nav stack) and that the live screen guard was `useEffect`-only (one frame of UI before redirect). Fixed by adding synchronous `if (!token || !user) return null` at `PatientSearchScreen.tsx` line 244. App.tsx comment updated to document the structural gap. Empty state: confirmed that mockup "empty" state is "empty search bar, recent patients visible" by design — not a first-run state. True first-run empty state (no patients ever) is correctly handled in live screen lines 451–457. Checklist items 12, 13, 14, 15 logged as deferred. **Next: D3 mockup.**
 
 ---
 
