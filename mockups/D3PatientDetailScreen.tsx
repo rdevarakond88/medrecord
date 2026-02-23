@@ -14,6 +14,7 @@
 
 import React, { useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -173,15 +174,27 @@ function VisitCard({
           : `Visit on ${visit.date}${visit.chiefComplaint ? ', ' + visit.chiefComplaint : ''}, ${recordLabel}`
       }
     >
-      {/* Row: date + record count pill */}
+      {/* Row: date + record count pill + expand chevron */}
       <View style={styles.visitCardTopRow}>
         <Text style={[styles.visitDate, grayed && styles.textGrayed]}>
           {visit.date}
         </Text>
-        <View style={styles.recordCountPill}>
-          <Text style={[styles.recordCountText, grayed && styles.textGrayed]}>
-            {recordLabel}
-          </Text>
+        <View style={styles.visitCardTopRowRight}>
+          <View style={styles.recordCountPill}>
+            <Text style={[styles.recordCountText, grayed && styles.textGrayed]}>
+              {recordLabel}
+            </Text>
+          </View>
+          {/* Chevron affordance — only on tappable cards; rotates to show expanded state.
+              Persona critique SHOULD FIX — flagged by Dr. Sinha (discoverability). */}
+          {!grayed && (
+            <Text style={[
+              styles.expandChevron,
+              expanded && styles.expandChevronOpen,
+            ]}>
+              {'\u203a'}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -278,6 +291,28 @@ export function D3PatientDetailHasDataConsentGranted({
 }
 
 // ---------------------------------------------------------------------------
+// Confirmation handler — shown when staff/doctor taps 'Request Access'.
+// Displays the patient's masked mobile so the user knows exactly which number
+// the consent SMS will be sent to before they confirm.
+// Persona critique MUST FIX — flagged by Sunita (accidental SMS risk).
+// ---------------------------------------------------------------------------
+function handleRequestAccess() {
+  Alert.alert(
+    'Send Consent Request?',
+    `This will send an SMS to the patient's registered mobile (\u2022\u2022\u2022\u2022\u2022 ${PATIENT.mobileLastFive}). The patient must approve before their visit history becomes visible.`,
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Send Request',
+        style: 'default',
+        // Stub — will wire to D9 (Consent Request Flow) in live screen
+        onPress: () => {},
+      },
+    ],
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Variant 2 — Has data + no consent
 // Amber badge, visit list grayed out, consent gate message, Request Access button.
 // "New Visit" remains active — creates implicit consent request (spec § D3 Behaviour).
@@ -313,6 +348,7 @@ export function D3PatientDetailHasDataNoConsent() {
           </Text>
           <TouchableOpacity
             style={styles.requestAccessButton}
+            onPress={handleRequestAccess}
             activeOpacity={0.8}
             accessibilityLabel="Request patient access"
             accessibilityRole="button"
@@ -508,6 +544,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems:     'center',
     marginBottom:    4,
+  },
+  visitCardTopRowRight: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:            8,
+  },
+  expandChevron: {
+    fontSize:   18,
+    color:      '#94A3B8',   // lighter than textSecondary — subtle affordance
+    lineHeight: 20,
+  },
+  expandChevronOpen: {
+    // Rotated 90° → points downward, indicating card is expanded
+    transform: [{ rotate: '90deg' }],
   },
   visitDate: {
     fontSize:   14,

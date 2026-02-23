@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D3 static mockup created — next: D3 persona critique + live screen
+**Phase:** D3 mockup revised post-persona-critique — next: D3 live screen
 **Last Updated:** 2026-02-23
 **Last Session:** D3 pre-build setup (2026-02-23). Created `reviews/D3-VALIDATION-CHECKLIST.md` (57 items across 7 sections) before any code written. Built `mockups/D3PatientDetailScreen.tsx` with three exported variants: `D3PatientDetailHasDataConsentGranted` (green badge, full visit list, inline expand, optional offline banner), `D3PatientDetailHasDataNoConsent` (amber badge, grayed history, consent gate + Request Access CTA), `D3PatientDetailEmptyState` (no visits, spec-exact empty state message). Indian placeholder data throughout. All touch targets ≥ 48px. Colour palette exact to spec. **Next: D3 persona critique.**
 
@@ -42,7 +42,7 @@ _Carry these into every build/mockup session for these screens._
 | Screen | File | Session | Notes |
 |---|---|---|---|
 | D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit v1 (BLOCKED), persona critique (3.2/5), QA test plan (`reviews/D2-qa-test-plan.md`). C-1/C-2/C-3 fixed (2026-02-20). Security re-audit v2 passed. All HIGH debt items closed (2026-02-22). **Real device verified (2026-02-22) on iPhone via Expo Go:** search bar focus/unfocus, cursor after digit, FAB position, digit entry — all confirmed. Checklist: `reviews/D2-VALIDATION-CHECKLIST.md`. **On `dev`. Do not merge to `main` until H-2 + H-3 resolved.** |
-| D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) | 2026-02-23 | Static mockup with three variants: has data + consent granted (with offline banner option), has data + no consent (amber badge, grayed history, Request Access CTA → D9), empty state (spec-exact message). Indian placeholder data. All touch targets ≥ 48px. Colour palette exact to spec. Checklist: `reviews/D3-VALIDATION-CHECKLIST.md`. **Next: persona critique + live screen.** |
+| D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) | 2026-02-23 | Static mockup with three variants: has data + consent granted (with offline banner option), has data + no consent (amber badge, grayed history, Request Access CTA → D9), empty state (spec-exact message). Indian placeholder data. All touch targets ≥ 48px. Colour palette exact to spec. Checklist: `reviews/D3-VALIDATION-CHECKLIST.md`. **Persona critique complete (3.54/5)** — `reviews/D3-persona-critique.md`. MUST FIX (Request Access confirmation dialog) and SHOULD FIX (visit card expand chevron) applied to mockup. Patient name PII visibility logged as MEDIUM debt. **Next: D3 live screen.** |
 
 ## Screens Pending
 All remaining screens from screen-inventory.md (next: D3 persona critique + live screen, then D4 onwards)
@@ -96,6 +96,7 @@ All remaining screens from screen-inventory.md (next: D3 persona critique + live
 | Double-tap on `PatientRow` pushes two D3 screens onto navigation stack | D2 | QA E-7 | Add tap-guard ref; disable `onPress` immediately on first tap. |
 | "Add New Patient" CTA fires with partial (3–9 digit) query; D5 receives invalid `prefillMobile` | D2 | QA E-8 | Only pass `prefillMobile` if `query.length === 10`. |
 | `recentPatients` not refreshed when background sync completes while D2 is active | D2 | QA E-2 | Use `useFocusEffect` to re-run `getRecentPatients` on screen focus. |
+| Patient full name displayed at 22pt bold in D3 header — no PII dimming option; visible to bystanders in shared clinic waiting areas | D3 | Persona critique SHOULD FIX | Flagged by Shantabai and Arjun. Same principle as D2 mobile number masking (resolved). Address in D3 live build: consider a name-dimming gesture or abbreviated display after screen idle timeout. |
 
 ### LOW / SHOULD FIX
 
