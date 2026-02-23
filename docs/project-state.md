@@ -27,10 +27,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ---
 
-## Build Constraints — Doctor Visit Flow (D2, D5, D6, D7)
+## Build Constraints — Doctor Visit Flow (D2, D3, D5, D6, D7)
 _Carry these into every build/mockup session for these screens._
 
 - **D2 (Patient Search):** Offline SQLite search is the primary implementation path, not a fallback. Write the SQLite path first. The network path layers on top. Show offline state variant as a first-class design state.
+- **D3 (Patient Detail):** Patient header must include an edit affordance (stub navigation to profile-edit screen is acceptable for v1) — staff correct mobile numbers from this screen. Do not omit it from the live build. Flagged by Sunita (persona critique SHOULD FIX, not applied to mockup).
+- **D3 (Patient Detail):** Patient full name is displayed at 22pt bold with no PII dimming — visible to bystanders in shared clinic spaces. Address in this live build: implement a name-dimming gesture or abbreviated display after screen idle timeout. Tracked as MEDIUM debt.
 - **D6 (New Visit):** Must include an explicit "consent not yet established" state variant in the mockup. Do not build D6 as if patient consent is always pre-granted — D9 (Consent Request Flow) will wire up later, but D6 must acknowledge the state exists.
 - **D6 (New Visit):** Validate against the product-vision.md success metric: doctor completes a visit record in under 60 seconds. If the screen requires more than 3 taps to reach a submittable state, redesign before persona review.
 - **D7 (Document Scanner):** Include a simple exposure/readability indicator before capture (e.g. too dark / good / overexposed). Do not rely on OCR feedback — this is basic camera exposure feedback only. Required for inconsistent clinic lighting conditions.
