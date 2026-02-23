@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D3 mockup complete — all security audit findings addressed; ready for live build
+**Phase:** D3 mockup fully reviewed — all agents run; ready for live build
 **Last Updated:** 2026-02-23
-**Last Session:** D3 security audit fixes (2026-02-23). Fixed CRITICAL D3-C-1: `chiefComplaint: null` passed to all grayed cards in `D3PatientDetailHasDataNoConsent`. Fixed HIGH D3-C-2: added fourth variant `D3PatientDetailHasDataOwnVisitsOnly` with `VISITS_OWN` (expandable, full data) + `VISITS_OTHER` (grayed, `chiefComplaint: null`) modelling the two-list API shape. Added HIGH live-build debt item for `myVisits` + `otherDoctorVisits` API split. **Next: D3 live screen.**
+**Last Session:** D3 QA review (2026-02-23). `reviews/D3-qa-report.md`. HIGH: no loading/error state for consent re-fetch, no dynamic consent transition (no-consent → granted) in-screen, ScrollView + map will OOM on 200+ visits. MEDIUM: `recordCount: 0` shows "0 records", patient name no overflow guard, empty state shows "Access Granted" badge misleadingly. Key edge cases: consent revoked while screen open; consent granted mid-consultation; two-section vs. interleaved visit list (open design question). **Next: D3 live screen.**
 
 ---
 
@@ -47,7 +47,7 @@ _Carry these into every build/mockup session for these screens._
 | Screen | File | Session | Notes |
 |---|---|---|---|
 | D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit v1 (BLOCKED), persona critique (3.2/5), QA test plan (`reviews/D2-qa-test-plan.md`). C-1/C-2/C-3 fixed (2026-02-20). Security re-audit v2 passed. All HIGH debt items closed (2026-02-22). **Real device verified (2026-02-22) on iPhone via Expo Go:** search bar focus/unfocus, cursor after digit, FAB position, digit entry — all confirmed. Checklist: `reviews/D2-VALIDATION-CHECKLIST.md`. **On `dev`. Do not merge to `main` until H-2 + H-3 resolved.** |
-| D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) | 2026-02-23 | Static mockup with four variants: consent granted (full list, expandable), no consent (all grayed, `chiefComplaint: null`), own-visits-only (VISITS_OWN expandable + VISITS_OTHER grayed, no clinical content), empty state. Checklist: `reviews/D3-VALIDATION-CHECKLIST.md`. Persona critique (3.54/5): `reviews/D3-persona-critique.md`. Security audit: `reviews/D3-security-audit.md` — CRITICAL + HIGH findings resolved in mockup. **Next: D3 live screen.** |
+| D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) | 2026-02-23 | Static mockup with four variants: consent granted (full list, expandable), no consent (all grayed, `chiefComplaint: null`), own-visits-only (VISITS_OWN expandable + VISITS_OTHER grayed, no clinical content), empty state. **All agents run:** validation checklist (`reviews/D3-VALIDATION-CHECKLIST.md`), persona critique 3.54/5 (`reviews/D3-persona-critique.md`), security audit (`reviews/D3-security-audit.md`) — CRITICAL + HIGH resolved, QA review (`reviews/D3-qa-report.md`). **Next: D3 live screen.** |
 
 ## Screens Pending
 All remaining screens from screen-inventory.md (next: D3 live screen, then D4 onwards)
@@ -120,6 +120,12 @@ All remaining screens from screen-inventory.md (next: D3 live screen, then D4 on
 | Request Access button has no offline guard — stub fires with no feedback when device is offline | D3 | Security audit MEDIUM | In the live build, check network status before showing Alert. If offline, replace with: "Cannot send consent request — no internet connection." Do not show "Send Request" option when offline. |
 | No consent `accessed` audit event emitted when D3 opens with consent granted — DPDP audit trail incomplete | D3 | Security audit MEDIUM | consent-layer-spec.md defines `accessed` event in `consent_audit_log`. Emit to SQLite `audit_events` on D3 mount with consent granted; sync to server on reconnect. Same pattern as H-3 audit log requirement on D2. |
 | Full placeholder phone number written in code comment — establishes risky pattern for live build | D3 | Security audit MEDIUM | `mockups/D3PatientDetailScreen.tsx` line 49: `// full: +91 98765 84627`. Fictional data, but pattern must not be followed in live build. Remove full number from comment. |
+| `ScrollView` + `map` for visit list — will OOM on 200+ visits on a 2GB RAM device | D3 | QA H-4 | Replace with `FlatList` (`maxToRenderPerBatch={10}`, `windowSize={5}`). Paginate at 20 visits per page. Implement server-side pagination from the start. |
+| No loading or error state for server consent re-fetch — live build will flash wrong variant or crash silently on API failure | D3 | QA H-1 / H-2 | Render loading skeleton on mount until re-fetch resolves. On failure: fail secure (show no-consent variant) + retry banner. Never fail open. |
+| No dynamic in-screen consent transition — after D9 grants consent, doctor must navigate away and back to see history | D3 | QA H-3 | Single component with `consentGranted` as state. After D9 returns, call `navigation.setParams` or update Zustand store so D3 re-renders in-place. |
+| `recordCount: 0` displays "0 records" pill — confusing; indicates a draft/interrupted visit | D3 | QA M-3 | Add `recordCount === 0 ? 'Draft' : ...` branch. Show distinct pill colour for drafts. |
+| Patient name has no overflow guard at 22pt — long names wrap and push consent badge off-screen | D3 | QA M-4 | Add `numberOfLines={1}` + `ellipsizeMode="tail"` to patient name Text node in live build. |
+| Empty state shows "Access Granted" badge — semantically misleading when there are no records to gate | D3 | QA M-5 | Omit consent badge in the empty-state variant, or replace with a "New Patient" neutral indicator. |
 
 ### LOW / SHOULD FIX
 
