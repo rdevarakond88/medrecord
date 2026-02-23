@@ -18,7 +18,7 @@ FLOW LEVEL (once per group of screens)
 ---
 
 ## Worked Example: Doctor Visit Flow
-### Screens in this flow: D2, D5, D6, D7
+### Screens in this flow: D2, D3, D6, D7
 
 ---
 
@@ -30,7 +30,7 @@ FLOW LEVEL (once per group of screens)
 ```
 Read agents/agent-pm.md, docs/product-vision.md, docs/project-state.md.
 
-I am about to build the Doctor Visit Flow: screens D2, D5, D6, D7.
+I am about to build the Doctor Visit Flow: screens D2, D3, D6, D7.
 Run your Moment 1 pre-flight review and produce the output in the
 format specified in your agent file.
 ```
@@ -166,13 +166,16 @@ Read docs/project-state.md.
 
 ---
 
-### Then Repeat Steps 2–8 for D5, D6, D7
+### Then Repeat Steps 2–8 for D3, D6, D7
+
+> **Note:** D5 (New Patient Form) is a supporting screen, not part of the core flow.
+> Build it after D2, D3, D6, D7 are complete (see Tier 3 in screen-inventory.md).
 
 Once all four screens are done, run the PM agent again (Moment 2):
 ```
 Read agents/agent-pm.md, docs/project-state.md.
 
-The complete Doctor Visit Flow (D2, D5, D6, D7) is now built.
+The complete Doctor Visit Flow (D2, D3, D6, D7) is now built.
 Run your Moment 2 post-flow review and produce the output in the
 format specified in your agent file.
 ```
