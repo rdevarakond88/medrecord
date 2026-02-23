@@ -22,7 +22,7 @@ That is the only command. Nothing else.
 After startup the terminal prints a URL like:
 
 ```
-exp://xxxx-anonymous-8081.exp.direct
+exp://xxxx-anonymous-8082.exp.direct
 ```
 
 Open **Expo Go** on iPhone → tap **Enter URL manually** → paste that URL.
