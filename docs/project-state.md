@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D3 mockup revised post-persona-critique — next: D3 live screen
+**Phase:** D3 security audit complete — BLOCKED: 1 critical finding must be fixed in mockup before live build
 **Last Updated:** 2026-02-23
-**Last Session:** D3 persona critique fixes (2026-02-23). Ran persona critique on `mockups/D3PatientDetailScreen.tsx` (3.54/5 — `reviews/D3-persona-critique.md`). Applied MUST FIX: `Alert.alert` confirmation dialog on Request Access button (shows masked mobile, stubs D9 wire-up). Applied SHOULD FIX: expand chevron (`›`, rotates 90° when open) on visit cards. Logged patient name PII visibility as MEDIUM debt. Updated project-state.md. **Next: D3 live screen.**
+**Last Session:** D3 security audit (2026-02-23). Ran security audit on `mockups/D3PatientDetailScreen.tsx` — `reviews/D3-security-audit.md`. CRITICAL: chief complaint text rendered in no-consent grayed variant without consent (DPDP/consent-layer-spec violation). HIGH: no auth guard on mount; own-doctor vs other-doctor visits not distinguished; server-side consent re-verification window. MEDIUM: Request Access has no offline guard; consent accessed event not logged; full placeholder number in comment. **Blocked: mockup must be corrected before live build begins.**
 
 ---
 
@@ -44,10 +44,10 @@ _Carry these into every build/mockup session for these screens._
 | Screen | File | Session | Notes |
 |---|---|---|---|
 | D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit v1 (BLOCKED), persona critique (3.2/5), QA test plan (`reviews/D2-qa-test-plan.md`). C-1/C-2/C-3 fixed (2026-02-20). Security re-audit v2 passed. All HIGH debt items closed (2026-02-22). **Real device verified (2026-02-22) on iPhone via Expo Go:** search bar focus/unfocus, cursor after digit, FAB position, digit entry — all confirmed. Checklist: `reviews/D2-VALIDATION-CHECKLIST.md`. **On `dev`. Do not merge to `main` until H-2 + H-3 resolved.** |
-| D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) | 2026-02-23 | Static mockup with three variants: has data + consent granted (with offline banner option), has data + no consent (amber badge, grayed history, Request Access CTA → D9), empty state (spec-exact message). Indian placeholder data. All touch targets ≥ 48px. Colour palette exact to spec. Checklist: `reviews/D3-VALIDATION-CHECKLIST.md`. **Persona critique complete (3.54/5)** — `reviews/D3-persona-critique.md`. MUST FIX (Request Access confirmation dialog) and SHOULD FIX (visit card expand chevron) applied to mockup. Patient name PII visibility logged as MEDIUM debt. **Next: D3 live screen.** |
+| D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) | 2026-02-23 | Static mockup with three variants: has data + consent granted (with offline banner option), has data + no consent (amber badge, grayed history, Request Access CTA → D9), empty state (spec-exact message). Indian placeholder data. All touch targets ≥ 48px. Colour palette exact to spec. Checklist: `reviews/D3-VALIDATION-CHECKLIST.md`. Persona critique (3.54/5): `reviews/D3-persona-critique.md` — MUST/SHOULD FIX applied. Security audit: `reviews/D3-security-audit.md` — **BLOCKED: CRITICAL** (chief complaint in grayed no-consent variant) + 2 HIGH design issues must be resolved before live build. |
 
 ## Screens Pending
-All remaining screens from screen-inventory.md (next: D3 live screen, then D4 onwards)
+All remaining screens from screen-inventory.md (next: fix D3 mockup CRITICAL findings, then D3 live screen, then D4 onwards)
 
 ---
 
@@ -78,6 +78,13 @@ All remaining screens from screen-inventory.md (next: D3 live screen, then D4 on
 | **H-2:** Certificate pinning not implemented — `apiFetch` uses bare `fetch()` with no SPKI pin; MITM possible on shared clinic WiFi | D2 | Security audit v2 H-2 | Required before merge to main. Use `expo-build-properties` OkHttp interceptor (Android) + NSURLSession delegate (iOS), or `react-native-ssl-pinning`. Pin leaf cert + one intermediate. |
 | **H-3:** Offline patient access generates no audit log — `getRecentPatients` and `searchPatientsByMobile` return PII with zero audit trail when offline | D2 | Security audit v2 H-3 | Required before merge to main. Add `audit_events` SQLite table; call `logLocalAccess()` after each read; flush to server audit log on reconnect via `POST /sync`. |
 
+### CRITICAL — Must fix in D3 mockup before live build begins
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D3-C-1:** Chief complaint text rendered in grayed visit cards in no-consent variant — clinical content visible without consent | D3 | Security audit CRITICAL | `D3PatientDetailHasDataNoConsent` passes full `VISITS` data (including `chiefComplaint`) to grayed `VisitCard` components. In the live build this exposes clinical PHI to an unconsented doctor. Fix in mockup first: pass `chiefComplaint: null` on all visits in the no-consent render path. In live build: API must not return `chiefComplaint` for consent-absent queries. |
+| **D3-C-2:** Own-doctor visits not distinguished from other-doctor visits in no-consent variant — all visits grayed indiscriminately | D3 | Security audit HIGH | consent-layer-spec.md: "View records they created — Without Consent: ✅." All VISITS are grayed in `D3PatientDetailHasDataNoConsent`. Live build API must return `myVisits` (ungated) + `otherDoctorVisits` (consent-gated, no chiefComplaint). Mockup needs a fourth variant or update to no-consent variant to model this correctly. |
+
 ### HIGH — Fix before D3 build
 
 | Item | Screen | Source | Notes |
@@ -99,6 +106,9 @@ All remaining screens from screen-inventory.md (next: D3 live screen, then D4 on
 | "Add New Patient" CTA fires with partial (3–9 digit) query; D5 receives invalid `prefillMobile` | D2 | QA E-8 | Only pass `prefillMobile` if `query.length === 10`. |
 | `recentPatients` not refreshed when background sync completes while D2 is active | D2 | QA E-2 | Use `useFocusEffect` to re-run `getRecentPatients` on screen focus. |
 | Patient full name displayed at 22pt bold in D3 header — no PII dimming option; visible to bystanders in shared clinic waiting areas | D3 | Persona critique SHOULD FIX | Flagged by Shantabai and Arjun. Same principle as D2 mobile number masking (resolved). Address in D3 live build: consider a name-dimming gesture or abbreviated display after screen idle timeout. |
+| Request Access button has no offline guard — stub fires with no feedback when device is offline | D3 | Security audit MEDIUM | In the live build, check network status before showing Alert. If offline, replace with: "Cannot send consent request — no internet connection." Do not show "Send Request" option when offline. |
+| No consent `accessed` audit event emitted when D3 opens with consent granted — DPDP audit trail incomplete | D3 | Security audit MEDIUM | consent-layer-spec.md defines `accessed` event in `consent_audit_log`. Emit to SQLite `audit_events` on D3 mount with consent granted; sync to server on reconnect. Same pattern as H-3 audit log requirement on D2. |
+| Full placeholder phone number written in code comment — establishes risky pattern for live build | D3 | Security audit MEDIUM | `mockups/D3PatientDetailScreen.tsx` line 49: `// full: +91 98765 84627`. Fictional data, but pattern must not be followed in live build. Remove full number from comment. |
 
 ### LOW / SHOULD FIX
 
