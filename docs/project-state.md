@@ -165,6 +165,13 @@ e.g.
 
 ## Environment Setup Notes
 
+### Mobile testing — iPhone via Expo Go (WSL2 Windows)
+- Run: `npm start` — kills port 8081, starts Metro on 8081, opens ngrok tunnel
+- `--host lan` abandoned: WSL2 LAN IP (172.x.x.x) is not reachable from iPhone
+- `--tunnel` (ngrok) is the only reliable approach on WSL2; `@expo/ngrok` in devDependencies
+- URL format: `exp://xxxx-anonymous-8081.exp.direct` — changes every session (ngrok free tier)
+- See `START-DEV.md` in project root for full instructions
+
 ### Web Preview (WSL2 Windows)
 - Pure-HTML preview tool at `web-preview/D2.html` — NOT an Expo build
 - Expo web bundle approach abandoned: react-native-web + Metro dev server

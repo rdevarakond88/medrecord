@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "App.tsx",
   "scripts": {
-    "start": "expo start --host lan",
+    "prestart": "fuser -k 8081/tcp 2>/dev/null || true",
+    "start": "expo start --tunnel --port 8081",
     "web": "python3 -m http.server 3000 --directory web-preview --bind 0.0.0.0",
     "android": "expo start --android --host lan",
     "ios": "expo start --ios --host lan"
