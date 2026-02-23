@@ -4,7 +4,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 ## Current Status
 **Phase:** D3 mockup revised post-persona-critique — next: D3 live screen
 **Last Updated:** 2026-02-23
-**Last Session:** D3 pre-build setup (2026-02-23). Created `reviews/D3-VALIDATION-CHECKLIST.md` (57 items across 7 sections) before any code written. Built `mockups/D3PatientDetailScreen.tsx` with three exported variants: `D3PatientDetailHasDataConsentGranted` (green badge, full visit list, inline expand, optional offline banner), `D3PatientDetailHasDataNoConsent` (amber badge, grayed history, consent gate + Request Access CTA), `D3PatientDetailEmptyState` (no visits, spec-exact empty state message). Indian placeholder data throughout. All touch targets ≥ 48px. Colour palette exact to spec. **Next: D3 persona critique.**
+**Last Session:** D3 persona critique fixes (2026-02-23). Ran persona critique on `mockups/D3PatientDetailScreen.tsx` (3.54/5 — `reviews/D3-persona-critique.md`). Applied MUST FIX: `Alert.alert` confirmation dialog on Request Access button (shows masked mobile, stubs D9 wire-up). Applied SHOULD FIX: expand chevron (`›`, rotates 90° when open) on visit cards. Logged patient name PII visibility as MEDIUM debt. Updated project-state.md. **Next: D3 live screen.**
 
 ---
 
@@ -45,7 +45,7 @@ _Carry these into every build/mockup session for these screens._
 | D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) | 2026-02-23 | Static mockup with three variants: has data + consent granted (with offline banner option), has data + no consent (amber badge, grayed history, Request Access CTA → D9), empty state (spec-exact message). Indian placeholder data. All touch targets ≥ 48px. Colour palette exact to spec. Checklist: `reviews/D3-VALIDATION-CHECKLIST.md`. **Persona critique complete (3.54/5)** — `reviews/D3-persona-critique.md`. MUST FIX (Request Access confirmation dialog) and SHOULD FIX (visit card expand chevron) applied to mockup. Patient name PII visibility logged as MEDIUM debt. **Next: D3 live screen.** |
 
 ## Screens Pending
-All remaining screens from screen-inventory.md (next: D3 persona critique + live screen, then D4 onwards)
+All remaining screens from screen-inventory.md (next: D3 live screen, then D4 onwards)
 
 ---
 
