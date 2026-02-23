@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D3 security audit complete — BLOCKED: 1 critical finding must be fixed in mockup before live build
+**Phase:** D3 mockup complete — all security audit findings addressed; ready for live build
 **Last Updated:** 2026-02-23
-**Last Session:** D3 security audit (2026-02-23). Ran security audit on `mockups/D3PatientDetailScreen.tsx` — `reviews/D3-security-audit.md`. CRITICAL: chief complaint text rendered in no-consent grayed variant without consent (DPDP/consent-layer-spec violation). HIGH: no auth guard on mount; own-doctor vs other-doctor visits not distinguished; server-side consent re-verification window. MEDIUM: Request Access has no offline guard; consent accessed event not logged; full placeholder number in comment. **Blocked: mockup must be corrected before live build begins.**
+**Last Session:** D3 security audit fixes (2026-02-23). Fixed CRITICAL D3-C-1: `chiefComplaint: null` passed to all grayed cards in `D3PatientDetailHasDataNoConsent`. Fixed HIGH D3-C-2: added fourth variant `D3PatientDetailHasDataOwnVisitsOnly` with `VISITS_OWN` (expandable, full data) + `VISITS_OTHER` (grayed, `chiefComplaint: null`) modelling the two-list API shape. Added HIGH live-build debt item for `myVisits` + `otherDoctorVisits` API split. **Next: D3 live screen.**
 
 ---
 
@@ -31,6 +31,9 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Carry these into every build/mockup session for these screens._
 
 - **D2 (Patient Search):** Offline SQLite search is the primary implementation path, not a fallback. Write the SQLite path first. The network path layers on top. Show offline state variant as a first-class design state.
+- **D3 (Patient Detail):** API must return two separate visit lists — `myVisits` (doctor's own records, always returned) and `otherDoctorVisits` (consent-gated, `chiefComplaint` excluded at the query layer). Do not rely on UI graying alone. The fourth mockup variant (`D3PatientDetailHasDataOwnVisitsOnly`) models the correct shape. Tracked as D3-H-1.
+- **D3 (Patient Detail):** Do not render visit history until server-side consent re-fetch completes. Use loading skeleton on mount; fall back to SQLite cache only when offline. Nav param is the initial signal only, not the gate. Tracked as D3-H-2.
+- **D3 (Patient Detail):** Add synchronous auth guard (`if (!token || !user) return null`) before any JSX in all variants. Same pattern as D2 live screen. Tracked as D3-H-3.
 - **D3 (Patient Detail):** Patient header must include an edit affordance (stub navigation to profile-edit screen is acceptable for v1) — staff correct mobile numbers from this screen. Do not omit it from the live build. Flagged by Sunita (persona critique SHOULD FIX, not applied to mockup).
 - **D3 (Patient Detail):** Patient full name is displayed at 22pt bold with no PII dimming — visible to bystanders in shared clinic spaces. Address in this live build: implement a name-dimming gesture or abbreviated display after screen idle timeout. Tracked as MEDIUM debt.
 - **D6 (New Visit):** Must include an explicit "consent not yet established" state variant in the mockup. Do not build D6 as if patient consent is always pre-granted — D9 (Consent Request Flow) will wire up later, but D6 must acknowledge the state exists.
@@ -44,10 +47,10 @@ _Carry these into every build/mockup session for these screens._
 | Screen | File | Session | Notes |
 |---|---|---|---|
 | D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit v1 (BLOCKED), persona critique (3.2/5), QA test plan (`reviews/D2-qa-test-plan.md`). C-1/C-2/C-3 fixed (2026-02-20). Security re-audit v2 passed. All HIGH debt items closed (2026-02-22). **Real device verified (2026-02-22) on iPhone via Expo Go:** search bar focus/unfocus, cursor after digit, FAB position, digit entry — all confirmed. Checklist: `reviews/D2-VALIDATION-CHECKLIST.md`. **On `dev`. Do not merge to `main` until H-2 + H-3 resolved.** |
-| D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) | 2026-02-23 | Static mockup with three variants: has data + consent granted (with offline banner option), has data + no consent (amber badge, grayed history, Request Access CTA → D9), empty state (spec-exact message). Indian placeholder data. All touch targets ≥ 48px. Colour palette exact to spec. Checklist: `reviews/D3-VALIDATION-CHECKLIST.md`. Persona critique (3.54/5): `reviews/D3-persona-critique.md` — MUST/SHOULD FIX applied. Security audit: `reviews/D3-security-audit.md` — **BLOCKED: CRITICAL** (chief complaint in grayed no-consent variant) + 2 HIGH design issues must be resolved before live build. |
+| D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) | 2026-02-23 | Static mockup with four variants: consent granted (full list, expandable), no consent (all grayed, `chiefComplaint: null`), own-visits-only (VISITS_OWN expandable + VISITS_OTHER grayed, no clinical content), empty state. Checklist: `reviews/D3-VALIDATION-CHECKLIST.md`. Persona critique (3.54/5): `reviews/D3-persona-critique.md`. Security audit: `reviews/D3-security-audit.md` — CRITICAL + HIGH findings resolved in mockup. **Next: D3 live screen.** |
 
 ## Screens Pending
-All remaining screens from screen-inventory.md (next: fix D3 mockup CRITICAL findings, then D3 live screen, then D4 onwards)
+All remaining screens from screen-inventory.md (next: D3 live screen, then D4 onwards)
 
 ---
 
@@ -82,8 +85,16 @@ All remaining screens from screen-inventory.md (next: fix D3 mockup CRITICAL fin
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D3-C-1:** Chief complaint text rendered in grayed visit cards in no-consent variant — clinical content visible without consent | D3 | Security audit CRITICAL | `D3PatientDetailHasDataNoConsent` passes full `VISITS` data (including `chiefComplaint`) to grayed `VisitCard` components. In the live build this exposes clinical PHI to an unconsented doctor. Fix in mockup first: pass `chiefComplaint: null` on all visits in the no-consent render path. In live build: API must not return `chiefComplaint` for consent-absent queries. |
-| **D3-C-2:** Own-doctor visits not distinguished from other-doctor visits in no-consent variant — all visits grayed indiscriminately | D3 | Security audit HIGH | consent-layer-spec.md: "View records they created — Without Consent: ✅." All VISITS are grayed in `D3PatientDetailHasDataNoConsent`. Live build API must return `myVisits` (ungated) + `otherDoctorVisits` (consent-gated, no chiefComplaint). Mockup needs a fourth variant or update to no-consent variant to model this correctly. |
+| ~~**D3-C-1:** Chief complaint text rendered in grayed visit cards in no-consent variant — clinical content visible without consent~~ | D3 | Security audit CRITICAL | **CLOSED 2026-02-23** — `{ ...visit, chiefComplaint: null }` passed to all grayed `VisitCard` components in `D3PatientDetailHasDataNoConsent`. In live build: API must not return `chiefComplaint` on the consent-absent query path (tracked as HIGH live-build debt below). |
+| ~~**D3-C-2:** Own-doctor visits not distinguished from other-doctor visits in no-consent variant — all visits grayed indiscriminately~~ | D3 | Security audit HIGH | **CLOSED 2026-02-23** — Fourth variant `D3PatientDetailHasDataOwnVisitsOnly` added with `VISITS_OWN` (expandable, full data) and `VISITS_OTHER` (grayed, `chiefComplaint: null`). Models the `myVisits` + `otherDoctorVisits` two-list API shape. API split tracked as HIGH live-build debt below. |
+
+### HIGH — Must fix before D3 live build
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D3-H-1:** Live build API must return two separate visit lists — `myVisits` (doctor's own, always returned) and `otherDoctorVisits` (consent-gated, `chiefComplaint` omitted) | D3 | Security audit D3-C-2 / mockup `VISITS_OWN` + `VISITS_OTHER` | The D3 live screen must query visits in two passes: (1) fetch all visits the current doctor created for this patient — always shown; (2) fetch visits by other doctors only when `consent_granted = true` — `chiefComplaint` field must be excluded at the query layer, not the display layer. The fourth mockup variant (`D3PatientDetailHasDataOwnVisitsOnly`) models the correct UI shape. |
+| **D3-H-2:** Server-side consent re-verification must complete before visit history renders — nav param must not be used as the sole gate | D3 | Security audit HIGH | On D3 mount, render a loading skeleton; do not display visit history until server consent re-fetch returns. Fall back to SQLite cache only when `isConnected === false` and display offline banner. consent-layer-spec: "All consent checks must be server-side." |
+| **D3-H-3:** Auth guard on mount — synchronous null-render if token or user is absent | D3 | Security audit HIGH | All three live-build variants must add `if (!token \|\| !user) return null` before any JSX, matching the D2 live screen pattern (PatientSearchScreen.tsx). |
 
 ### HIGH — Fix before D3 build
 

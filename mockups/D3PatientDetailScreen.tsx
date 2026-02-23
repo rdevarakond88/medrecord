@@ -3,10 +3,14 @@
  * D3 — Patient Detail / History
  * Static mockup — implements ui-ux-spec.md § D3
  *
- * Three exported variants:
+ * Four exported variants:
  *   D3PatientDetailHasDataConsentGranted  — visit list visible, green badge
  *                                           (pass offline={true} for offline banner)
- *   D3PatientDetailHasDataNoConsent       — amber badge, history grayed, Request Access
+ *   D3PatientDetailHasDataNoConsent       — amber badge, all history grayed;
+ *                                           chiefComplaint stripped (security audit D3-C-1)
+ *   D3PatientDetailHasDataOwnVisitsOnly   — amber badge; own visits visible + expandable,
+ *                                           other doctors' visits grayed with no clinical
+ *                                           content (security audit D3-C-2)
  *   D3PatientDetailEmptyState             — no visits, empty state message
  *
  * No real data wired. All content is static placeholder.
@@ -86,6 +90,54 @@ const VISITS: Visit[] = [
     date:           '02/03/2025',
     chiefComplaint: 'Knee pain, difficulty walking',
     clinicName:     'Sri Dhanvantri Clinic, Bangalore',
+    recordCount:    5,
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Partial-access placeholder data — models the two-list API shape required
+// by the live build (security audit D3-C-2).
+//
+// VISITS_OWN  — records created by the current doctor; always visible without
+//               consent (consent-layer-spec: "View records they created: ✅").
+// VISITS_OTHER — records created by other doctors; consent required.
+//               chiefComplaint is null throughout — clinical content must not
+//               be fetched or rendered without consent (security audit D3-C-1).
+// ---------------------------------------------------------------------------
+
+// Visits the current doctor created at their own clinic
+const VISITS_OWN: Visit[] = [
+  {
+    id:             'vo1',
+    date:           '18/02/2026',
+    chiefComplaint: 'Persistent cough and mild fever',
+    clinicName:     'Sri Dhanvantri Clinic, Bangalore',
+    recordCount:    3,
+  },
+  {
+    id:             'vo2',
+    date:           '05/11/2025',
+    chiefComplaint: 'Routine checkup',
+    clinicName:     'Sri Dhanvantri Clinic, Bangalore',
+    recordCount:    1,
+  },
+];
+
+// Visits created by other doctors — chiefComplaint null (D3-C-1 + D3-C-2 fix).
+// In the live build the API must not return chiefComplaint on the otherDoctorVisits list.
+const VISITS_OTHER: Visit[] = [
+  {
+    id:             'vx1',
+    date:           '14/07/2025',
+    chiefComplaint: null,   // stripped — consent required for clinical content
+    clinicName:     'Rajiv Gandhi PHC, Anekal',
+    recordCount:    2,
+  },
+  {
+    id:             'vx2',
+    date:           '02/03/2025',
+    chiefComplaint: null,   // stripped — consent required for clinical content
+    clinicName:     'City Hospital, Mysore',
     recordCount:    5,
   },
 ];
@@ -359,9 +411,14 @@ export function D3PatientDetailHasDataNoConsent() {
 
         <Text style={styles.sectionLabel}>Visit History</Text>
 
-        {/* Visit cards grayed — history exists but hidden (checklist item 41) */}
+        {/* Visit cards grayed — chiefComplaint stripped; clinical content must not
+            be rendered without consent (security audit D3-C-1 fix). */}
         {VISITS.map(visit => (
-          <VisitCard key={visit.id} visit={visit} grayed={true} />
+          <VisitCard
+            key={visit.id}
+            visit={{ ...visit, chiefComplaint: null }}
+            grayed={true}
+          />
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -408,6 +465,83 @@ export function D3PatientDetailEmptyState() {
             No previous records.{'\n'}Start the first visit.
           </Text>
         </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Variant 4 — Has data + partial access (own visits visible, other doctors' hidden)
+// Amber badge. Own visits (VISITS_OWN) fully accessible and expandable — the
+// current doctor created these records and can always view them without consent.
+// Other doctors' visits (VISITS_OTHER) grayed with chiefComplaint null — consent
+// required before clinical content is returned by the API.
+// Security audit D3-C-2 fix. Models the two-list API shape: myVisits + otherDoctorVisits.
+// ---------------------------------------------------------------------------
+export function D3PatientDetailHasDataOwnVisitsOnly() {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  function handleCardPress(id: string) {
+    setExpandedId(prev => (prev === id ? null : id));
+  }
+
+  return (
+    <SafeAreaView style={styles.screen}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.surface} />
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <PatientHeader />
+        <ConsentBadge granted={false} />
+
+        {/* New Visit — always active (checklist items 6, 22, 38) */}
+        <TouchableOpacity
+          style={styles.newVisitButton}
+          activeOpacity={0.8}
+          accessibilityLabel="New Visit"
+          accessibilityRole="button"
+        >
+          <Text style={styles.newVisitButtonText}>+ New Visit</Text>
+        </TouchableOpacity>
+
+        {/* Consent gate — scoped to other doctors' visits only, not the doctor's own */}
+        <View style={styles.consentGateBox}>
+          <Text style={styles.consentGateTitle}>Other Doctors' Visits Hidden</Text>
+          <Text style={styles.consentGateBody}>
+            Request patient consent to view records from other doctors
+          </Text>
+          <TouchableOpacity
+            style={styles.requestAccessButton}
+            onPress={handleRequestAccess}
+            activeOpacity={0.8}
+            accessibilityLabel="Request patient access"
+            accessibilityRole="button"
+          >
+            <Text style={styles.requestAccessButtonText}>Request Access</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Own visits — doctor created these; fully accessible without consent */}
+        <Text style={styles.sectionLabel}>My Visits</Text>
+
+        {VISITS_OWN.map(visit => (
+          <VisitCard
+            key={visit.id}
+            visit={visit}
+            expanded={expandedId === visit.id}
+            onPress={() => handleCardPress(visit.id)}
+          />
+        ))}
+
+        {/* Other doctors' visits — grayed; chiefComplaint null (D3-C-1 + D3-C-2 fix) */}
+        <Text style={styles.sectionLabel}>Other Visits</Text>
+
+        {VISITS_OTHER.map(visit => (
+          <VisitCard key={visit.id} visit={visit} grayed={true} />
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
