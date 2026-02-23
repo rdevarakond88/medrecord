@@ -236,6 +236,13 @@ export default function PatientSearchScreen() {
     navigation.navigate('NewPatientForm', { prefillMobile: query });
   }, [navigation, query]);
 
+  // ── Synchronous render guard ─────────────────────────────
+  // All hooks above must run unconditionally (React rules).
+  // This guard fires after hooks, before any JSX is evaluated,
+  // so the screen renders nothing to the display when unauthenticated.
+  // The useEffect above handles the async redirect to Login.
+  if (!token || !user) return null;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />

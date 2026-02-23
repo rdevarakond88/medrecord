@@ -24,6 +24,19 @@ Build: `dev` branch — commits 14b6894, 5aa5ff1
 | 7 | First-digit validation on live keypad | Code reviewed | `handleKeyPress`: `query.length === 0 && key < '6'` → `mobileError` state + red border |
 | 8 | Auth guard on D2 mount | Code reviewed | `useEffect([token, user])` → `navigation.replace('Login')` if either falsy |
 
+## Deferred — fix written, needs D1 navigation stack to test
+
+| # | Item | Status | Notes |
+|---|---|---|---|
+| 12 | 401 session expired — red banner shown + redirect to Login after 2s | 🔶 Deferred | Fix written in `PatientSearchScreen.tsx`. `SessionExpiredBanner` renders on `ApiError.status === 401`; 2s timer then `navigation.replace('Login')`. Needs registered Login route to verify end-to-end. Verify during D1 session. |
+| 13 | Auth guard on D2 mount — unauthenticated user cannot see screen | 🔶 Deferred | Fix written in `PatientSearchScreen.tsx`. Synchronous `if (!token \|\| !user) return null` guard added before JSX (2026-02-23); `useEffect` redirect to Login follows. Needs registered Login route + NavigationContainer to verify. Verify during D1 session. |
+
+## Deferred — needs real device WiFi test
+
+| # | Item | Status | Notes |
+|---|---|---|---|
+| 14 | Captive portal / no-internet WiFi — offline mode activates correctly | 🔶 Deferred | Fix written in `useNetworkStatus.ts`: `isConnected === true && isInternetReachable === true` required for online state; null treated as offline. Cannot reproduce in Expo Go simulator. Test on actual clinic-style WiFi before v1 launch. |
+
 ---
 
 ## Outstanding — not yet device-tested
