@@ -129,6 +129,22 @@ export async function upsertPatientFromServer(
 }
 
 /**
+ * Fetch a single patient by device-local UUID.
+ * Used by D3 on mount to populate the patient header immediately from SQLite,
+ * before the server consent re-fetch completes.
+ * Returns null if the record has been deleted or the ID is wrong.
+ */
+export async function getPatientByLocalId(
+  db: SQLite.SQLiteDatabase,
+  localId: string,
+): Promise<LocalPatient | null> {
+  return db.getFirstAsync<LocalPatient>(
+    `SELECT * FROM patients WHERE local_id = ?`,
+    [localId],
+  );
+}
+
+/**
  * Delete all locally cached patients belonging to the given doctor.
  * Called as part of the logout sequence (before clearAuth) to prevent
  * cross-doctor data leakage on shared clinic devices.

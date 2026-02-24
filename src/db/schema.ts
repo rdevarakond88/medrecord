@@ -74,6 +74,43 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
       entity_type TEXT NOT NULL,
       mapped_at   TEXT NOT NULL
     );
+
+    -- Visit cache — populated from GET /patients/:serverId/visits (D3).
+    -- server_id is the primary key; all rows here come from the server.
+    -- Locally-created draft visits (D6) will use a separate visits_draft table.
+    -- chief_complaint is null for other-doctor visits when consent is absent —
+    -- the server excludes it at the query layer (build constraint D3-H-1).
+    CREATE TABLE IF NOT EXISTS visits (
+      server_id          TEXT PRIMARY KEY,
+      patient_server_id  TEXT NOT NULL,
+      visit_date         TEXT NOT NULL,   -- server-assigned UTC ISO — authoritative (QA E-6)
+      chief_complaint    TEXT,
+      clinic_name        TEXT NOT NULL DEFAULT '',
+      record_count       INTEGER NOT NULL DEFAULT 0,
+      is_own_visit       INTEGER NOT NULL DEFAULT 0,  -- 1=current doctor created it
+      synced_at          TEXT NOT NULL,
+      created_at         TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_visits_patient
+      ON visits (patient_server_id, visit_date DESC);
+
+    -- Audit event log — DPDP Act 2023 §§ 5, 8 (data access audit trail).
+    -- Tracks consent_accessed, patient_searched, and similar auditable events.
+    -- Synced to server via POST /sync on reconnect (tracked as H-3 pre-merge blocker).
+    CREATE TABLE IF NOT EXISTS audit_events (
+      id          TEXT PRIMARY KEY,
+      event_type  TEXT NOT NULL,   -- consent_accessed | patient_searched | etc.
+      doctor_id   TEXT NOT NULL,
+      patient_id  TEXT NOT NULL,   -- server patient ID
+      metadata    TEXT,            -- JSON blob for event-specific fields
+      created_at  TEXT NOT NULL,
+      synced_at   TEXT             -- null until flushed to server POST /sync
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_audit_events_unsynced
+      ON audit_events (synced_at, created_at ASC)
+      WHERE synced_at IS NULL;
   `);
 
   // Migration: add new columns to existing databases that predate this schema.
