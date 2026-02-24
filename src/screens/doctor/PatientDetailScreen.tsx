@@ -101,7 +101,10 @@ export default function PatientDetailScreen() {
   const isOnline   = useNetworkStatus();
   const { token, user } = useAuthStore();
 
-  const { patientLocalId, patientServerId, consentGranted: navConsentGranted } = route.params;
+  // consentGranted nav param is the initial signal only (D3-H-2).
+  // H-1: offline path reads consent_granted from SQLite via getPatientByLocalId, not this
+  // stale nav param — see fetchData offline path below.
+  const { patientLocalId, patientServerId } = route.params;
 
   // ── Component state ─────────────────────────────────────────
   const [patient,             setPatient]             = useState<LocalPatient | null>(null);
@@ -137,9 +140,9 @@ export default function PatientDetailScreen() {
         // ── Online path: server is authoritative ─────────────
         const result = await getPatientVisits(patientServerId, token);
 
-        // Cache both lists to SQLite for offline fallback
-        await upsertVisitsFromServer(db, result.my_visits, true, patientServerId);
-        await upsertVisitsFromServer(db, result.other_doctor_visits, false, patientServerId);
+        // Cache both lists to SQLite for offline fallback — doctor-scoped (H-2)
+        await upsertVisitsFromServer(db, result.my_visits, true, patientServerId, user.id);
+        await upsertVisitsFromServer(db, result.other_doctor_visits, false, patientServerId, user.id);
 
         // Update local consent in SQLite patients table so D2's cache stays fresh
         // (minor hygiene — not a security gate; the server response is the gate)
@@ -147,6 +150,10 @@ export default function PatientDetailScreen() {
           `UPDATE patients SET consent_granted = ?, updated_at = ? WHERE server_id = ?`,
           [result.consent_granted ? 1 : 0, new Date().toISOString(), patientServerId],
         );
+
+        // H-1: refresh patient state so subsequent offline fetchData reads current consent
+        const refreshedPatient = await getPatientByLocalId(db, patientLocalId);
+        if (refreshedPatient) setPatient(refreshedPatient);
 
         setConsentGranted(result.consent_granted);
         setMyVisits(result.my_visits.map(adaptMyVisit));
@@ -159,20 +166,27 @@ export default function PatientDetailScreen() {
 
       } else {
         // ── Offline path: SQLite cache ────────────────────────
-        // Use the nav param as the consent gate when offline (no server available).
-        // Fail secure: treat undefined/null as false.
-        const offlineConsent = navConsentGranted ?? false;
+        // H-1: read consent_granted from SQLite, not from the stale navConsentGranted nav
+        // param which was fixed at D2 navigation time and does not reflect revocations
+        // written to SQLite by prior online D3 fetches. Fail secure: false if not found.
+        const offlineFreshPatient = await getPatientByLocalId(db, patientLocalId);
+        const offlineConsent = offlineFreshPatient?.consent_granted ?? false;
+
+        // H-2: scope cache read to this doctor's rows only
         const cached = patientServerId
-          ? await getCachedVisits(db, patientServerId)
+          ? await getCachedVisits(db, patientServerId, user.id)
           : { myVisits: [], otherVisits: [], lastSyncAt: null };
 
         setConsentGranted(offlineConsent);
         setMyVisits(cached.myVisits);
-        // When offline and no consent: show otherVisits grayed (doctor sees they exist)
-        // When offline and consent granted: show otherVisits fully
-        // chiefComplaint in SQLite may be null if it was absent at last server sync —
-        // this is correct; the server already stripped it before writing to cache.
-        setOtherVisits(cached.otherVisits);
+        // C-1: strip chief_complaint from otherVisits when offline consent is false.
+        // The SQLite cache may hold non-null chief_complaint from a prior consented session.
+        // Opacity alone is not access control — enforce at the data level (security audit C-1).
+        setOtherVisits(
+          offlineConsent
+            ? cached.otherVisits
+            : cached.otherVisits.map((v) => ({ ...v, chief_complaint: null })),
+        );
         setLastVerifiedAt(cached.lastSyncAt);
         setLoadState('loaded');
       }
@@ -187,8 +201,9 @@ export default function PatientDetailScreen() {
 
       // Any other error — fail secure: deny consent, show what SQLite has for own visits
       // consent-layer-spec.md: "Never fail open" (QA H-2, security audit HIGH)
+      // H-2: scope cache read to this doctor's rows only
       const cached = patientServerId
-        ? await getCachedVisits(db, patientServerId)
+        ? await getCachedVisits(db, patientServerId, user.id)
         : { myVisits: [], otherVisits: [], lastSyncAt: null };
 
       setFetchError(
@@ -202,7 +217,7 @@ export default function PatientDetailScreen() {
       setLastVerifiedAt(cached.lastSyncAt);
       setLoadState('error');
     }
-  }, [db, token, user, isOnline, patientServerId, navConsentGranted, navigation]);
+  }, [db, token, user, isOnline, patientServerId, patientLocalId, navigation]);
 
   // Re-run fetchData every time this screen comes into focus:
   //   - Initial mount
@@ -494,14 +509,15 @@ function adaptApiVisit(
   isOwn: boolean = false,
 ): LocalVisit {
   return {
-    server_id:         v.id,
-    patient_server_id: '',          // not needed for display; populated in DB
-    visit_date:        v.visit_date,
-    chief_complaint:   v.chief_complaint,
-    clinic_name:       v.clinic_name,
-    record_count:      v.record_count,
-    is_own_visit:      isOwn,
-    synced_at:         new Date().toISOString(),
+    server_id:           v.id,
+    patient_server_id:   '',    // not needed for display; populated in DB
+    visit_date:          v.visit_date,
+    chief_complaint:     v.chief_complaint,
+    clinic_name:         v.clinic_name,
+    record_count:        v.record_count,
+    is_own_visit:        isOwn,
+    cached_by_doctor_id: '',    // not used for display; populated in DB via upsertVisitsFromServer
+    synced_at:           new Date().toISOString(),
   };
 }
 

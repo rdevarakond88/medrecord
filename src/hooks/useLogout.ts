@@ -5,10 +5,11 @@
  * needs a logout button imports this hook, not clearAuth() directly.
  *
  * Execution order is strictly enforced to prevent cross-doctor data leakage
- * on shared clinic devices (fixes C-1 and C-3):
+ * on shared clinic devices (fixes C-1, C-3, D3-H-3):
  *
  *   1. Read user.id from store BEFORE any state change
- *   2. await clearDoctorPatients(db, doctorId)  — SQLite cleared first
+ *   2. await clearDoctorPatients(db, doctorId)  — patients table cleared first
+ *      await clearDoctorVisits(db, doctorId)    — visits cache cleared (D3-H-3)
  *   3. queryClient.clear()                       — React Query cache cleared
  *   4. clearAuth()                               — in-memory state cleared last
  *
@@ -22,6 +23,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/useAuthStore';
 import { clearDoctorPatients } from '../db/patients';
+import { clearDoctorVisits } from '../db/visits';
 
 export function useLogout(): () => Promise<void> {
   const db          = useSQLiteContext();
@@ -33,9 +35,10 @@ export function useLogout(): () => Promise<void> {
     // Step 1: capture doctor ID before any state is cleared
     const doctorId = user?.id ?? '';
 
-    // Step 2: wipe this doctor's patients from the local SQLite cache
+    // Step 2: wipe this doctor's SQLite caches (patients + visits)
     if (doctorId) {
       await clearDoctorPatients(db, doctorId);
+      await clearDoctorVisits(db, doctorId);    // D3-H-3: visits cache cleared on logout
     }
 
     // Step 3: clear the React Query in-memory cache (prevents session bleed

@@ -15,14 +15,15 @@ import * as SQLite from 'expo-sqlite';
 import * as Crypto from 'expo-crypto';
 
 export interface LocalVisit {
-  server_id:         string;
-  patient_server_id: string;
-  visit_date:        string;         // server-assigned UTC ISO
-  chief_complaint:   string | null;  // null for other-doctor visits without consent
-  clinic_name:       string;
-  record_count:      number;
-  is_own_visit:      boolean;        // true = current doctor created this visit
-  synced_at:         string;         // when this row was last written from a server response
+  server_id:           string;
+  patient_server_id:   string;
+  visit_date:          string;         // server-assigned UTC ISO
+  chief_complaint:     string | null;  // null for other-doctor visits without consent
+  clinic_name:         string;
+  record_count:        number;
+  is_own_visit:        boolean;        // true = current doctor created this visit
+  cached_by_doctor_id: string;         // H-2: doctor who fetched and cached this row (security audit)
+  synced_at:           string;         // when this row was last written from a server response
 }
 
 export interface CachedVisitsResult {
@@ -42,6 +43,7 @@ export interface CachedVisitsResult {
 export async function getCachedVisits(
   db: SQLite.SQLiteDatabase,
   patientServerId: string,
+  doctorId: string,
 ): Promise<CachedVisitsResult> {
   const rows = await db.getAllAsync<
     Omit<LocalVisit, 'is_own_visit' | 'record_count'> & {
@@ -50,9 +52,9 @@ export async function getCachedVisits(
     }
   >(
     `SELECT * FROM visits
-     WHERE patient_server_id = ?
+     WHERE patient_server_id = ? AND cached_by_doctor_id = ?
      ORDER BY visit_date DESC`,
-    [patientServerId],
+    [patientServerId, doctorId],
   );
 
   // SQLite stores booleans as integers — normalise to JS
@@ -96,20 +98,22 @@ export async function upsertVisitsFromServer(
   }>,
   isOwnVisit: boolean,
   patientServerId: string,
+  doctorId: string,
 ): Promise<void> {
   const now = new Date().toISOString();
   for (const v of visits) {
     await db.runAsync(
       `INSERT INTO visits
          (server_id, patient_server_id, visit_date, chief_complaint,
-          clinic_name, record_count, is_own_visit, synced_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          clinic_name, record_count, is_own_visit, cached_by_doctor_id, synced_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(server_id) DO UPDATE SET
-         chief_complaint = excluded.chief_complaint,
-         clinic_name     = excluded.clinic_name,
-         record_count    = excluded.record_count,
-         is_own_visit    = excluded.is_own_visit,
-         synced_at       = excluded.synced_at`,
+         chief_complaint     = excluded.chief_complaint,
+         clinic_name         = excluded.clinic_name,
+         record_count        = excluded.record_count,
+         is_own_visit        = excluded.is_own_visit,
+         cached_by_doctor_id = excluded.cached_by_doctor_id,
+         synced_at           = excluded.synced_at`,
       [
         v.id,
         patientServerId,
@@ -118,10 +122,26 @@ export async function upsertVisitsFromServer(
         v.clinic_name,
         v.record_count,
         isOwnVisit ? 1 : 0,
+        doctorId,
         now,
       ],
     );
   }
+}
+
+/**
+ * Delete all cached visits for the given doctor from SQLite.
+ * Called during logout to prevent cross-doctor data leakage on shared devices.
+ * Requires the cached_by_doctor_id column added by the H-2 security fix.
+ */
+export async function clearDoctorVisits(
+  db: SQLite.SQLiteDatabase,
+  doctorId: string,
+): Promise<void> {
+  await db.runAsync(
+    `DELETE FROM visits WHERE cached_by_doctor_id = ?`,
+    [doctorId],
+  );
 }
 
 /**

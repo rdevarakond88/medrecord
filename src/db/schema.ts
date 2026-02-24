@@ -87,13 +87,16 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
       chief_complaint    TEXT,
       clinic_name        TEXT NOT NULL DEFAULT '',
       record_count       INTEGER NOT NULL DEFAULT 0,
-      is_own_visit       INTEGER NOT NULL DEFAULT 0,  -- 1=current doctor created it
-      synced_at          TEXT NOT NULL,
-      created_at         TEXT NOT NULL DEFAULT (datetime('now'))
+      is_own_visit         INTEGER NOT NULL DEFAULT 0,  -- 1=current doctor created it
+      cached_by_doctor_id  TEXT NOT NULL DEFAULT '',    -- H-2: doctor who cached this row
+      synced_at            TEXT NOT NULL,
+      created_at           TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_visits_patient
       ON visits (patient_server_id, visit_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_visits_doctor_patient
+      ON visits (cached_by_doctor_id, patient_server_id, visit_date DESC);
 
     -- Audit event log — DPDP Act 2023 §§ 5, 8 (data access audit trail).
     -- Tracks consent_accessed, patient_searched, and similar auditable events.
@@ -126,6 +129,13 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
   try {
     await db.execAsync(
       `ALTER TABLE patients ADD COLUMN consent_granted INTEGER NOT NULL DEFAULT 0;`,
+    );
+  } catch {
+    // Column already exists — safe to ignore.
+  }
+  try {
+    await db.execAsync(
+      `ALTER TABLE visits ADD COLUMN cached_by_doctor_id TEXT NOT NULL DEFAULT '';`,
     );
   } catch {
     // Column already exists — safe to ignore.

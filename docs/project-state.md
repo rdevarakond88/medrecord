@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D3 live screen complete — all pre-conditions met; ready for D4
+**Phase:** D3 live screen complete — all pre-conditions met; security audit critical and high findings fixed; ready for D4
 **Last Updated:** 2026-02-24
-**Last Session:** D3 live build (2026-02-24). `src/screens/doctor/PatientDetailScreen.tsx`. D3-H-1 (two-list API via `getPatientVisits()`), D3-H-2 (loading skeleton on mount, server consent gate, offline SQLite fallback), D3-H-3 (synchronous auth guard). Also added: `src/api/visits.ts`, `src/db/visits.ts`, schema migrations (visits + audit_events tables), `getPatientByLocalId()` in db/patients. FlatList replaces ScrollView+map. Dynamic consent transition via `useFocusEffect`. AppState foreground re-verify. Offline guard on Request Access. DPDP audit event write (SQLite; server sync deferred). All D3 HIGH pre-merge debt closed. **Next: D4 live screen (Visit Detail).**
+**Last Session:** D3 security audit fixes (2026-02-24). Fixed all CRITICAL and HIGH findings from `reviews/D3-live-security-audit.md`: C-1 (strip `chief_complaint` from offline `otherVisits` when consent false), H-1 (read consent from SQLite via `getPatientByLocalId`, not stale nav param), H-2 (`cached_by_doctor_id` column added to visits table; `getCachedVisits` + `upsertVisitsFromServer` scoped to doctor), H-3 (`clearDoctorVisits()` added + called in `useLogout` after `clearDoctorPatients`). Modified: `src/db/visits.ts`, `src/db/schema.ts`, `src/hooks/useLogout.ts`, `src/screens/doctor/PatientDetailScreen.tsx`. **Next: D4 live screen (Visit Detail).**
 
 ---
 
@@ -80,6 +80,20 @@ All remaining screens from screen-inventory.md (next: D4 — Visit Detail, then 
 |---|---|---|---|
 | **H-2:** Certificate pinning not implemented — `apiFetch` uses bare `fetch()` with no SPKI pin; MITM possible on shared clinic WiFi | D2 | Security audit v2 H-2 | Required before merge to main. Use `expo-build-properties` OkHttp interceptor (Android) + NSURLSession delegate (iOS), or `react-native-ssl-pinning`. Pin leaf cert + one intermediate. |
 | **H-3:** Offline patient access generates no audit log — `getRecentPatients` and `searchPatientsByMobile` return PII with zero audit trail when offline | D2 | Security audit v2 H-3 | Required before merge to main. Add `audit_events` SQLite table; call `logLocalAccess()` after each read; flush to server audit log on reconnect via `POST /sync`. |
+
+### CRITICAL — D3 live screen security audit
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| ~~**C-1:** `chief_complaint` rendered in grayed visit cards via stale SQLite cache in offline path when `offlineConsent=false` — consent-layer-spec Rule 2 violation~~ | D3 | D3 live security audit C-1 | **CLOSED 2026-02-24** — offline path strips `chief_complaint` from `otherVisits` when `offlineConsent=false`: `cached.otherVisits.map(v => ({ ...v, chief_complaint: null }))`. Enforced at data assignment, not in `VisitCard`. Online path was already safe (server excludes at query layer). |
+
+### HIGH — D3 live screen security audit
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| ~~**H-1:** Offline consent gate used stale `navConsentGranted` nav param instead of SQLite — ignored consent revocations written by prior online fetches~~ | D3 | D3 live security audit H-1 | **CLOSED 2026-02-24** — offline path calls `getPatientByLocalId(db, patientLocalId)` to get fresh `consent_granted`; online path refreshes `patient` state after `UPDATE patients SET consent_granted`. `navConsentGranted` no longer referenced. |
+| ~~**H-2:** `visits` table not doctor-scoped — `getCachedVisits` returned any doctor's rows for a patient; cross-doctor data leakage in offline path~~ | D3 | D3 live security audit H-2 | **CLOSED 2026-02-24** — `cached_by_doctor_id TEXT NOT NULL DEFAULT ''` column added to `visits` table (schema + migration); `getCachedVisits(db, patientId, doctorId)` and `upsertVisitsFromServer(..., doctorId)` now filter/write by doctor. New index `idx_visits_doctor_patient` added. |
+| ~~**H-3:** `useLogout` did not clear `visits` table — clinical visit data persisted across logout/login on shared devices~~ | D3 | D3 live security audit H-3 | **CLOSED 2026-02-24** — `clearDoctorVisits(db, doctorId)` added to `src/db/visits.ts`; called in `useLogout` as step 2b, immediately after `clearDoctorPatients`. |
 
 ### CRITICAL — Must fix in D3 mockup before live build begins
 
