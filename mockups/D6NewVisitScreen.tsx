@@ -524,6 +524,13 @@ export function D6NewVisitOffline() {
 // Variant 5 — No Consent (consent not yet established — per D6 project-state constraint)
 // ---------------------------------------------------------------------------
 export function D6NewVisitNoConsent() {
+  const [hintHighlighted, setHintHighlighted] = useState(false);
+
+  const handleDisabledPress = () => {
+    setHintHighlighted(true);
+    setTimeout(() => setHintHighlighted(false), 800);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScreenHeader />
@@ -587,7 +594,10 @@ export function D6NewVisitNoConsent() {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <SaveButton enabled={false} />
+        <SaveButton enabled={false} onDisabledPress={handleDisabledPress} />
+        <Text style={[styles.saveHint, hintHighlighted && styles.saveHintHighlighted]}>
+          Add a scan or note to save this visit.
+        </Text>
       </View>
     </SafeAreaView>
   );
