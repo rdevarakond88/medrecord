@@ -162,6 +162,7 @@ function ScanThumbnail({ offline = false }: ScanThumbProps) {
       </View>
       <TouchableOpacity
         style={styles.scanThumbRemove}
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         accessibilityLabel="Remove scan"
         accessibilityRole="button"
       >
@@ -1020,8 +1021,9 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   scanThumbRemove: {
-    width: 36,
-    height: 36,
+    // touch target 48×48px — ui-ux-spec.md compliance
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
