@@ -237,7 +237,7 @@ export function D6NewVisitEmpty() {
 
         {/* Chief complaint */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Chief Complaint</Text>
+          <Text style={styles.sectionLabel}>Chief Complaint (optional)</Text>
           <TextInput
             style={styles.chiefComplaintInput}
             placeholder="Why did patient visit? (Optional)"
@@ -318,7 +318,7 @@ export function D6NewVisitWithNote() {
 
         {/* Chief complaint — filled */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Chief Complaint</Text>
+          <Text style={styles.sectionLabel}>Chief Complaint (optional)</Text>
           <TextInput
             style={[styles.chiefComplaintInput, styles.chiefComplaintFilled]}
             defaultValue="Chest pain and breathlessness since 2 days"
@@ -386,7 +386,7 @@ export function D6NewVisitWithScan() {
 
         {/* Chief complaint — filled */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Chief Complaint</Text>
+          <Text style={styles.sectionLabel}>Chief Complaint (optional)</Text>
           <TextInput
             style={[styles.chiefComplaintInput, styles.chiefComplaintFilled]}
             defaultValue="Routine follow-up — diabetes management"
@@ -465,7 +465,7 @@ export function D6NewVisitOffline() {
 
         {/* Chief complaint */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Chief Complaint</Text>
+          <Text style={styles.sectionLabel}>Chief Complaint (optional)</Text>
           <TextInput
             style={styles.chiefComplaintInput}
             placeholder="Why did patient visit? (Optional)"
@@ -537,7 +537,7 @@ export function D6NewVisitNoConsent() {
 
         {/* Chief complaint */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Chief Complaint</Text>
+          <Text style={styles.sectionLabel}>Chief Complaint (optional)</Text>
           <TextInput
             style={styles.chiefComplaintInput}
             placeholder="Why did patient visit? (Optional)"
@@ -618,7 +618,7 @@ export function D6NewVisitNoConsentHasNote() {
 
         {/* Chief complaint — filled */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Chief Complaint</Text>
+          <Text style={styles.sectionLabel}>Chief Complaint (optional)</Text>
           <TextInput
             style={[styles.chiefComplaintInput, styles.chiefComplaintFilled]}
             defaultValue="Headache for 3 days"
@@ -690,7 +690,7 @@ export function D6NewVisitSaving() {
 
         {/* Chief complaint — filled */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Chief Complaint</Text>
+          <Text style={styles.sectionLabel}>Chief Complaint (optional)</Text>
           <TextInput
             style={[styles.chiefComplaintInput, styles.chiefComplaintFilled]}
             defaultValue="Routine follow-up — diabetes management"
