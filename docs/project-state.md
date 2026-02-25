@@ -53,7 +53,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | Status | Notes |
 |---|---|---|
-| D6 — New Visit | Mockup + checklist done (`mockups/D6NewVisitScreen.tsx`, `reviews/D6-VALIDATION-CHECKLIST.md`). Live build not started. | Tier 1 Critical. 6 state variants in mockup. Checklist: 65 items. |
+| D6 — New Visit | Mockup + checklist done (`mockups/D6NewVisitScreen.tsx`, `reviews/D6-VALIDATION-CHECKLIST.md`). Persona critique v2 complete (`reviews/D6-persona-critique-v2.md`). Live build not started. | Tier 1 Critical. 7 state variants in mockup (added D6NewVisitNoConsentHasNote). Checklist: 65 items. Persona v2 score: 3.98/5 — Ship as-is (2 pre-build corrections required: D6-M-4, D6-S-5). |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | Not started | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
@@ -129,6 +129,18 @@ _Carry these into every build/mockup session for these screens._
 | ~~**H-3 (UX):** No validation on first digit of Indian mobile number (valid: 6–9); numbers starting 0–5 trigger server lookup and may create invalid patient records~~ | D2 | Security audit M-2 / QA H-3 | **CLOSED** — `handleKeyPress` rejects digits 0–5 on first keystroke; sets `mobileError` state; inline red message "Mobile numbers start with 6–9" shown below search bar; cleared on valid input or clear. |
 | ~~**H-4:** No auth guard on D2 mount; `getRecentPatients` runs before `token` is confirmed non-null~~ | D2 | Security audit L-3 / QA H-4 | **CLOSED** — `useEffect` on `[token, user]` calls `navigation.replace('Login')` if either is falsy; both `getRecentPatients` and `searchPatientsByMobile` effects guarded with `if (!token \|\| !user) return`. **Upgraded 2026-02-23:** synchronous `if (!token \|\| !user) return null` added at line 244 before JSX — screen renders nothing on first frame when unauthenticated. End-to-end verification deferred to D1 session (needs NavigationContainer + registered Login route). See checklist item 13. |
 | ~~**H-5:** `useNetworkStatus` returns `true` when `isInternetReachable` is `null` (unconfirmed); triggers false server lookups on captive portal / no-internet WiFi~~ | D2 | QA H-5 | **CLOSED** — condition changed to `isConnected === true && isInternetReachable === true`; initial state changed to `false`; null treated as offline. |
+
+### MUST FIX — D6 mockup (fix before live build begins)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D6-M-4:** `D6NewVisitNoConsent` (Variant 5/7) disabled Save button has no tap feedback or hint text — M1 pattern not extended to this variant; consent notice + silent disabled button coexist, risking live-build misimplementation of Save as consent-gated | D6 | Persona critique v2 — Dr. Sinha, Sunita | Add `onDisabledPress` handler + `<Text style={styles.saveHint}>` to `D6NewVisitNoConsent` bottomBar, matching the pattern already implemented in `D6NewVisitEmpty`. All styles exist; only wiring is missing. |
+
+### SHOULD FIX — D6 mockup (fix before live build begins)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D6-S-5:** `DOCTOR` constant declared at line 66 is never referenced; `ScreenHeader` hardcodes `"City Clinic · Dr. Sharma"` instead of `{DOCTOR.clinic} · {DOCTOR.name}` — dead code; confuses live builder about which variable drives clinic attribution line | D6 | Persona critique v2 — Dr. Nair | Replace hardcoded string with `{DOCTOR.clinic} · {DOCTOR.name}` in `ScreenHeader`. |
 
 ### MEDIUM — Fix before production
 
