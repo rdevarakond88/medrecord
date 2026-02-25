@@ -174,12 +174,19 @@ function ScanThumbnail({ offline = false }: ScanThumbProps) {
 interface SaveButtonProps {
   enabled: boolean;
   saving?: boolean;
+  onDisabledPress?: () => void;
 }
-function SaveButton({ enabled, saving = false }: SaveButtonProps) {
+function SaveButton({ enabled, saving = false, onDisabledPress }: SaveButtonProps) {
+  // When disabled but a tap handler is provided, keep the button touchable so
+  // the handler fires — but suppress the press-opacity animation (activeOpacity=1)
+  // so the disabled visual appearance is unchanged.
+  const isInteractiveDisabled = !enabled && !!onDisabledPress;
   return (
     <TouchableOpacity
       style={[styles.saveButton, !enabled && styles.saveButtonDisabled]}
-      disabled={!enabled}
+      disabled={!enabled && !onDisabledPress}
+      onPress={isInteractiveDisabled ? onDisabledPress : undefined}
+      activeOpacity={isInteractiveDisabled ? 1 : 0.8}
       accessibilityLabel={
         saving
           ? 'Saving visit…'
@@ -206,6 +213,13 @@ function SaveButton({ enabled, saving = false }: SaveButtonProps) {
 // Variant 1 — Empty (no record added)
 // ---------------------------------------------------------------------------
 export function D6NewVisitEmpty() {
+  const [hintHighlighted, setHintHighlighted] = useState(false);
+
+  const handleDisabledPress = () => {
+    setHintHighlighted(true);
+    setTimeout(() => setHintHighlighted(false), 800);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScreenHeader />
@@ -269,7 +283,10 @@ export function D6NewVisitEmpty() {
 
       {/* Save button anchored at bottom */}
       <View style={styles.bottomBar}>
-        <SaveButton enabled={false} />
+        <SaveButton enabled={false} onDisabledPress={handleDisabledPress} />
+        <Text style={[styles.saveHint, hintHighlighted && styles.saveHintHighlighted]}>
+          Add a scan or note to save this visit.
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -1066,5 +1083,17 @@ const styles = StyleSheet.create({
   },
   saveButtonTextDisabled: {
     color: Colors.textDisabled,
+  },
+
+  // Save hint (Empty variant only)
+  saveHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  saveHintHighlighted: {
+    fontWeight: '700',
+    color: Colors.warning,
   },
 });
