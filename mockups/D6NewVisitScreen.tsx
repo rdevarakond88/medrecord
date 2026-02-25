@@ -119,8 +119,10 @@ function ConsentNoticeBanner() {
       <View style={styles.consentNoticeTextGroup}>
         <Text style={styles.consentNoticeTitle}>Consent not yet established</Text>
         <Text style={styles.consentNoticeBody}>
-          This visit will create an implicit consent request. The patient will be
-          notified on their next app open.
+          This patient hasn't set up record sharing yet. This visit will be
+          saved to your device. They will be asked to approve sharing the next
+          time they open the app. If they don't have the app, ask them to
+          download it or request their consent in person.
         </Text>
       </View>
     </View>
