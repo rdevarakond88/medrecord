@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D2→D3 navigation wired and verified on real device; ready for D4
-**Last Updated:** 2026-02-24
-**Last Session:** Navigation wiring + real-device verification (2026-02-24). Created production `App.tsx` root (NavigationContainer + SQLiteProvider + QueryClientProvider). Installed missing dependencies: `expo-sqlite`, `expo-crypto`, `@tanstack/react-query`, `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens`, `react-native-safe-area-context`, `@react-native-community/netinfo`, `zustand`. Added `Login` stub (seeds fake doctor token + 2 test patients) and `NewPatientForm` stub (D5 not yet built). Fixed FAB overlap with keypad key 3 in live screen: removed `position:absolute,bottom:320`, moved FAB into `fabRow` flex row between ScrollView and NumericKeypad. Verified on real iPhone via Expo Go: Login stub → D2 (recent patients visible) → D3 (patient detail). **Next: D4 live screen (Visit Detail).**
+**Phase:** D2→D3 live screens complete and device-verified; D6 mockup and validation checklist added; ready for D6 live build or D4 live screen
+**Last Updated:** 2026-02-25
+**Last Session:** D6 mockup session (2026-02-25). Created `mockups/D6NewVisitScreen.tsx` with 6 state variants (Empty, HasNote, HasScan, Offline, NoConsent, Saving). Created `reviews/D6-VALIDATION-CHECKLIST.md` (65 items across 7 sections). Both committed to `dev`. Note: D6 is Tier 1 Critical (same tier as D2/D3 per screen-inventory.md); D4 is Tier 3. Recommended next step is D6 live build (not D4), or D4 if consent/visit-detail flow is prioritised. **Next: D6 live screen (New Visit) OR D4 (Visit Detail).**
 
 ---
 
@@ -50,7 +50,17 @@ _Carry these into every build/mockup session for these screens._
 | D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) / `src/screens/doctor/PatientDetailScreen.tsx` (live) | 2026-02-23 / 2026-02-24 | Static mockup with four variants approved. Live screen wired: `getPatientVisits()` two-list API (`myVisits` + `otherDoctorVisits`), loading skeleton on mount, server consent gate (D3-H-2), offline SQLite fallback (`getCachedVisits()`), synchronous auth guard (D3-H-3), `useFocusEffect` for dynamic consent transition on D9 return, AppState foreground re-verify, offline guard on Request Access, DPDP audit event to `audit_events` table, FlatList with `maxToRenderPerBatch={10}` + client-side pagination, `recordCount=0 → 'Draft'`, `numberOfLines={1}` on patient name, no consent badge on empty state, last-verified timestamp in offline banner, per-variant consent gate box, "View Full Visit" disabled stub until D4. Supporting modules: `src/api/visits.ts`, `src/db/visits.ts`, `getPatientByLocalId()` in db/patients. Schema: visits + audit_events tables. All D3 HIGH pre-merge debt closed. |
 
 ## Screens Pending
-All remaining screens from screen-inventory.md (next: D4 — Visit Detail, then D5 onwards)
+
+| Screen | Status | Notes |
+|---|---|---|
+| D6 — New Visit | Mockup + checklist done (`mockups/D6NewVisitScreen.tsx`, `reviews/D6-VALIDATION-CHECKLIST.md`). Live build not started. | Tier 1 Critical. 6 state variants in mockup. Checklist: 65 items. |
+| D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
+| D7 — Document Scanner | Not started | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
+| D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
+| D1 — Login / OTP | Stub only (seeds fake token) | Tier 3. Replace stub when OTP auth is implemented. |
+| D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
+| D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
+| P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
 
 ---
 
