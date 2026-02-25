@@ -588,6 +588,86 @@ export function D6NewVisitNoConsent() {
 }
 
 // ---------------------------------------------------------------------------
+// Save is enabled by the presence of a record.
+// Consent status has no effect on Save availability.
+// The consent notice is informational only.
+// Variant 7 — No Consent, Has Note (Save active)
+// ---------------------------------------------------------------------------
+export function D6NewVisitNoConsentHasNote() {
+  const NOTE =
+    'Patient reports persistent headache for 3 days. BP 122/78 mmHg. ' +
+    'No fever, no vomiting. Prescribed Paracetamol 500mg TDS for 3 days. ' +
+    'Advised rest and hydration. Return if symptoms worsen.';
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScreenHeader />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Consent notice — informational, does not block Save */}
+        <ConsentNoticeBanner />
+
+        {/* Visit date */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Visit Date</Text>
+          <DatePill date={TODAY} />
+        </View>
+
+        {/* Chief complaint — filled */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Chief Complaint</Text>
+          <TextInput
+            style={[styles.chiefComplaintInput, styles.chiefComplaintFilled]}
+            defaultValue="Headache for 3 days"
+            placeholderTextColor={Colors.textDisabled}
+            multiline
+            maxLength={200}
+            accessibilityLabel="Chief complaint"
+          />
+        </View>
+
+        {/* Record entry zone — note filled; Save becomes active */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Add a Record</Text>
+
+          <TouchableOpacity
+            style={styles.scanCtaSecondary}
+            accessibilityLabel="Scan a document"
+            accessibilityRole="button"
+          >
+            <Text style={styles.scanCtaSecondaryText}>📷  Add a Scan</Text>
+          </TouchableOpacity>
+
+          <View style={styles.orDivider}>
+            <View style={styles.orLine} />
+            <Text style={styles.orText}>OR</Text>
+            <View style={styles.orLine} />
+          </View>
+
+          {/* Note filled — this is what enables Save */}
+          <TextInput
+            style={[styles.noteInput, styles.noteInputFilled]}
+            defaultValue={NOTE}
+            multiline
+            textAlignVertical="top"
+            accessibilityLabel="Visit note"
+          />
+          <Text style={styles.charCount}>{NOTE.length}/2000</Text>
+        </View>
+      </ScrollView>
+
+      {/* Save active — consent notice does not disable this */}
+      <View style={styles.bottomBar}>
+        <SaveButton enabled={true} />
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Variant 6 — Saving in Progress
 // ---------------------------------------------------------------------------
 export function D6NewVisitSaving() {
@@ -653,33 +733,39 @@ export default function D6AllVariants() {
   return (
     <ScrollView style={styles.previewScroll}>
       <Text style={styles.previewHeading}>D6 — New Visit · All Variants</Text>
+      {/* 7 variants total — see variant 7 for Save-enabled-with-consent-notice proof */}
 
-      <Text style={styles.variantLabel}>1 / 6  Empty (Save Disabled)</Text>
+      <Text style={styles.variantLabel}>1 / 7  Empty (Save Disabled)</Text>
       <View style={styles.variantFrame}>
         <D6NewVisitEmpty />
       </View>
 
-      <Text style={styles.variantLabel}>2 / 6  Has Note (Save Active)</Text>
+      <Text style={styles.variantLabel}>2 / 7  Has Note (Save Active)</Text>
       <View style={styles.variantFrame}>
         <D6NewVisitWithNote />
       </View>
 
-      <Text style={styles.variantLabel}>3 / 6  Has Scan (Save Active)</Text>
+      <Text style={styles.variantLabel}>3 / 7  Has Scan (Save Active)</Text>
       <View style={styles.variantFrame}>
         <D6NewVisitWithScan />
       </View>
 
-      <Text style={styles.variantLabel}>4 / 6  Offline</Text>
+      <Text style={styles.variantLabel}>4 / 7  Offline</Text>
       <View style={styles.variantFrame}>
         <D6NewVisitOffline />
       </View>
 
-      <Text style={styles.variantLabel}>5 / 6  Consent Not Yet Established</Text>
+      <Text style={styles.variantLabel}>5 / 7  Consent Not Yet Established</Text>
       <View style={styles.variantFrame}>
         <D6NewVisitNoConsent />
       </View>
 
-      <Text style={styles.variantLabel}>6 / 6  Saving In Progress</Text>
+      <Text style={styles.variantLabel}>6 / 7  Consent Notice + Note → Save Active</Text>
+      <View style={styles.variantFrame}>
+        <D6NewVisitNoConsentHasNote />
+      </View>
+
+      <Text style={styles.variantLabel}>7 / 7  Saving In Progress</Text>
       <View style={styles.variantFrame}>
         <D6NewVisitSaving />
       </View>
