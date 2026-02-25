@@ -140,6 +140,7 @@ function DatePill({ date }: DatePillProps) {
       <Text style={styles.datePillIcon}>📅</Text>
       <Text style={styles.datePillDate}>{date}</Text>
       <Text style={styles.datePillChevron}>›</Text>
+      <Text style={styles.datePillChange}>Change</Text>
     </TouchableOpacity>
   );
 }
@@ -965,6 +966,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: Colors.textSecondary,
     fontWeight: '300',
+  },
+  datePillChange: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginLeft: 4,
   },
 
   // Chief complaint input
