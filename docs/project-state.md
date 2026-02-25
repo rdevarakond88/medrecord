@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D3 live screen complete — all pre-conditions met; security audit critical and high findings fixed; ready for D4
+**Phase:** D2→D3 navigation wired and verified on real device; ready for D4
 **Last Updated:** 2026-02-24
-**Last Session:** D3 security audit fixes (2026-02-24). Fixed all CRITICAL and HIGH findings from `reviews/D3-live-security-audit.md`: C-1 (strip `chief_complaint` from offline `otherVisits` when consent false), H-1 (read consent from SQLite via `getPatientByLocalId`, not stale nav param), H-2 (`cached_by_doctor_id` column added to visits table; `getCachedVisits` + `upsertVisitsFromServer` scoped to doctor), H-3 (`clearDoctorVisits()` added + called in `useLogout` after `clearDoctorPatients`). Modified: `src/db/visits.ts`, `src/db/schema.ts`, `src/hooks/useLogout.ts`, `src/screens/doctor/PatientDetailScreen.tsx`. **Next: D4 live screen (Visit Detail).**
+**Last Session:** Navigation wiring + real-device verification (2026-02-24). Created production `App.tsx` root (NavigationContainer + SQLiteProvider + QueryClientProvider). Installed missing dependencies: `expo-sqlite`, `expo-crypto`, `@tanstack/react-query`, `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens`, `react-native-safe-area-context`, `@react-native-community/netinfo`, `zustand`. Added `Login` stub (seeds fake doctor token + 2 test patients) and `NewPatientForm` stub (D5 not yet built). Fixed FAB overlap with keypad key 3 in live screen: removed `position:absolute,bottom:320`, moved FAB into `fabRow` flex row between ScrollView and NumericKeypad. Verified on real iPhone via Expo Go: Login stub → D2 (recent patients visible) → D3 (patient detail). **Next: D4 live screen (Visit Detail).**
 
 ---
 
@@ -126,6 +126,7 @@ All remaining screens from screen-inventory.md (next: D4 — Visit Detail, then 
 |---|---|---|---|
 | Full mobile numbers displayed in `PatientRow` — PII visible to bystanders in shared clinic spaces | D2 | Persona critique MUST FIX / QA M-2 | Use `formatMobile(mobile, true)` (last 5 digits only) in list view. Full number only in D3 post-consent. |
 | Clear button touch target is 28×28px; below WCAG AA 44×44px minimum | D2 | Persona critique MUST FIX / QA M-3 | Expand `hitSlop` or increase button size to 44×44. |
+| ~~FAB overlaps keypad key 3 in live screen — `position:absolute,bottom:320` fragile across device heights~~ | D2 | Real-device session 2026-02-24 | **CLOSED 2026-02-24** — FAB moved into `fabRow` flex row (flexDirection:row, justifyContent:flex-end) between ScrollView and NumericKeypad; position:absolute removed. Verified on iPhone. |
 | `searchPatientsByMobile` LIKE query not prefix-anchored (`%123%`); common digit sequences return noisy results | D2 | QA E-6 | Change to prefix-anchored LIKE pattern (`123%`). |
 | Double-tap on `PatientRow` pushes two D3 screens onto navigation stack | D2 | QA E-7 | Add tap-guard ref; disable `onPress` immediately on first tap. |
 | "Add New Patient" CTA fires with partial (3–9 digit) query; D5 receives invalid `prefillMobile` | D2 | QA E-8 | Only pass `prefillMobile` if `query.length === 10`. |

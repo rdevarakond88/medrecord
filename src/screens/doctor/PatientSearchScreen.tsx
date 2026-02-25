@@ -288,25 +288,28 @@ export default function PatientSearchScreen() {
           />
         </ScrollView>
 
+        {/* ── FAB — New Patient ── */}
+        {/* Shown in empty + no-match states only. Hidden when inline results card */}
+        {/* is visible (has-data state) to prevent two create CTAs simultaneously. */}
+        {/* Sits in flex flow above the keypad — never overlaps keys. */}
+        {showFab && (
+          <View style={styles.fabRow}>
+            <TouchableOpacity
+              style={styles.fab}
+              onPress={handleCreateNew}
+              accessibilityLabel="New Patient"
+              accessibilityRole="button"
+              activeOpacity={0.85}
+            >
+              <Text style={styles.fabPlus}>+</Text>
+              <Text style={styles.fabLabel}>New{'\n'}Patient</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── Numeric keypad — replaces system keyboard ── */}
         <NumericKeypad onKeyPress={handleKeyPress} />
       </View>
-
-      {/* ── FAB — New Patient ── */}
-      {/* Shown in empty + no-match states only. Hidden when inline results card */}
-      {/* is visible (has-data state) to prevent two create CTAs simultaneously. */}
-      {showFab && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={handleCreateNew}
-          accessibilityLabel="New Patient"
-          accessibilityRole="button"
-          activeOpacity={0.85}
-        >
-          <Text style={styles.fabPlus}>+</Text>
-          <Text style={styles.fabLabel}>New{'\n'}Patient</Text>
-        </TouchableOpacity>
-      )}
 
       {/* ── Bottom tab bar ── */}
       <BottomTabBar />
@@ -1231,13 +1234,16 @@ const styles = StyleSheet.create({
   },
 
   // ── FAB — New Patient ─────────────────────────────────────
+  // fabRow sits in flex flow between ScrollView and NumericKeypad.
+  // justifyContent:flex-end pins the FAB to the right without absolute positioning,
+  // so it never overlaps the keypad regardless of device height.
+  fabRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
   fab: {
-    position: 'absolute',
-    // TODO (SHOULD FIX — project-state.md tech debt):
-    // bottom: 320 is fragile across device heights.
-    // Needs flex-based positioning before production build.
-    bottom: 320,
-    right: 16,
     width: 64,
     height: 64,
     borderRadius: 32,
