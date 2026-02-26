@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D2→D3 live screens complete and device-verified; D6 live screen initial build complete (commit 4af58d0). Pending: D6 device test session, security audit, QA.
+**Phase:** D6 live screen built (NewVisitScreen.tsx). getCachedVisits union fix applied (0c4d204). Security audit not yet run. Next: security agent on NewVisitScreen.tsx.
 **Last Updated:** 2026-02-25
-**Last Session:** D6 live screen build (2026-02-25). Built `src/screens/doctor/NewVisitScreen.tsx` — full D6 implementation. Supporting files: `visits_draft` SQLite table, `insertLocalVisit()`, `clearDoctorDraftVisits()`, `createVisit()` API, `DocumentScanner` stub (D7), `NewVisit` route in App.tsx, D3 `onNewVisit` wired. All 65 checklist items addressed (20 confirmed in code, 43 deferred to device test). Commit: `4af58d0`. **Next: D6 device test session + security audit.**
+**Last Session:** D6 live screen build + getCachedVisits union fix (2026-02-25). Built `src/screens/doctor/NewVisitScreen.tsx` (commit `4af58d0`). Extended `getCachedVisits` to UNION `visits_draft` so D3 shows locally-created visits before server sync; added `sync_status` field to `LocalVisit`; cloud icon in VisitCard for draft rows (commit `0c4d204`). **Next: security agent on NewVisitScreen.tsx.**
 
 ---
 
@@ -53,7 +53,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | Status | Notes |
 |---|---|---|
-| D6 — New Visit | **Live build complete (4af58d0).** Pending: device test session + security audit + QA. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: 20/65 confirmed in code, 43 pending device test. |
+| D6 — New Visit | **Live screen built (4af58d0). getCachedVisits union fix applied (0c4d204). Security audit pending. 43 checklist items pending device test.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | Not started | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
@@ -174,7 +174,8 @@ _Carry these into every build/mockup session for these screens._
 | "View Full Visit" button disabled until D4 (Visit Detail) is built | D3 | Live build (QA M-1) | `onViewFullVisit` prop is a disabled stub with TODO comment. Wire to `navigation.navigate('VisitDetail', ...)` when D4 is built. |
 | D9 consent request not yet wired — `handleRequestAccess` sets `consentRequestSent` state but does not navigate to D9 | D3 | Live build | `navigation.navigate('ConsentRequest', ...)` stubbed with TODO comment. Wire when D9 is built. |
 | Pull-to-refresh not implemented — reconnecting while D3 is open requires navigate-away-and-back for fresh server data | D3 | Live build | `useFocusEffect` handles focus re-fetches. Add `RefreshControl` on FlatList for in-screen refresh before D4. |
-| D3 visit list does not show locally-created visits from visits_draft — new visit from D6 appears in D3 only after server sync | D3/D6 | D6 live build | D3 fetches from `visits` (server cache). Union with `visits_draft` needed so offline-created visits are visible immediately. Requires updating `getCachedVisits()` and D3 render to include draft rows. |
+| ~~D3 visit list does not show locally-created visits from visits_draft — new visit from D6 appears in D3 only after server sync~~ | D3/D6 | D6 live build | **CLOSED 0c4d204** — `getCachedVisits` now UNIONs `visits_draft`; `sync_status: 'synced' \| 'draft'` added to `LocalVisit`; cloud icon shown in VisitCard for draft rows. |
+| **D6 security audit not yet run — run before device testing begins.** | D6 | D6 live build | Run security agent on `src/screens/doctor/NewVisitScreen.tsx` before device test session. |
 | `createVisit()` server response not used to update visits_draft.server_id + sync_status | D6 | D6 live build | TODO comment in `handleSave()`. Sync worker will update when built. |
 | `@react-native-community/datetimepicker` not in package.json (bundled with Expo SDK 54, not explicit) | D6 | D6 live build | If TypeScript errors: run `npx expo install @react-native-community/datetimepicker`. |
 
