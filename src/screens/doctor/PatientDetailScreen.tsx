@@ -475,8 +475,13 @@ export default function PatientDetailScreen() {
               isOnline={isOnline}
               otherVisitCount={otherVisits.length}
               onNewVisit={() => {
-                // TODO: navigate to D6 (New Visit) when built.
-                // navigation.navigate('NewVisit', { patientLocalId, patientServerId });
+                navigation.navigate('NewVisit', {
+                  patientId:       patientLocalId,
+                  patientServerId: patientServerId,
+                  patientName:     patient?.name ?? 'Patient',
+                  patientMobile:   patient?.mobile_number ?? '',
+                  consentGranted:  consentGranted,
+                });
               }}
               onRequestAccess={handleRequestAccess}
             />

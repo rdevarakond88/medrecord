@@ -29,6 +29,7 @@ import { useAuthStore } from './src/store/useAuthStore';
 import { upsertPatientFromServer } from './src/db/patients';
 import PatientSearchScreen from './src/screens/doctor/PatientSearchScreen';
 import PatientDetailScreen from './src/screens/doctor/PatientDetailScreen';
+import NewVisitScreen from './src/screens/doctor/NewVisitScreen';
 
 // ─── Login stub ────────────────────────────────────────────────────────────
 // D1 (Login screen) is not built yet. This stub:
@@ -91,6 +92,24 @@ const loginStyles = StyleSheet.create({
   btnText:   { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
 
+// ─── DocumentScanner stub (D7) ────────────────────────────────────────────
+// D7 (Document Scanner) is not built yet. Prevents a navigation crash when
+// D6's "Scan a Document" button fires. Replace with the real DocumentScannerScreen
+// when D7 is built. The stub receives patientId + visitId from D6 — both are
+// available so the scan can be correctly associated when D7 is real.
+function DocumentScannerScreen() {
+  const navigation = useNavigation<any>();
+  return (
+    <View style={stubStyles.container}>
+      <Text style={stubStyles.title}>Document Scanner</Text>
+      <Text style={stubStyles.sub}>D7 — not built yet</Text>
+      <TouchableOpacity style={stubStyles.btn} onPress={() => navigation.goBack()}>
+        <Text style={stubStyles.btnText}>← Back to Visit</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── NewPatientForm stub ───────────────────────────────────────────────────
 // D5 is not built yet. Prevents a navigation crash when D2's "Add New Patient"
 // button fires. Replace with the real NewPatientFormScreen when D5 is built.
@@ -124,6 +143,17 @@ export type RootStackParamList = {
     patientServerId: string | null;
     consentGranted:  boolean;
   };
+  NewVisit: {
+    patientId:       string;    // local SQLite patient ID
+    patientServerId: string | null;
+    patientName:     string;
+    patientMobile:   string;
+    consentGranted:  boolean;
+  };
+  DocumentScanner: {
+    patientId: string;
+    visitId:   string;   // pre-generated local visit ID — not yet written to SQLite
+  };
   NewPatientForm: { prefillMobile?: string };
 };
 
@@ -151,10 +181,12 @@ function App() {
             initialRouteName="PatientSearch"
             screenOptions={{ headerShown: false }}
           >
-            <Stack.Screen name="Login"          component={LoginScreen} />
-            <Stack.Screen name="PatientSearch"  component={PatientSearchScreen} />
-            <Stack.Screen name="PatientDetail"  component={PatientDetailScreen} />
-            <Stack.Screen name="NewPatientForm" component={NewPatientFormScreen} />
+            <Stack.Screen name="Login"             component={LoginScreen} />
+            <Stack.Screen name="PatientSearch"     component={PatientSearchScreen} />
+            <Stack.Screen name="PatientDetail"     component={PatientDetailScreen} />
+            <Stack.Screen name="NewVisit"          component={NewVisitScreen} />
+            <Stack.Screen name="DocumentScanner"   component={DocumentScannerScreen} />
+            <Stack.Screen name="NewPatientForm"    component={NewPatientFormScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </QueryClientProvider>

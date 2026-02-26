@@ -144,6 +144,69 @@ export async function clearDoctorVisits(
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// D6 — locally-created visits (visits_draft table)
+// ─────────────────────────────────────────────────────────────
+
+export interface NewLocalVisitParams {
+  localId:         string;
+  doctorId:        string;
+  patientId:       string;  // local SQLite patient ID (patients.local_id)
+  patientServerId: string | null;
+  visitDate:       string;  // YYYY-MM-DD
+  chiefComplaint:  string | null;
+  noteText:        string | null;
+  consentGranted:  boolean;
+}
+
+/**
+ * Insert a locally-created visit into the visits_draft table.
+ * Called by D6 BEFORE any server API call — SQLite is always the safety net.
+ *
+ * Every row is scoped to doctor_id + patient_id so it cannot be mis-attributed
+ * across a logout/login cycle on a shared clinic device.
+ */
+export async function insertLocalVisit(
+  db: SQLite.SQLiteDatabase,
+  visit: NewLocalVisitParams,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `INSERT INTO visits_draft
+       (local_id, doctor_id, patient_id, patient_server_id, visit_date,
+        chief_complaint, note_text, consent_granted, server_id, sync_status,
+        created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 'pending', ?, ?)`,
+    [
+      visit.localId,
+      visit.doctorId,
+      visit.patientId,
+      visit.patientServerId,
+      visit.visitDate,
+      visit.chiefComplaint,
+      visit.noteText,
+      visit.consentGranted ? 1 : 0,
+      now,
+      now,
+    ],
+  );
+}
+
+/**
+ * Delete all draft visits for the given doctor from SQLite.
+ * Called during logout to prevent cross-doctor data leakage on shared devices.
+ * Must be added to the useLogout sequence alongside clearDoctorVisits().
+ */
+export async function clearDoctorDraftVisits(
+  db: SQLite.SQLiteDatabase,
+  doctorId: string,
+): Promise<void> {
+  await db.runAsync(
+    `DELETE FROM visits_draft WHERE doctor_id = ?`,
+    [doctorId],
+  );
+}
+
 /**
  * Write a consent_accessed audit event to the local audit_events table.
  * Called by D3 on mount when visit history is displayed with consent granted.

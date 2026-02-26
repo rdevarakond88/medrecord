@@ -23,7 +23,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/useAuthStore';
 import { clearDoctorPatients } from '../db/patients';
-import { clearDoctorVisits } from '../db/visits';
+import { clearDoctorVisits, clearDoctorDraftVisits } from '../db/visits';
 
 export function useLogout(): () => Promise<void> {
   const db          = useSQLiteContext();
@@ -38,7 +38,8 @@ export function useLogout(): () => Promise<void> {
     // Step 2: wipe this doctor's SQLite caches (patients + visits)
     if (doctorId) {
       await clearDoctorPatients(db, doctorId);
-      await clearDoctorVisits(db, doctorId);    // D3-H-3: visits cache cleared on logout
+      await clearDoctorVisits(db, doctorId);          // D3-H-3: server-cached visits cleared
+      await clearDoctorDraftVisits(db, doctorId);     // D6: locally-created draft visits cleared
     }
 
     // Step 3: clear the React Query in-memory cache (prevents session bleed

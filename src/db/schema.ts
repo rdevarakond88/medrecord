@@ -98,6 +98,34 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
     CREATE INDEX IF NOT EXISTS idx_visits_doctor_patient
       ON visits (cached_by_doctor_id, patient_server_id, visit_date DESC);
 
+    -- Locally-created draft visits — D6 New Visit.
+    -- Separate from the visits cache (server-fetched rows) so the two tables
+    -- have distinct insert patterns and can be cleared independently on logout.
+    -- sync_status: pending → synced when the background sync worker uploads.
+    -- doctor_id and patient_id are NOT NULL — every row is auth-scoped.
+    CREATE TABLE IF NOT EXISTS visits_draft (
+      local_id          TEXT PRIMARY KEY,
+      doctor_id         TEXT NOT NULL,          -- auth-scoped: never unscoped (D6 security)
+      patient_id        TEXT NOT NULL,          -- local SQLite patient ID (patients.local_id)
+      patient_server_id TEXT,                   -- null for offline-only patients
+      visit_date        TEXT NOT NULL,          -- YYYY-MM-DD (local date, doctor-selected)
+      chief_complaint   TEXT,                   -- optional
+      note_text         TEXT,                   -- optional; doctor-typed note
+      consent_granted   INTEGER NOT NULL DEFAULT 0,
+      server_id         TEXT,                   -- null until synced to server
+      sync_status       TEXT NOT NULL DEFAULT 'pending',  -- pending | synced | failed
+      created_at        TEXT NOT NULL,
+      updated_at        TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_visits_draft_patient
+      ON visits_draft (patient_id, visit_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_visits_draft_doctor
+      ON visits_draft (doctor_id, visit_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_visits_draft_pending
+      ON visits_draft (sync_status, created_at ASC)
+      WHERE sync_status = 'pending';
+
     -- Audit event log — DPDP Act 2023 §§ 5, 8 (data access audit trail).
     -- Tracks consent_accessed, patient_searched, and similar auditable events.
     -- Synced to server via POST /sync on reconnect (tracked as H-3 pre-merge blocker).

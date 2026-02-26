@@ -28,6 +28,52 @@ export interface ApiVisitsResponse {
   checked_at:          string;    // server UTC ISO; surfaced in offline banner (QA M-6)
 }
 
+// ─────────────────────────────────────────────────────────────
+// D6 — create a new visit
+// ─────────────────────────────────────────────────────────────
+
+export interface CreateVisitRequest {
+  patientId:      string;  // server patient ID
+  doctorId:       string;
+  visitDate:      string;  // YYYY-MM-DD
+  chiefComplaint: string | null;
+  consentGranted: boolean;
+}
+
+export interface CreateVisitResponse {
+  visitId:   string;
+  createdAt: string;
+}
+
+/**
+ * Create a new visit on the server.
+ *
+ * Always called AFTER the SQLite write in insertLocalVisit() — the local row
+ * is the safety net if the network call fails. If offline or the server is
+ * unreachable, the visit lives in visits_draft until the sync worker picks it up.
+ *
+ * Note: note_text is not included in this call — notes are records within a visit
+ * and will be posted to POST /visits/:id/records once D4/D7 records endpoint is built.
+ * The sync queue payload (enqueueOperation) carries note_text for the worker.
+ *
+ * POST /visits
+ */
+export async function createVisit(
+  req: CreateVisitRequest,
+  authToken: string,
+): Promise<CreateVisitResponse> {
+  return apiFetch<CreateVisitResponse>('/visits', authToken, {
+    method: 'POST',
+    body: JSON.stringify({
+      patient_id:      req.patientId,
+      doctor_id:       req.doctorId,
+      visit_date:      req.visitDate,
+      chief_complaint: req.chiefComplaint,
+      consent_granted: req.consentGranted,
+    }),
+  });
+}
+
 /**
  * Fetch the patient's visit history and current consent status.
  *
