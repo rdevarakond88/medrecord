@@ -97,7 +97,7 @@ function ScreenHeader({ showBackArrow = true }: HeaderProps) {
           {PATIENT.name} · {PATIENT.mobile}
         </Text>
         <Text style={styles.headerSubtitle} numberOfLines={1}>
-          City Clinic · Dr. Sharma
+          {DOCTOR.clinic} · {DOCTOR.name}
         </Text>
       </View>
     </View>
