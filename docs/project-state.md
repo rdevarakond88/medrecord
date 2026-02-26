@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D2→D3 live screens complete and device-verified; D6 mockup complete and persona critique cleared (3.98/5). Ready for D6 live build.
+**Phase:** D2→D3 live screens complete and device-verified; D6 live screen initial build complete (commit 4af58d0). Pending: D6 device test session, security audit, QA.
 **Last Updated:** 2026-02-25
-**Last Session:** D6 persona critique and mockup fix session (2026-02-25). Ran persona critique v2 on all 7 D6 variants — score 3.98/5, verdict Ship as-is. Applied all mockup fixes (D6-M-1 through D6-M-4, D6-S-1 through D6-S-5). Critique saved to `reviews/D6-persona-critique-v2.md`. **Next: D6 live screen (New Visit).**
+**Last Session:** D6 live screen build (2026-02-25). Built `src/screens/doctor/NewVisitScreen.tsx` — full D6 implementation. Supporting files: `visits_draft` SQLite table, `insertLocalVisit()`, `clearDoctorDraftVisits()`, `createVisit()` API, `DocumentScanner` stub (D7), `NewVisit` route in App.tsx, D3 `onNewVisit` wired. All 65 checklist items addressed (20 confirmed in code, 43 deferred to device test). Commit: `4af58d0`. **Next: D6 device test session + security audit.**
 
 ---
 
@@ -53,7 +53,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | Status | Notes |
 |---|---|---|
-| D6 — New Visit | Mockup complete. Persona critique v2 cleared 3.98/5. All mockup fixes applied (D6-M-1–M4, D6-S-1–S5). Live build not started. | Tier 1 Critical. 7 state variants in mockup. Checklist: 65 items. Critique: `reviews/D6-persona-critique-v2.md`. |
+| D6 — New Visit | **Live build complete (4af58d0).** Pending: device test session + security audit + QA. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: 20/65 confirmed in code, 43 pending device test. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | Not started | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
@@ -174,6 +174,9 @@ _Carry these into every build/mockup session for these screens._
 | "View Full Visit" button disabled until D4 (Visit Detail) is built | D3 | Live build (QA M-1) | `onViewFullVisit` prop is a disabled stub with TODO comment. Wire to `navigation.navigate('VisitDetail', ...)` when D4 is built. |
 | D9 consent request not yet wired — `handleRequestAccess` sets `consentRequestSent` state but does not navigate to D9 | D3 | Live build | `navigation.navigate('ConsentRequest', ...)` stubbed with TODO comment. Wire when D9 is built. |
 | Pull-to-refresh not implemented — reconnecting while D3 is open requires navigate-away-and-back for fresh server data | D3 | Live build | `useFocusEffect` handles focus re-fetches. Add `RefreshControl` on FlatList for in-screen refresh before D4. |
+| D3 visit list does not show locally-created visits from visits_draft — new visit from D6 appears in D3 only after server sync | D3/D6 | D6 live build | D3 fetches from `visits` (server cache). Union with `visits_draft` needed so offline-created visits are visible immediately. Requires updating `getCachedVisits()` and D3 render to include draft rows. |
+| `createVisit()` server response not used to update visits_draft.server_id + sync_status | D6 | D6 live build | TODO comment in `handleSave()`. Sync worker will update when built. |
+| `@react-native-community/datetimepicker` not in package.json (bundled with Expo SDK 54, not explicit) | D6 | D6 live build | If TypeScript errors: run `npx expo install @react-native-community/datetimepicker`. |
 
 ### LOW / SHOULD FIX
 
