@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D2→D3 live screens complete and device-verified; D6 mockup and validation checklist added; ready for D6 live build or D4 live screen
+**Phase:** D2→D3 live screens complete and device-verified; D6 mockup complete and persona critique cleared (3.98/5). Ready for D6 live build.
 **Last Updated:** 2026-02-25
-**Last Session:** D6 mockup session (2026-02-25). Created `mockups/D6NewVisitScreen.tsx` with 6 state variants (Empty, HasNote, HasScan, Offline, NoConsent, Saving). Created `reviews/D6-VALIDATION-CHECKLIST.md` (65 items across 7 sections). Both committed to `dev`. Note: D6 is Tier 1 Critical (same tier as D2/D3 per screen-inventory.md); D4 is Tier 3. Recommended next step is D6 live build (not D4), or D4 if consent/visit-detail flow is prioritised. **Next: D6 live screen (New Visit) OR D4 (Visit Detail).**
+**Last Session:** D6 persona critique and mockup fix session (2026-02-25). Ran persona critique v2 on all 7 D6 variants — score 3.98/5, verdict Ship as-is. Applied all mockup fixes (D6-M-1 through D6-M-4, D6-S-1 through D6-S-5). Critique saved to `reviews/D6-persona-critique-v2.md`. **Next: D6 live screen (New Visit).**
 
 ---
 
@@ -53,7 +53,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | Status | Notes |
 |---|---|---|
-| D6 — New Visit | Mockup + checklist done (`mockups/D6NewVisitScreen.tsx`, `reviews/D6-VALIDATION-CHECKLIST.md`). Persona critique v2 complete (`reviews/D6-persona-critique-v2.md`). Live build not started. | Tier 1 Critical. 7 state variants in mockup (added D6NewVisitNoConsentHasNote). Checklist: 65 items. Persona v2 score: 3.98/5 — Ship as-is (2 pre-build corrections required: D6-M-4, D6-S-5). |
+| D6 — New Visit | Mockup complete. Persona critique v2 cleared 3.98/5. All mockup fixes applied (D6-M-1–M4, D6-S-1–S5). Live build not started. | Tier 1 Critical. 7 state variants in mockup. Checklist: 65 items. Critique: `reviews/D6-persona-critique-v2.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | Not started | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
@@ -130,17 +130,24 @@ _Carry these into every build/mockup session for these screens._
 | ~~**H-4:** No auth guard on D2 mount; `getRecentPatients` runs before `token` is confirmed non-null~~ | D2 | Security audit L-3 / QA H-4 | **CLOSED** — `useEffect` on `[token, user]` calls `navigation.replace('Login')` if either is falsy; both `getRecentPatients` and `searchPatientsByMobile` effects guarded with `if (!token \|\| !user) return`. **Upgraded 2026-02-23:** synchronous `if (!token \|\| !user) return null` added at line 244 before JSX — screen renders nothing on first frame when unauthenticated. End-to-end verification deferred to D1 session (needs NavigationContainer + registered Login route). See checklist item 13. |
 | ~~**H-5:** `useNetworkStatus` returns `true` when `isInternetReachable` is `null` (unconfirmed); triggers false server lookups on captive portal / no-internet WiFi~~ | D2 | QA H-5 | **CLOSED** — condition changed to `isConnected === true && isInternetReachable === true`; initial state changed to `false`; null treated as offline. |
 
-### MUST FIX — D6 mockup (fix before live build begins)
+### MUST FIX — D6 mockup (all closed)
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D6-M-4:** `D6NewVisitNoConsent` (Variant 5/7) disabled Save button has no tap feedback or hint text — M1 pattern not extended to this variant; consent notice + silent disabled button coexist, risking live-build misimplementation of Save as consent-gated | D6 | Persona critique v2 — Dr. Sinha, Sunita | Add `onDisabledPress` handler + `<Text style={styles.saveHint}>` to `D6NewVisitNoConsent` bottomBar, matching the pattern already implemented in `D6NewVisitEmpty`. All styles exist; only wiring is missing. |
+| ~~**D6-M-1:** Disabled Save button gives no tap feedback — silent failure~~ | D6 | Persona critique v1 — Dr. Sinha | **CLOSED 2026-02-25** — `handleDisabledPress` + `hintHighlighted` state + persistent `saveHint` text in `D6NewVisitEmpty`. |
+| ~~**D6-M-2:** `scanThumbRemove` touch target 36×36px — below 48×48px spec minimum~~ | D6 | Persona critique v1 — Sunita | **CLOSED 2026-02-25** — `scanThumbRemove` set to 48×48px + `hitSlop={{ top:6, bottom:6, left:6, right:6 }}`. |
+| ~~**D6-M-3:** `D6NewVisitNoConsent` variant does not show Save becoming active when a record is added — spec ambiguity risking live-build misimplementation~~ | D6 | Persona critique v1 — Dr. Nair | **CLOSED 2026-02-25** — `D6NewVisitNoConsentHasNote` variant added (consent notice + filled note + `SaveButton enabled={true}`). |
+| ~~**D6-M-4:** `D6NewVisitNoConsent` disabled Save button has no tap feedback or hint text — M1 pattern not extended to this variant~~ | D6 | Persona critique v2 — Dr. Sinha, Sunita | **CLOSED 2026-02-25** — `handleDisabledPress` + `saveHint` wired into `D6NewVisitNoConsent` bottomBar. |
 
-### SHOULD FIX — D6 mockup (fix before live build begins)
+### SHOULD FIX — D6 mockup (all closed)
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D6-S-5:** `DOCTOR` constant declared at line 66 is never referenced; `ScreenHeader` hardcodes `"City Clinic · Dr. Sharma"` instead of `{DOCTOR.clinic} · {DOCTOR.name}` — dead code; confuses live builder about which variable drives clinic attribution line | D6 | Persona critique v2 — Dr. Nair | Replace hardcoded string with `{DOCTOR.clinic} · {DOCTOR.name}` in `ScreenHeader`. |
+| ~~**D6-S-1:** Chief complaint optional indicator at label level only~~ | D6 | Persona critique v1 — Dr. Sinha | **CLOSED 2026-02-25** — `"Chief Complaint (optional)"` at section label level in all variants. |
+| ~~**D6-S-2:** Date pill tappability — chevron alone insufficient affordance~~ | D6 | Persona critique v1 — Dr. Sinha | **CLOSED 2026-02-25** — `"Change"` text label added to `DatePill` alongside chevron. |
+| ~~**D6-S-3:** Consent notice language — "implicit consent request" and "next app open" are jargon~~ | D6 | Persona critique v1 — Dr. Sinha, Arjun, Shantabai | **CLOSED 2026-02-25** — Plain-language rewrite in `ConsentNoticeBanner`; patient-without-app sentence added. |
+| ~~**D6-S-4:** Header missing clinic attribution — multi-doctor clinics need visit filing context~~ | D6 | Persona critique v1 — Dr. Nair | **CLOSED 2026-02-25** — Third subtitle line added to `ScreenHeader`. |
+| ~~**D6-S-5:** `DOCTOR` constant dead code; `ScreenHeader` hardcoded `"City Clinic · Dr. Sharma"` instead of `{DOCTOR.clinic} · {DOCTOR.name}`~~ | D6 | Persona critique v2 — Dr. Nair | **CLOSED 2026-02-25** — Hardcoded string replaced with `{DOCTOR.clinic} · {DOCTOR.name}` in `ScreenHeader`. |
 
 ### MEDIUM — Fix before production
 
