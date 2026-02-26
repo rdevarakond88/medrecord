@@ -3,8 +3,12 @@
  * Spec: docs/data-models.md — Visit entity
  * Spec: docs/offline-sync-spec.md — SQLite as primary read path
  *
- * All rows in this cache originate from GET /patients/:serverId/visits server responses.
- * Locally-created draft visits (D6) will use a separate visits_draft table when D6 is built.
+ * getCachedVisits reads from two tables:
+ *   visits       — server-synced rows (written by upsertVisitsFromServer)
+ *   visits_draft — locally-created rows (written by insertLocalVisit in D6)
+ * Both are UNIONed so D3 shows a complete picture offline, including visits
+ * saved in D6 that have not yet reached the server.  sync_status distinguishes
+ * the two sources: 'synced' (server cache) | 'draft' (local only).
  *
  * Also contains logConsentAccess() — writes a DPDP audit event to the audit_events table
  * when D3 opens with consent granted. Will be refactored to src/db/auditLog.ts when D2's
@@ -24,6 +28,7 @@ export interface LocalVisit {
   is_own_visit:        boolean;        // true = current doctor created this visit
   cached_by_doctor_id: string;         // H-2: doctor who fetched and cached this row (security audit)
   synced_at:           string;         // when this row was last written from a server response
+  sync_status:         'synced' | 'draft';  // 'synced' = server cache; 'draft' = D6 local-only
 }
 
 export interface CachedVisitsResult {
@@ -51,10 +56,35 @@ export async function getCachedVisits(
       record_count: number;
     }
   >(
-    `SELECT * FROM visits
+    `SELECT
+       server_id,
+       patient_server_id,
+       visit_date,
+       chief_complaint,
+       clinic_name,
+       record_count,
+       is_own_visit,
+       cached_by_doctor_id,
+       synced_at,
+       'synced'             AS sync_status
+     FROM visits
      WHERE patient_server_id = ? AND cached_by_doctor_id = ?
+     UNION ALL
+     SELECT
+       local_id                        AS server_id,
+       COALESCE(patient_server_id, '') AS patient_server_id,
+       visit_date,
+       chief_complaint,
+       ''                              AS clinic_name,
+       0                               AS record_count,
+       1                               AS is_own_visit,
+       doctor_id                       AS cached_by_doctor_id,
+       created_at                      AS synced_at,
+       'draft'                         AS sync_status
+     FROM visits_draft
+     WHERE patient_server_id = ? AND doctor_id = ?
      ORDER BY visit_date DESC`,
-    [patientServerId, doctorId],
+    [patientServerId, doctorId, patientServerId, doctorId],
   );
 
   // SQLite stores booleans as integers — normalise to JS

@@ -523,6 +523,7 @@ function adaptApiVisit(
     is_own_visit:        isOwn,
     cached_by_doctor_id: '',    // not used for display; populated in DB via upsertVisitsFromServer
     synced_at:           new Date().toISOString(),
+    sync_status:         'synced',
   };
 }
 
@@ -684,9 +685,10 @@ interface VisitCardProps {
 }
 
 function VisitCard({ visit, grayed, expanded, onPress, onViewFullVisit }: VisitCardProps) {
-  const label     = recordLabel(visit.record_count);
-  const dateStr   = formatVisitDate(visit.visit_date);
-  const isDraft   = visit.record_count === 0;
+  const label      = recordLabel(visit.record_count);
+  const dateStr    = formatVisitDate(visit.visit_date);
+  const isDraft    = visit.record_count === 0;
+  const isUnsynced = visit.sync_status === 'draft';
 
   return (
     <TouchableOpacity
@@ -707,6 +709,9 @@ function VisitCard({ visit, grayed, expanded, onPress, onViewFullVisit }: VisitC
           {dateStr}
         </Text>
         <View style={styles.visitCardTopRowRight}>
+          {isUnsynced && !grayed && (
+            <Text style={styles.unsyncedIcon}>{'☁'}</Text>
+          )}
           <View style={[styles.recordCountPill, isDraft && styles.draftPill]}>
             <Text style={[styles.recordCountText, grayed && styles.textGrayed, isDraft && styles.draftText]}>
               {label}
@@ -1107,6 +1112,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems:    'center',
     gap:            8,
+  },
+  unsyncedIcon: {
+    fontSize: 13,
+    color:    Colors.warning,
   },
   visitDate: {
     fontSize:   14,
