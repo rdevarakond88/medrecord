@@ -223,6 +223,28 @@ export async function insertLocalVisit(
 }
 
 /**
+ * Mark a locally-created draft visit as synced after a successful createVisit() response.
+ * Sets sync_status = 'synced', records the server-assigned ID, and stamps updated_at.
+ * Must be called immediately after createVisit() returns so the sync worker does not
+ * find a 'pending' entry and re-POST the visit, creating a duplicate on the server.
+ */
+export async function markVisitSynced(
+  db: SQLite.SQLiteDatabase,
+  localId: string,
+  serverId: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `UPDATE visits_draft
+     SET sync_status = 'synced',
+         server_id   = ?,
+         updated_at  = ?
+     WHERE local_id = ?`,
+    [serverId, now, localId],
+  );
+}
+
+/**
  * Delete all draft visits for the given doctor from SQLite.
  * Called during logout to prevent cross-doctor data leakage on shared devices.
  * Must be added to the useLogout sequence alongside clearDoctorVisits().

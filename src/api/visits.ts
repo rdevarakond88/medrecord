@@ -37,6 +37,7 @@ export interface CreateVisitRequest {
   doctorId:       string;
   visitDate:      string;  // YYYY-MM-DD
   chiefComplaint: string | null;
+  noteText:       string | null;  // doctor-typed note; sent on creation so note is not lost if device is wiped before sync
   consentGranted: boolean;
 }
 
@@ -52,9 +53,9 @@ export interface CreateVisitResponse {
  * is the safety net if the network call fails. If offline or the server is
  * unreachable, the visit lives in visits_draft until the sync worker picks it up.
  *
- * Note: note_text is not included in this call — notes are records within a visit
- * and will be posted to POST /visits/:id/records once D4/D7 records endpoint is built.
- * The sync queue payload (enqueueOperation) carries note_text for the worker.
+ * note_text is included so the note is server-persisted immediately on the online path
+ * and is not dependent on the sync worker. The sync queue payload also carries note_text
+ * as a safety net for the offline/retry path.
  *
  * POST /visits
  */
@@ -69,6 +70,7 @@ export async function createVisit(
       doctor_id:       req.doctorId,
       visit_date:      req.visitDate,
       chief_complaint: req.chiefComplaint,
+      note_text:       req.noteText ?? '',
       consent_granted: req.consentGranted,
     }),
   });

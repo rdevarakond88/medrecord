@@ -56,7 +56,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNetworkStatus } from '../../utils/useNetworkStatus';
-import { insertLocalVisit } from '../../db/visits';
+import { insertLocalVisit, markVisitSynced } from '../../db/visits';
 import { createVisit } from '../../api/visits';
 import { enqueueOperation } from '../../sync/syncQueue';
 import { ApiError } from '../../api/apiClient';
@@ -287,16 +287,22 @@ export default function NewVisitScreen() {
       // (no server ID yet) are sync-queued and uploaded when their patient record syncs.
       if (isOnline && patientServerId) {
         try {
-          await createVisit({
+          const serverVisit = await createVisit({
             patientId:      patientServerId,
             doctorId:       user.id,
             visitDate,
             chiefComplaint: trimmedComplaint,
+            noteText:       trimmedNote,
             consentGranted,
           }, token);
-          // TODO: update visits_draft.server_id + sync_status = 'synced'
-          //       when createVisit returns the server ID.
-          //       Deferred — the sync worker handles this when it's built.
+          // Mark draft row as synced so the sync worker does not re-POST (HIGH-2).
+          await markVisitSynced(db, visitLocalId, serverVisit.visitId);
+          // Mark sync_queue entry as done — prevents duplicate upload by the worker.
+          await db.runAsync(
+            `UPDATE sync_queue SET status = 'success'
+             WHERE entity_local_id = ? AND doctor_id = ?`,
+            [visitLocalId, user.id],
+          );
         } catch (apiErr) {
           // Server error after SQLite write — visit is safely persisted.
           // Sync queue will retry. Swallow silently: offline save must feel
