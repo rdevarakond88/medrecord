@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D6 live screen built (NewVisitScreen.tsx). getCachedVisits union fix applied (0c4d204). Security audit not yet run. Next: security agent on NewVisitScreen.tsx.
-**Last Updated:** 2026-02-25
-**Last Session:** D6 live screen build + getCachedVisits union fix (2026-02-25). Built `src/screens/doctor/NewVisitScreen.tsx` (commit `4af58d0`). Extended `getCachedVisits` to UNION `visits_draft` so D3 shows locally-created visits before server sync; added `sync_status` field to `LocalVisit`; cloud icon in VisitCard for draft rows (commit `0c4d204`). **Next: security agent on NewVisitScreen.tsx.**
+**Phase:** D6 security audit complete. All CRITICAL and HIGH findings closed. MEDIUM and LOW findings open — fix before merge to main. Ready for device testing (43 checklist items pending).
+**Last Updated:** 2026-03-02
+**Last Session:** D6 security audit (2026-03-02). Fixed CRITICAL-2 (sync_queue no doctor_id column), CRITICAL-1 (sync_queue not cleared on logout), HIGH-1 (noteText omitted from API call), HIGH-2 (visits_draft not marked synced after createVisit), HIGH-3 (no DPDP audit event on visit creation), HIGH-4 (doctorId IDOR risk comment). Commits: `04f3e99`, `831f0dc`, `f888874`, `fb9b766`. 6 MEDIUM + 2 LOW findings open — fix before merge to main.
 
 ---
 
@@ -53,7 +53,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | Status | Notes |
 |---|---|---|
-| D6 — New Visit | **Live screen built (4af58d0). getCachedVisits union fix applied (0c4d204). Security audit pending. 43 checklist items pending device test.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
+| D6 — New Visit | **Live screen built. Security audit complete — CRITICAL and HIGH closed (commits `04f3e99`, `831f0dc`, `f888874`, `fb9b766`). MEDIUM + LOW open. 43 checklist items pending device test.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | Not started | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
@@ -175,9 +175,27 @@ _Carry these into every build/mockup session for these screens._
 | D9 consent request not yet wired — `handleRequestAccess` sets `consentRequestSent` state but does not navigate to D9 | D3 | Live build | `navigation.navigate('ConsentRequest', ...)` stubbed with TODO comment. Wire when D9 is built. |
 | Pull-to-refresh not implemented — reconnecting while D3 is open requires navigate-away-and-back for fresh server data | D3 | Live build | `useFocusEffect` handles focus re-fetches. Add `RefreshControl` on FlatList for in-screen refresh before D4. |
 | ~~D3 visit list does not show locally-created visits from visits_draft — new visit from D6 appears in D3 only after server sync~~ | D3/D6 | D6 live build | **CLOSED 0c4d204** — `getCachedVisits` now UNIONs `visits_draft`; `sync_status: 'synced' \| 'draft'` added to `LocalVisit`; cloud icon shown in VisitCard for draft rows. |
-| **D6 security audit not yet run — run before device testing begins.** | D6 | D6 live build | Run security agent on `src/screens/doctor/NewVisitScreen.tsx` before device test session. |
+| ~~**D6 security audit not yet run — run before device testing begins.**~~ | D6 | D6 live build | **CLOSED 2026-03-02** — All CRITICAL and HIGH findings fixed (commits `04f3e99`, `831f0dc`, `f888874`, `fb9b766`). 6 MEDIUM + 2 LOW open — tracked in D6 security audit sections below. |
 | `createVisit()` server response not used to update visits_draft.server_id + sync_status | D6 | D6 live build | TODO comment in `handleSave()`. Sync worker will update when built. |
 | `@react-native-community/datetimepicker` not in package.json (bundled with Expo SDK 54, not explicit) | D6 | D6 live build | If TypeScript errors: run `npx expo install @react-native-community/datetimepicker`. |
+
+### MEDIUM — D6 live screen security audit
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **MEDIUM-1:** `consentGranted` nav param stored without re-verification at save time — stale consent value may be written to `visits_draft` and sent to server | D6 | D6 security audit | Fix before merge to main. Re-read `consent_granted` from SQLite via `getPatientByLocalId()` inside `handleSave()` before calling `insertLocalVisit()`, same pattern as D3 offline consent fix. |
+| **MEDIUM-2:** Full patient mobile number rendered in D6 header — PII visible to bystanders in shared clinic spaces | D6 | D6 security audit | Fix before merge to main. Mask to last 5 digits in header display, same pattern as D2 `PatientRow` MEDIUM item. Full number visible to doctor only in D3 post-consent. |
+| **MEDIUM-3:** Attached scan silently dropped on save — `scan.localPath` and `scan.label` never written to any storage layer | D6 | D6 security audit | Fix before merge to main. `insertLocalVisit()` has no scan parameters; `enqueueOperation` payload does not include scan. Scan is lost on navigation away. Requires D7 integration work. |
+| **MEDIUM-4:** `insertLocalVisit()` and `enqueueOperation()` not wrapped in a transaction — UNIQUE constraint violation on retry leaves sync queue entry without a matching `visits_draft` row | D6 | D6 security audit | Fix before merge to main. Wrap both calls in `db.withTransactionAsync()` so they succeed or fail atomically. |
+| **MEDIUM-5:** `getCachedVisits` UNION query filters `visits_draft` on `patient_server_id = ?` — offline-only patients with `NULL patient_server_id` return zero draft rows in D3 | D6 | D6 security audit | Fix before merge to main. Add `OR (patient_server_id IS NULL AND patient_id = ?)` branch to the `visits_draft` leg of the UNION, bound to the local patient ID. |
+| **MEDIUM-6:** Unsynced draft visits deleted on logout without warning — silent, irreversible data loss for visits not yet synced to server | D6 | D6 security audit | Fix before merge to main. Check for pending `visits_draft` rows before logout; warn doctor with count and require explicit confirmation before proceeding. |
+
+### LOW — D6 live screen security audit
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **LOW-1:** `isSavingRef.current` never reset on success path — Save button permanently locked if `navigation.goBack()` fails to unmount the screen | D6 | D6 security audit | Reset `isSavingRef.current = false` immediately before `navigation.goBack()` on the success path, or in a `finally` block. |
+| **LOW-2:** Visit date validation enforced only at picker layer, not at save time in `handleSave()` — future-dated visits possible via state manipulation | D6 | D6 security audit | Add a guard at the top of `handleSave()`: if `visitDate > todayISO()`, set `saveError` and return early. |
 
 ### LOW / SHOULD FIX
 
