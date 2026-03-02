@@ -12,8 +12,8 @@ That is the only command. Nothing else.
 
 ## What happens
 
-1. Any leftover process on port 8081 is killed automatically
-2. Metro bundler starts on port 8081
+1. Any leftover process on port 8082 is killed automatically
+2. Metro bundler starts on port 8082
 3. An ngrok tunnel opens — this is what makes it work on WSL Windows,
    where the WSL network interface is not reachable from your iPhone
 
@@ -32,6 +32,5 @@ The tunnel works over the internet.
 
 ## If the URL changes between sessions
 
-The ngrok subdomain (the `xxxx` part) changes every time you restart.
-Re-enter the new URL in Expo Go. This is normal — ngrok free tier
-generates a fresh subdomain each session.
+The URL is printed clearly at the top of the terminal every session.
+Copy it from there — no need to scroll through Metro output.
