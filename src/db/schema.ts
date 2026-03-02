@@ -52,6 +52,7 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
       id              TEXT PRIMARY KEY,
       entity_type     TEXT NOT NULL,      -- patient | visit | record | consent
       entity_local_id TEXT NOT NULL,
+      doctor_id       TEXT NOT NULL DEFAULT '',  -- auth-scoped: enables per-doctor logout cleanup
       operation       TEXT NOT NULL,      -- create | update
       payload         TEXT NOT NULL,      -- JSON snapshot of entity at queue time
       queued_at       TEXT NOT NULL,
@@ -64,6 +65,8 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
     CREATE INDEX IF NOT EXISTS idx_sync_queue_pending
       ON sync_queue (status, queued_at ASC)
       WHERE status = 'pending';
+    CREATE INDEX IF NOT EXISTS idx_sync_queue_doctor
+      ON sync_queue (doctor_id);
 
     -- Maps device-generated local_ids to server-assigned UUIDs after sync.
     -- Used by the sync worker to resolve foreign key references within a batch.
@@ -164,6 +167,13 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
   try {
     await db.execAsync(
       `ALTER TABLE visits ADD COLUMN cached_by_doctor_id TEXT NOT NULL DEFAULT '';`,
+    );
+  } catch {
+    // Column already exists — safe to ignore.
+  }
+  try {
+    await db.execAsync(
+      `ALTER TABLE sync_queue ADD COLUMN doctor_id TEXT NOT NULL DEFAULT '';`,
     );
   } catch {
     // Column already exists — safe to ignore.

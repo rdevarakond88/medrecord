@@ -24,6 +24,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/useAuthStore';
 import { clearDoctorPatients } from '../db/patients';
 import { clearDoctorVisits, clearDoctorDraftVisits } from '../db/visits';
+import { clearDoctorSyncQueue } from '../sync/syncQueue';
 
 export function useLogout(): () => Promise<void> {
   const db          = useSQLiteContext();
@@ -35,11 +36,12 @@ export function useLogout(): () => Promise<void> {
     // Step 1: capture doctor ID before any state is cleared
     const doctorId = user?.id ?? '';
 
-    // Step 2: wipe this doctor's SQLite caches (patients + visits)
+    // Step 2: wipe this doctor's SQLite caches (patients + visits + sync queue)
     if (doctorId) {
       await clearDoctorPatients(db, doctorId);
       await clearDoctorVisits(db, doctorId);          // D3-H-3: server-cached visits cleared
       await clearDoctorDraftVisits(db, doctorId);     // D6: locally-created draft visits cleared
+      await clearDoctorSyncQueue(db, doctorId);       // CRITICAL-1: sync queue cleared on logout
     }
 
     // Step 3: clear the React Query in-memory cache (prevents session bleed

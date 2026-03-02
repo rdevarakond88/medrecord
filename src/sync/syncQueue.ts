@@ -18,6 +18,7 @@ export type SyncEntityType = 'patient' | 'visit' | 'record' | 'consent';
 export type SyncOperation  = 'create' | 'update';
 
 export interface SyncQueueEntry {
+  doctor_id:       string;  // auth-scoped: written to sync_queue.doctor_id for per-doctor cleanup
   entity_type:     SyncEntityType;
   entity_local_id: string;
   operation:       SyncOperation;
@@ -42,15 +43,31 @@ export async function enqueueOperation(
 
   await db.runAsync(
     `INSERT INTO sync_queue
-       (id, entity_type, entity_local_id, operation, payload, queued_at, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+       (id, entity_type, entity_local_id, doctor_id, operation, payload, queued_at, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
     [
       id,
       entry.entity_type,
       entry.entity_local_id,
+      entry.doctor_id,
       entry.operation,
       JSON.stringify(entry.payload),
       queuedAt,
     ],
+  );
+}
+
+/**
+ * Delete all sync queue entries for the given doctor from SQLite.
+ * Called during logout to prevent cross-doctor data leakage on shared devices.
+ * Requires the doctor_id column added by the CRITICAL-2 security fix.
+ */
+export async function clearDoctorSyncQueue(
+  db: SQLite.SQLiteDatabase,
+  doctorId: string,
+): Promise<void> {
+  await db.runAsync(
+    `DELETE FROM sync_queue WHERE doctor_id = ?`,
+    [doctorId],
   );
 }

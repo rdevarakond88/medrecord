@@ -266,6 +266,7 @@ export default function NewVisitScreen() {
 
       // ── 2. Enqueue for background sync ──────────────────────────────────
       await enqueueOperation(db, {
+        doctor_id:       user.id,
         entity_type:     'visit',
         entity_local_id: visitLocalId,
         operation:       'create',
