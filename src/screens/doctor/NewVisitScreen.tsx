@@ -56,7 +56,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNetworkStatus } from '../../utils/useNetworkStatus';
-import { insertLocalVisit, markVisitSynced } from '../../db/visits';
+import { insertLocalVisit, markVisitSynced, logVisitCreated } from '../../db/visits';
 import { createVisit } from '../../api/visits';
 import { enqueueOperation } from '../../sync/syncQueue';
 import { ApiError } from '../../api/apiClient';
@@ -263,6 +263,10 @@ export default function NewVisitScreen() {
         noteText:        trimmedNote,
         consentGranted,
       });
+
+      // ── 1b. DPDP audit event — personal health data written (HIGH-3) ────
+      // Fires for both online and offline saves — audit trail is always complete.
+      await logVisitCreated(db, user.id, patientId, visitLocalId);
 
       // ── 2. Enqueue for background sync ──────────────────────────────────
       await enqueueOperation(db, {

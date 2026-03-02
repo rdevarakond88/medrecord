@@ -260,6 +260,32 @@ export async function clearDoctorDraftVisits(
 }
 
 /**
+ * Write a visit_created audit event to the local audit_events table.
+ * Called by D6 immediately after insertLocalVisit() succeeds.
+ *
+ * DPDP Act 2023 §§ 5, 8 — clinical notes are personal health data; write
+ * operations must be audited alongside read operations.
+ * visitLocalId is stored in metadata so the event can be correlated to the
+ * visits_draft row before a server ID is assigned.
+ * Events are flushed to the server audit log via POST /sync on reconnect.
+ */
+export async function logVisitCreated(
+  db: SQLite.SQLiteDatabase,
+  doctorId: string,
+  patientId: string,
+  visitLocalId: string,
+): Promise<void> {
+  const id  = Crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `INSERT OR IGNORE INTO audit_events
+       (id, event_type, doctor_id, patient_id, metadata, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, 'visit_created', doctorId, patientId, JSON.stringify({ visitLocalId }), now],
+  );
+}
+
+/**
  * Write a consent_accessed audit event to the local audit_events table.
  * Called by D3 on mount when visit history is displayed with consent granted.
  *
