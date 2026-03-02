@@ -41,8 +41,6 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
       ON patients (mobile_number);
     CREATE INDEX IF NOT EXISTS idx_patient_last_visit
       ON patients (last_visit_date DESC);
-    CREATE INDEX IF NOT EXISTS idx_patient_doctor
-      ON patients (doctor_id);
 
     -- Offline write queue.
     -- Every write operation (create/update) is enqueued here before the
@@ -65,8 +63,6 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
     CREATE INDEX IF NOT EXISTS idx_sync_queue_pending
       ON sync_queue (status, queued_at ASC)
       WHERE status = 'pending';
-    CREATE INDEX IF NOT EXISTS idx_sync_queue_doctor
-      ON sync_queue (doctor_id);
 
     -- Maps device-generated local_ids to server-assigned UUIDs after sync.
     -- Used by the sync worker to resolve foreign key references within a batch.
@@ -98,8 +94,6 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
 
     CREATE INDEX IF NOT EXISTS idx_visits_patient
       ON visits (patient_server_id, visit_date DESC);
-    CREATE INDEX IF NOT EXISTS idx_visits_doctor_patient
-      ON visits (cached_by_doctor_id, patient_server_id, visit_date DESC);
 
     -- Locally-created draft visits — D6 New Visit.
     -- Separate from the visits cache (server-fetched rows) so the two tables
@@ -185,4 +179,16 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
   } catch {
     // Column already exists — safe to ignore.
   }
+
+  // Create indexes that reference migrated columns — must run AFTER the ALTER TABLE
+  // migrations above so the columns exist on existing databases. CREATE INDEX IF NOT
+  // EXISTS is idempotent; this is a no-op on fresh installs where the indexes already exist.
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_patient_doctor
+      ON patients (doctor_id);
+    CREATE INDEX IF NOT EXISTS idx_sync_queue_doctor
+      ON sync_queue (doctor_id);
+    CREATE INDEX IF NOT EXISTS idx_visits_doctor_patient
+      ON visits (cached_by_doctor_id, patient_server_id, visit_date DESC);
+  `);
 }
