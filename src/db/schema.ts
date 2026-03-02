@@ -173,6 +173,13 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
   }
   try {
     await db.execAsync(
+      `ALTER TABLE visits ADD COLUMN is_own_visit INTEGER NOT NULL DEFAULT 0;`,
+    );
+  } catch {
+    // Column already exists — safe to ignore.
+  }
+  try {
+    await db.execAsync(
       `ALTER TABLE sync_queue ADD COLUMN doctor_id TEXT NOT NULL DEFAULT '';`,
     );
   } catch {
