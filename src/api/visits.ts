@@ -59,6 +59,7 @@ export interface CreateVisitResponse {
  *
  * POST /visits
  */
+// TODO: server-side — derive doctorId from JWT, not request body. See HIGH-4 in D6 security audit.
 export async function createVisit(
   req: CreateVisitRequest,
   authToken: string,
@@ -67,6 +68,10 @@ export async function createVisit(
     method: 'POST',
     body: JSON.stringify({
       patient_id:      req.patientId,
+      // SERVER MUST derive doctor identity from JWT claim,
+      // not from this body value. Validate body doctor_id
+      // matches token sub — reject with 403 if mismatch.
+      // Risk: IDOR if server trusts body doctor_id blindly.
       doctor_id:       req.doctorId,
       visit_date:      req.visitDate,
       chief_complaint: req.chiefComplaint,
