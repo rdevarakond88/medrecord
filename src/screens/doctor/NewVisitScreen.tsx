@@ -44,7 +44,6 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
-  Modal,
   Platform,
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -427,6 +426,17 @@ export default function NewVisitScreen() {
             <Text style={styles.datePillChevron}>›</Text>
             <Text style={styles.datePillChange}>Change</Text>
           </TouchableOpacity>
+          {/* iOS: inline spinner — no Modal; avoids blank-screen native rendering
+              issues seen with transparent Modals on datetimepicker v8 / iOS */}
+          {Platform.OS === 'ios' && showDatePicker && (
+            <DateTimePicker
+              value={isoToDate(visitDate)}
+              mode="date"
+              display="spinner"
+              maximumDate={new Date()}
+              onChange={handleDateChange}
+            />
+          )}
         </View>
 
         {/* ── Chief Complaint (optional) (checklist #3, #4, #24, #25) ───── */}
@@ -585,44 +595,7 @@ export default function NewVisitScreen() {
       </ScrollView>
 
       {/* ── Date picker — platform-aware (checklist #26, #27) ──────────── */}
-
-      {/* iOS: spinner inside a bottom sheet Modal.
-          Always mounted — controlled by visible prop only.
-          Conditional mounting causes a blank-screen flash on iOS before
-          the native presentation animation completes. */}
-      {Platform.OS === 'ios' && (
-        <Modal
-          transparent
-          animationType="slide"
-          visible={showDatePicker}
-          onRequestClose={() => setShowDatePicker(false)}
-        >
-          <TouchableOpacity
-            style={styles.datePickerBackdrop}
-            activeOpacity={1}
-            onPress={() => setShowDatePicker(false)}
-          />
-          <View style={styles.datePickerSheet}>
-            <View style={styles.datePickerHeader}>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker(false)}
-                style={styles.datePickerDoneButton}
-                accessibilityLabel="Done selecting date"
-                accessibilityRole="button"
-              >
-                <Text style={styles.datePickerDoneText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              value={isoToDate(visitDate)}
-              mode="date"
-              display="spinner"
-              maximumDate={new Date()}
-              onChange={handleDateChange}
-            />
-          </View>
-        </Modal>
-      )}
+      {/* iOS inline spinner is rendered inside the date section in ScrollView above. */}
 
       {/* Android: native date dialog rendered conditionally */}
       {Platform.OS === 'android' && showDatePicker && (
