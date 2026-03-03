@@ -586,8 +586,11 @@ export default function NewVisitScreen() {
 
       {/* ── Date picker — platform-aware (checklist #26, #27) ──────────── */}
 
-      {/* iOS: spinner inside a bottom sheet Modal */}
-      {Platform.OS === 'ios' && showDatePicker && (
+      {/* iOS: spinner inside a bottom sheet Modal.
+          Always mounted — controlled by visible prop only.
+          Conditional mounting causes a blank-screen flash on iOS before
+          the native presentation animation completes. */}
+      {Platform.OS === 'ios' && (
         <Modal
           transparent
           animationType="slide"

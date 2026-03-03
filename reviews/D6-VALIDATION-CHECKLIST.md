@@ -49,7 +49,7 @@ Created before build starts. Every item must be confirmed or explicitly deferred
 | 23 | Deleting all typed text deactivates the "Save Visit" button again (returns to disabled) | 🔶 | Pending device test. Same derived state — empty string makes `hasRecord = false`. |
 | 24 | Chief complaint field is skippable — Save works without it | 🔶 | Pending device test. `trimmedComplaint = chiefComplaint.trim() \|\| null` — null is accepted by insertLocalVisit. |
 | 25 | Chief complaint field is skippable even when scan is attached | 🔶 | Pending device test. Same path as #24. |
-| 26 | Tapping the date opens a date picker or inline date selector | 🔶 | Pending device test. `onPress={() => setShowDatePicker(true)}` wired to date pill. |
+| 26 | Tapping the date opens a date picker or inline date selector | ✅ | Device-confirmed fix: iOS Modal now always mounted (controlled by `visible` only). Conditional mount caused blank-screen flash before native animation completed. `display="spinner"` for iOS, `display="default"` for Android. |
 | 27 | Date picker defaults to today; past dates selectable; future dates blocked | 🔶 | Pending device test. `value={isoToDate(visitDate)}` defaults to today. `maximumDate={new Date()}` blocks future. Past dates allowed. |
 | 28 | "Save Visit" tap triggers save and returns to D3 with new visit in list | 🔶 | Pending device test. `navigation.goBack()` called after `insertLocalVisit()` succeeds. D3 uses `useFocusEffect` so list refreshes. |
 | 29 | Double-tap on "Save Visit" does not create two duplicate visit records (tap-guard) | 🔶 | Pending device test. `isSavingRef.current` check is synchronous — second tap blocked before any async work starts. |
