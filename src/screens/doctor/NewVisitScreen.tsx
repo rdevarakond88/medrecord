@@ -427,15 +427,27 @@ export default function NewVisitScreen() {
             <Text style={styles.datePillChange}>Change</Text>
           </TouchableOpacity>
           {/* iOS: inline spinner — no Modal; avoids blank-screen native rendering
-              issues seen with transparent Modals on datetimepicker v8 / iOS */}
+              issues seen with transparent Modals on datetimepicker v8 / iOS.
+              Wrapper View provides explicit bounds so the native spinner binds
+              correctly to the value prop (without bounds it shows a stale date). */}
           {Platform.OS === 'ios' && showDatePicker && (
-            <DateTimePicker
-              value={isoToDate(visitDate)}
-              mode="date"
-              display="spinner"
-              maximumDate={new Date()}
-              onChange={handleDateChange}
-            />
+            <View style={styles.inlineDatePicker}>
+              <TouchableOpacity
+                style={styles.inlineDatePickerDone}
+                onPress={() => setShowDatePicker(false)}
+                accessibilityLabel="Done selecting date"
+                accessibilityRole="button"
+              >
+                <Text style={styles.inlineDatePickerDoneText}>Done</Text>
+              </TouchableOpacity>
+              <DateTimePicker
+                value={isoToDate(visitDate)}
+                mode="date"
+                display="spinner"
+                maximumDate={new Date()}
+                onChange={handleDateChange}
+              />
+            </View>
           )}
         </View>
 
@@ -846,6 +858,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     marginLeft: 4,
+  },
+
+  // Inline iOS date picker wrapper
+  inlineDatePicker: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  inlineDatePickerDone: {
+    alignItems: 'flex-end',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  inlineDatePickerDoneText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primaryBlue,
   },
 
   // Chief complaint input
