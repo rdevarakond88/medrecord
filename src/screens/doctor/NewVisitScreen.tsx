@@ -430,14 +430,19 @@ export default function NewVisitScreen() {
               display="compact" works reliably on all iOS 14+ devices and
               dismisses itself; no wrapper or Done button needed. */}
           {Platform.OS === 'ios' && showDatePicker && (
-            <DateTimePicker
-              value={isoToDate(visitDate)}
-              mode="date"
-              display="compact"
-              maximumDate={new Date()}
-              onChange={handleDateChange}
-              style={{ width: '100%' }}
-            />
+            <View style={styles.inlineDatePicker}>
+              <Text style={styles.datePickerInstruction}>
+                Tap the date below to change it
+              </Text>
+              <DateTimePicker
+                value={isoToDate(visitDate)}
+                mode="date"
+                display="compact"
+                maximumDate={new Date()}
+                onChange={handleDateChange}
+                style={{ width: '100%' }}
+              />
+            </View>
           )}
         </View>
 
@@ -1013,6 +1018,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: Colors.primaryBlue,
+  },
+
+  // Date picker — iOS inline wrapper + instruction label
+  inlineDatePicker: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  datePickerInstruction: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 4,
+    marginTop: 8,
   },
 
   // Date picker — iOS bottom sheet
