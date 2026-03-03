@@ -1,5 +1,5 @@
 #!/bin/bash
-expo start --tunnel --port 8082 &
+expo start --tunnel --port 8082 "$@" &
 EXPO_PID=$!
 
 FOUND=0
