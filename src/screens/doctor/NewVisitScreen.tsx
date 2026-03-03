@@ -446,6 +446,7 @@ export default function NewVisitScreen() {
                 display="spinner"
                 maximumDate={new Date()}
                 onChange={handleDateChange}
+                style={{ height: 180 }}
               />
             </View>
           )}
@@ -868,6 +869,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderWidth: 1,
     borderColor: Colors.border,
+    height: 220,
   },
   inlineDatePickerDone: {
     alignItems: 'flex-end',
