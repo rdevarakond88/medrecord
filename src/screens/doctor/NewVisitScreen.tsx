@@ -426,29 +426,18 @@ export default function NewVisitScreen() {
             <Text style={styles.datePillChevron}>›</Text>
             <Text style={styles.datePillChange}>Change</Text>
           </TouchableOpacity>
-          {/* iOS: inline spinner — no Modal; avoids blank-screen native rendering
-              issues seen with transparent Modals on datetimepicker v8 / iOS.
-              Wrapper View provides explicit bounds so the native spinner binds
-              correctly to the value prop (without bounds it shows a stale date). */}
+          {/* iOS: compact display — native popover calendar, no spinner.
+              display="compact" works reliably on all iOS 14+ devices and
+              dismisses itself; no wrapper or Done button needed. */}
           {Platform.OS === 'ios' && showDatePicker && (
-            <View style={styles.inlineDatePicker}>
-              <TouchableOpacity
-                style={styles.inlineDatePickerDone}
-                onPress={() => setShowDatePicker(false)}
-                accessibilityLabel="Done selecting date"
-                accessibilityRole="button"
-              >
-                <Text style={styles.inlineDatePickerDoneText}>Done</Text>
-              </TouchableOpacity>
-              <DateTimePicker
-                value={isoToDate(visitDate)}
-                mode="date"
-                display="spinner"
-                maximumDate={new Date()}
-                onChange={handleDateChange}
-                style={{ height: 180 }}
-              />
-            </View>
+            <DateTimePicker
+              value={isoToDate(visitDate)}
+              mode="date"
+              display="compact"
+              maximumDate={new Date()}
+              onChange={handleDateChange}
+              style={{ width: '100%' }}
+            />
           )}
         </View>
 
@@ -859,27 +848,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     marginLeft: 4,
-  },
-
-  // Inline iOS date picker wrapper
-  inlineDatePicker: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 8,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    height: 220,
-  },
-  inlineDatePickerDone: {
-    alignItems: 'flex-end',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  inlineDatePickerDoneText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.primaryBlue,
   },
 
   // Chief complaint input
