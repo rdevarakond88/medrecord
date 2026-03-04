@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D6 security audit complete. All CRITICAL and HIGH findings closed. MEDIUM and LOW findings open — fix before merge to main. Ready for device testing (43 checklist items pending).
-**Last Updated:** 2026-03-02
-**Last Session:** D6 security audit (2026-03-02). Fixed CRITICAL-2 (sync_queue no doctor_id column), CRITICAL-1 (sync_queue not cleared on logout), HIGH-1 (noteText omitted from API call), HIGH-2 (visits_draft not marked synced after createVisit), HIGH-3 (no DPDP audit event on visit creation), HIGH-4 (doctorId IDOR risk comment). Commits: `04f3e99`, `831f0dc`, `f888874`, `fb9b766`. 6 MEDIUM + 2 LOW findings open — fix before merge to main.
+**Phase:** D6 complete (security audit done, device testing done). D7 PM pre-flow gate complete — ready to build.
+**Last Updated:** 2026-03-04
+**Last Session:** D7 PM pre-flow gate (2026-03-04). Review saved to `reviews/D7-pm-preflow.md`. Three required changes before D7 build begin: doctor-scoped local image directory + logout cleanup; Aadhaar-format digit strip from OCR output before SQLite write; full scan → visits_draft → enqueueOperation path (closes D6 MEDIUM-3). Previous session: D6 security audit (2026-03-02). Fixed CRITICAL-2 (sync_queue no doctor_id column), CRITICAL-1 (sync_queue not cleared on logout), HIGH-1 (noteText omitted from API call), HIGH-2 (visits_draft not marked synced after createVisit), HIGH-3 (no DPDP audit event on visit creation), HIGH-4 (doctorId IDOR risk comment). Commits: `04f3e99`, `831f0dc`, `f888874`, `fb9b766`. 6 MEDIUM + 2 LOW findings open — fix before merge to main.
 
 ---
 
@@ -55,7 +55,7 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|
 | D6 — New Visit | **Live screen built. Security audit complete — CRITICAL and HIGH closed (commits `04f3e99`, `831f0dc`, `f888874`, `fb9b766`). Device testing complete for core workflow. 33 items confirmed. 9 items deferred pending D7 and backend. 2 MEDIUM debt items open (KeyboardAvoidingView, mobile number in header). 6 security MEDIUM + 2 LOW open before merge.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
-| D7 — Document Scanner | Not started | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
+| D7 — Document Scanner | **PM pre-flow gate complete (2026-03-04). See `reviews/D7-pm-preflow.md`. Three required changes before build: (1) doctor-scope local image directory + logout cleanup; (2) strip Aadhaar-format digit sequences from OCR output before SQLite write; (3) wire full scan → visits_draft → enqueueOperation path to close D6 MEDIUM-3.** | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
 | D1 — Login / OTP | Stub only (seeds fake token) | Tier 3. Replace stub when OTP auth is implemented. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
