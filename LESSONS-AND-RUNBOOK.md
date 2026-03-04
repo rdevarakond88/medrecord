@@ -10,6 +10,7 @@ _Source of truth for environment setup, agent workflows, build mistakes, and the
 2. [Agent Workflow Rules](#2-agent-workflow-rules)
 3. [Mistakes and Rules — D2, D3, D6 Builds](#3-mistakes-and-rules--d2-d3-d6-builds)
    - [3.4 Device Testing Mistakes (D2, D3, D6)](#34-device-testing-mistakes-d2-d3-d6)
+   - [3.5 Process Mistakes](#35-process-mistakes)
 4. [Standard Runbook — Building Each Screen](#4-standard-runbook--building-each-screen)
 
 ---
@@ -453,6 +454,18 @@ After any native component change or SQLite schema migration, shake → Reload i
 _Learned in D6._
 
 Every new column added to any SQLite table must have a corresponding `ALTER TABLE` migration wrapped in `try/catch` immediately below the `CREATE TABLE` definition. Missing migrations cause "no such column" crash on existing device databases. This happened with `is_own_visit` during D6 device testing. A fresh install would not catch this — always test schema changes on a device with an existing database.
+
+---
+
+### 3.5 Process Mistakes
+
+---
+
+**Mistake 9 — PM pre-flow gate skipped for D3 and D6**
+
+What happened: The PM agent was created during D2 with instructions to run before every new screen. The transition brief for D3 and D6 did not include it. It was silently dropped for two screens.
+
+Rule going forward: The PM pre-flow gate is mandatory before every new screen session. It must be the first item in CONTEXT-TRANSFER.md and the first step in every new screen chat. If it was skipped for a completed screen, run it retroactively before that screen is merged to main.
 
 ---
 

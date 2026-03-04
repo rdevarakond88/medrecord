@@ -6,6 +6,18 @@ _Last updated: 2026-03-03. Repo: https://github.com/rdevarakond88/medrecord — 
 
 ---
 
+## MANDATORY FIRST STEP — PM Pre-Flow Gate
+
+Before starting any screen, run this in the new chat session:
+
+Read agents/agent-pm.md, docs/product-vision.md, docs/project-state.md.
+
+Run the Moment 1 pre-flight review for [screen name] and produce output in the format specified in agent-pm.md.
+
+Do not start the validation checklist or mockup until the PM pre-flow gate is complete and confirmed.
+
+---
+
 # PART 1 — PROJECT STATE
 _Source: docs/project-state.md_
 
