@@ -182,10 +182,31 @@ async function mockUseThis(
   doctorId: string,
 ): Promise<{ localPath: string; label: string }> {
   await new Promise<void>(resolve => setTimeout(resolve, 1200)); // compress + save
-  // PM REQ 1: doctor-scoped final path
-  const localPath = `file:///data/user/0/com.medrecord/${doctorId}/scans/scan-${Date.now()}.jpg`;
+  // PM REQ 1: doctor-scoped final path — live build uses Crypto.randomUUID() (expo-crypto)
+  const mockUUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'; // placeholder; live build: randomUUID()
+  const localPath = `file:///data/user/0/com.medrecord/${doctorId}/scans/${mockUUID}.jpg`;
   const label = `Document – 04/03/2026`;
   return { localPath, label };
+}
+
+// ---------------------------------------------------------------------------
+// PM REQ 2 — OCR queue stub: demonstrates sanitizeOcrText() call site
+// HIGH-1 fix (reviews/D7-security-audit.md)
+//
+// Real build: called fire-and-forget after "Use This" saves the image.
+// sanitizeOcrText() MUST be applied at the SQLite write boundary —
+// before any INSERT/UPDATE to visits_draft — not at display time.
+// ---------------------------------------------------------------------------
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function queueOcrAsync(_localPath: string, _visitId: string): Promise<void> {
+  // Real build: POST /ocr/queue — fire-and-forget, never awaited in capture flow.
+  // When OCR result arrives (webhook / polling):
+  //   const rawOcrText: string = await fetchOcrResult(_localPath);
+  //   const safeText = sanitizeOcrText(rawOcrText); // ← strip Aadhaar at write boundary
+  //   await db.runAsync(
+  //     'UPDATE visits_draft SET ocr_text = ? WHERE id = ?',
+  //     [safeText, _visitId]  // ← parameterised — no string concatenation
+  //   );
 }
 
 // ---------------------------------------------------------------------------
@@ -323,13 +344,15 @@ export function D7ViewfinderGood() {
   // Auth guard — in live build: const { token, user } = useAuthStore()
   const token = MOCK_TOKEN;
   const user  = MOCK_USER;
-  if (!token || !user) return null;
 
   const [flashMode, setFlashMode] = useState<FlashMode>('off');
 
   // Tap guard — useRef (synchronous), not useState (async lag creates race window)
   // LESSONS-AND-RUNBOOK.md § 3.3
   const isCapturingRef = useRef(false);
+
+  // Auth guard AFTER all hooks — Rules of Hooks (D2/D3/D6 pattern)
+  if (!token || !user) return null;
 
   const handleCapture = async () => {
     if (isCapturingRef.current) return; // second tap blocked synchronously
@@ -434,9 +457,12 @@ export function D7ViewfinderGood() {
 export function D7ViewfinderTooDark() {
   const token = MOCK_TOKEN;
   const user  = MOCK_USER;
-  if (!token || !user) return null;
 
   const isCapturingRef = useRef(false);
+
+  // Auth guard AFTER all hooks — Rules of Hooks (D2/D3/D6 pattern)
+  if (!token || !user) return null;
+
   const handleCapture = async () => {
     // Indicator is advisory — capture proceeds even when "Too Dark"
     if (isCapturingRef.current) return;
@@ -490,9 +516,12 @@ export function D7ViewfinderTooDark() {
 export function D7ViewfinderOverexposed() {
   const token = MOCK_TOKEN;
   const user  = MOCK_USER;
-  if (!token || !user) return null;
 
   const isCapturingRef = useRef(false);
+
+  // Auth guard AFTER all hooks — Rules of Hooks (D2/D3/D6 pattern)
+  if (!token || !user) return null;
+
   const handleCapture = async () => {
     if (isCapturingRef.current) return;
     isCapturingRef.current = true;
@@ -538,6 +567,31 @@ export function D7ViewfinderOverexposed() {
 }
 
 // ---------------------------------------------------------------------------
+// ErrorState — shown when D7 is entered without a valid visitId.
+// CRITICAL-2 fix (reviews/D7-security-audit.md): a scan must never be written
+// to disk without a confirmed visitId — orphaned files have no cleanup path
+// on logout and no enqueueOperation entry for server sync.
+// ---------------------------------------------------------------------------
+interface ErrorStateProps { message: string; }
+function ErrorState({ message }: ErrorStateProps) {
+  return (
+    <SafeAreaView style={styles.fullScreenSafe}>
+      <View style={styles.errorStateContainer}>
+        <Text style={styles.errorStateText}>{message}</Text>
+        {/* Live build: onPress={() => navigation.goBack()} */}
+        <TouchableOpacity
+          style={styles.errorStateButton}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
+          <Text style={styles.errorStateButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // State 2 — Preview: Captured image with crop handles
 //
 // "Use This" — primary action (Primary Blue #1A6DB5)
@@ -550,10 +604,22 @@ export function D7ViewfinderOverexposed() {
 export function D7PreviewState() {
   const token = MOCK_TOKEN;
   const user  = MOCK_USER;
-  if (!token || !user) return null;
+
+  // visitId — in live build: const { visitId } = useRoute<DocumentScannerRouteProp>().params
+  const visitId = VISIT.localId;
 
   // Tap guard on "Use This" — useRef not useState (LESSONS-AND-RUNBOOK.md § 3.3)
   const isProcessingRef = useRef(false);
+
+  // Auth guard AFTER all hooks — Rules of Hooks (D2/D3/D6 pattern)
+  if (!token || !user) return null;
+
+  // CRITICAL-2 fix: visitId must be non-null before any scan write.
+  // Orphaned file risk: a scan saved without a visitId has no visits_draft row,
+  // no enqueueOperation entry, and no cleanup path on logout.
+  if (!visitId) {
+    return <ErrorState message="No visit context — cannot attach scan." />;
+  }
 
   const handleUseThis = async () => {
     if (isProcessingRef.current) return;
@@ -566,7 +632,8 @@ export function D7PreviewState() {
       // Live build:
       //   navigation.navigate('NewVisit', { scan: result });
       //   OR navigation.navigate('VisitDetail', { scan: result });
-      console.log('[D7 mockup] Use This result:', result.label);
+      // [D7 mockup] result: { localPath, label } — do not log in live build
+      void result;
     } finally {
       isProcessingRef.current = false;
     }
@@ -639,6 +706,8 @@ export function D7PreviewState() {
 export function D7ProcessingState() {
   const token = MOCK_TOKEN;
   const user  = MOCK_USER;
+  // Auth guard AFTER all hooks — Rules of Hooks (D2/D3/D6 pattern)
+  // (D7ProcessingState has no hooks; guard is already in correct position)
   if (!token || !user) return null;
   void user; // consumed via mockUseThis in live build
 
@@ -1051,5 +1120,34 @@ const styles = StyleSheet.create({
     fontSize:   15,
     fontWeight: '500',
     marginTop:  14,
+  },
+
+  // ── ErrorState — CRITICAL-2 fix (reviews/D7-security-audit.md) ────────────
+  errorStateContainer: {
+    flex:            1,
+    alignItems:      'center',
+    justifyContent:  'center',
+    padding:         32,
+  },
+  errorStateText: {
+    color:      Colors.error,
+    fontSize:   16,
+    fontWeight: '600',
+    textAlign:  'center',
+    marginBottom: 24,
+  },
+  errorStateButton: {
+    backgroundColor:  Colors.primaryBlue,
+    borderRadius:     12,
+    paddingHorizontal: 24,
+    paddingVertical:  14,
+    minHeight:        48,
+    alignItems:       'center',
+    justifyContent:   'center',
+  },
+  errorStateButtonText: {
+    color:      Colors.surface,
+    fontSize:   16,
+    fontWeight: '600',
   },
 });

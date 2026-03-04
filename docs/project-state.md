@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D6 complete (security audit done, device testing done). D7 static mockup built and security audit run — BLOCKED on 2 CRITICAL findings before live build can begin.
+**Phase:** D6 complete. D7 static mockup built, security audit run, all CRITICAL + HIGH findings fixed — ready for live build.
 **Last Updated:** 2026-03-04
-**Last Session:** D7 security audit on static mockup (2026-03-04). Audit saved to `reviews/D7-security-audit.md`. BLOCKED: CRITICAL-1 (auth guard before hooks in 4/5 variants), CRITICAL-2 (visitId not validated non-null before scan write). HIGH-1 (sanitizeOcrText defined but no call site). 2 MEDIUM + 2 LOW findings. Previous session: D7 PM pre-flow gate (2026-03-04). Previous: D6 security audit (2026-03-02). Fixed CRITICAL-2 (sync_queue no doctor_id column), CRITICAL-1 (sync_queue not cleared on logout), HIGH-1 (noteText omitted from API call), HIGH-2 (visits_draft not marked synced after createVisit), HIGH-3 (no DPDP audit event on visit creation), HIGH-4 (doctorId IDOR risk comment). Commits: `04f3e99`, `831f0dc`, `f888874`, `fb9b766`. 6 MEDIUM + 2 LOW findings open — fix before merge to main.
+**Last Session:** D7 security audit findings fixed in mockup (2026-03-04). All 5 findings closed: CRITICAL-1 (auth guard moved after hooks), CRITICAL-2 (visitId guard + ErrorState added), HIGH-1 (queueOcrAsync stub with sanitizeOcrText call site), MEDIUM-1 (console.log removed), MEDIUM-2 (Date.now() → mock UUID). 2 LOW findings remain (backlog). Audit: `reviews/D7-security-audit.md`. Previous session: D7 security audit initial run (2026-03-04). Previous: D7 PM pre-flow gate (2026-03-04). Previous: D6 security audit (2026-03-02). Fixed CRITICAL-2 (sync_queue no doctor_id column), CRITICAL-1 (sync_queue not cleared on logout), HIGH-1 (noteText omitted from API call), HIGH-2 (visits_draft not marked synced after createVisit), HIGH-3 (no DPDP audit event on visit creation), HIGH-4 (doctorId IDOR risk comment). Commits: `04f3e99`, `831f0dc`, `f888874`, `fb9b766`. 6 MEDIUM + 2 LOW findings open — fix before merge to main.
 
 ---
 
@@ -55,7 +55,7 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|
 | D6 — New Visit | **Live screen built. Security audit complete — CRITICAL and HIGH closed (commits `04f3e99`, `831f0dc`, `f888874`, `fb9b766`). Device testing complete for core workflow. 33 items confirmed. 9 items deferred pending D7 and backend. 2 MEDIUM debt items open (KeyboardAvoidingView, mobile number in header). 6 security MEDIUM + 2 LOW open before merge.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
-| D7 — Document Scanner | **PM pre-flow gate complete (2026-03-04). Static mockup built (2026-03-04). Security audit run (2026-03-04) — BLOCKED: 2 CRITICAL findings. See `reviews/D7-security-audit.md`. CRITICAL-1: Auth guard before hooks in 4/5 variants. CRITICAL-2: visitId not validated non-null before scan write. HIGH-1: sanitizeOcrText() defined but no call site. Must fix before live build begins.** | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
+| D7 — Document Scanner | **PM pre-flow gate complete (2026-03-04). Static mockup built and security audit CLEARED (2026-03-04). All CRITICAL + HIGH findings fixed in mockup. See `reviews/D7-security-audit.md`. 2 LOW findings remain (backlog). Ready for live build.** | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
 | D1 — Login / OTP | Stub only (seeds fake token) | Tier 3. Replace stub when OTP auth is implemented. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
@@ -198,25 +198,25 @@ _Carry these into every build/mockup session for these screens._
 | **LOW-1:** `isSavingRef.current` never reset on success path — Save button permanently locked if `navigation.goBack()` fails to unmount the screen | D6 | D6 security audit | Reset `isSavingRef.current = false` immediately before `navigation.goBack()` on the success path, or in a `finally` block. |
 | **LOW-2:** Visit date validation enforced only at picker layer, not at save time in `handleSave()` — future-dated visits possible via state manipulation | D6 | D6 security audit | Add a guard at the top of `handleSave()`: if `visitDate > todayISO()`, set `saveError` and return early. |
 
-### CRITICAL — D7 mockup security audit (must fix before live build begins)
+### CRITICAL — D7 mockup security audit (all closed)
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D7-C-1:** Auth guard placed BEFORE hooks in 4 of 5 variants (`D7ViewfinderGood` line 326, `D7ViewfinderTooDark` line 437, `D7ViewfinderOverexposed` line 493, `D7PreviewState` line 553) — React Rules of Hooks violation; will crash on token expiry in live build | D7 | D7 security audit CRITICAL-1 | Move `if (!token \|\| !user) return null` to AFTER all hooks in all five variants. |
-| **D7-C-2:** `visitId` not validated as non-null before scan is written to disk — orphaned sensitive medical image file risk with no database association and no cleanup path | D7 | D7 security audit CRITICAL-2 | Add `visitId` extraction from nav params and non-null guard before any capture/write logic in `D7PreviewState.handleUseThis`. |
+| ~~**D7-C-1:** Auth guard placed BEFORE hooks in 4 of 5 variants — React Rules of Hooks violation~~ | D7 | D7 security audit CRITICAL-1 | **CLOSED 2026-03-04** — Guard moved after all hooks in all 5 variants. |
+| ~~**D7-C-2:** `visitId` not validated non-null before scan write — orphaned sensitive image risk~~ | D7 | D7 security audit CRITICAL-2 | **CLOSED 2026-03-04** — `visitId` stub + `ErrorState` guard added to `D7PreviewState`. |
 
-### HIGH — D7 mockup security audit (fix before live build begins)
-
-| Item | Screen | Source | Notes |
-|---|---|---|---|
-| **D7-H-1:** `sanitizeOcrText()` defined but never called — no demonstrated call site; builder will likely omit the Aadhaar strip when wiring OCR result handler in live build | D7 | D7 security audit HIGH-1 | Add a `queueOcrAsync()` stub showing the `sanitizeOcrText(rawOcrOutput)` call before the SQLite write. PM REQ 2 and UIDAI locked decision. |
-
-### MEDIUM — D7 mockup security audit
+### HIGH — D7 mockup security audit (all closed)
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D7-M-1:** `console.log` at `D7PreviewState` line 569 logs `result.label` — if label includes patient data in live build, PII will reach application logs | D7 | D7 security audit MEDIUM-1 | Remove console.log; replace with comment. |
-| **D7-M-2:** `mockUseThis` uses `Date.now()` for filename (line 186) — should use `randomUUID()` per PM REQ 1 spec and checklist item #51 | D7 | D7 security audit MEDIUM-2 | Replace `Date.now()` with placeholder UUID in mockup so builder copies correct pattern. |
+| ~~**D7-H-1:** `sanitizeOcrText()` defined but never called — no demonstrated call site~~ | D7 | D7 security audit HIGH-1 | **CLOSED 2026-03-04** — `queueOcrAsync()` stub added showing `sanitizeOcrText()` at SQLite write boundary. |
+
+### MEDIUM — D7 mockup security audit (all closed)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| ~~**D7-M-1:** `console.log` at `D7PreviewState` line 569 logs `result.label` — PII risk in live build~~ | D7 | D7 security audit MEDIUM-1 | **CLOSED 2026-03-04** — `console.log` removed; replaced with comment. |
+| ~~**D7-M-2:** `mockUseThis` uses `Date.now()` for filename — should use `randomUUID()`~~ | D7 | D7 security audit MEDIUM-2 | **CLOSED 2026-03-04** — `Date.now()` replaced with hardcoded mock UUID; comment references `expo-crypto`. |
 
 ### LOW / SHOULD FIX
 

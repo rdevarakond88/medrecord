@@ -10,9 +10,11 @@ _Validation checklist: `reviews/D7-VALIDATION-CHECKLIST.md`_
 
 ## CRITICAL (must fix before merge)
 
-### CRITICAL-1: Auth guard placed BEFORE hooks in 4 of 5 variants — React Rules of Hooks violation
+### ~~CRITICAL-1: Auth guard placed BEFORE hooks in 4 of 5 variants — React Rules of Hooks violation~~
 
-**Affected variants:** `D7ViewfinderGood` (line 326), `D7ViewfinderTooDark` (line 437),
+**CLOSED 2026-03-04** — Guard moved to after all hooks in all 5 variants. `D7ViewfinderGood` guard now at line 355 (after `useState` line 348, `useRef` line 352). `D7ViewfinderTooDark` guard at line 464 (after `useRef` line 461). `D7ViewfinderOverexposed` guard at line 523 (after `useRef` line 520). `D7PreviewState` guard at line 615 (after `useRef` line 612). `D7ProcessingState` guard at line 711 (no hooks; comment added for pattern clarity). Commit: `[D7] Fix security audit findings on mockup`.
+
+_Original finding — affected variants:_ `D7ViewfinderGood` (line 326), `D7ViewfinderTooDark` (line 437),
 `D7ViewfinderOverexposed` (line 493), `D7PreviewState` (line 553)
 
 **File:** `mockups/D7DocumentScannerScreen.tsx`, lines 326, 437, 493, 553
@@ -62,7 +64,11 @@ safe, but must still follow the consistent pattern when the live build is writte
 
 ---
 
-### CRITICAL-2: visitId not validated as non-null before scan is written to disk
+### ~~CRITICAL-2: visitId not validated as non-null before scan is written to disk~~
+
+**CLOSED 2026-03-04** — `visitId` extracted from nav params stub (`VISIT.localId`) at top of `D7PreviewState`. `ErrorState` component added. After auth guard, `if (!visitId) return <ErrorState message="No visit context — cannot attach scan." />` guard added at line 620. Pattern demonstrates correct live-build implementation. Commit: `[D7] Fix security audit findings on mockup`.
+
+_Original finding:_
 
 **File:** `mockups/D7DocumentScannerScreen.tsx`, `D7PreviewState.handleUseThis` (line 558–572)
 
@@ -124,7 +130,11 @@ has a concrete implementation reference.
 
 ## HIGH (fix before v1 launch)
 
-### HIGH-1: sanitizeOcrText() defined but never called — no demonstrated call site
+### ~~HIGH-1: sanitizeOcrText() defined but never called — no demonstrated call site~~
+
+**CLOSED 2026-03-04** — `queueOcrAsync(_localPath, _visitId)` stub function added after `mockUseThis`. Stub shows `sanitizeOcrText(rawOcrText)` called at the write boundary before the parameterised `db.runAsync()` UPDATE to `visits_draft`. Fire-and-forget async pattern documented in comments. Commit: `[D7] Fix security audit findings on mockup`.
+
+_Original finding:_
 
 **File:** `mockups/D7DocumentScannerScreen.tsx`, lines 135–139 (definition), entire file (no call site)
 
@@ -176,7 +186,11 @@ Without this, HIGH-1 will likely become a CRITICAL finding in the live screen se
 
 ## MEDIUM (fix in next sprint)
 
-### MEDIUM-1: console.log in D7PreviewState logs scan result — risky pattern for live build
+### ~~MEDIUM-1: console.log in D7PreviewState logs scan result — risky pattern for live build~~
+
+**CLOSED 2026-03-04** — `console.log` removed. Replaced with `// [D7 mockup] result: { localPath, label } — do not log in live build` and `void result` to suppress the unused-variable warning. Commit: `[D7] Fix security audit findings on mockup`.
+
+_Original finding:_
 
 **File:** `mockups/D7DocumentScannerScreen.tsx`, line 569
 
@@ -196,7 +210,11 @@ consent-layer-spec.md Rule 1: "Never log patient mobile numbers or names in appl
 // [D7 mockup] result: { localPath, label } — do not log in live build
 ```
 
-### MEDIUM-2: mockUseThis uses Date.now() for filename — should use randomUUID()
+### ~~MEDIUM-2: mockUseThis uses Date.now() for filename — should use randomUUID()~~
+
+**CLOSED 2026-03-04** — `Date.now()` replaced with hardcoded mock UUID `'a1b2c3d4-e5f6-7890-abcd-ef1234567890'`. Comment added: `// placeholder; live build: randomUUID()`. Builder will copy the UUID pattern rather than the timestamp pattern. Commit: `[D7] Fix security audit findings on mockup`.
+
+_Original finding:_
 
 **File:** `mockups/D7DocumentScannerScreen.tsx`, line 186
 
@@ -260,11 +278,11 @@ to cover non-breaking spaces.
 
 | Area | Status | Notes |
 |---|---|---|
-| Auth guard position | ❌ CRITICAL | Wrong position in 4/5 variants — before hooks |
+| Auth guard position | ✅ CLOSED | CRITICAL-1 fixed — guard after all hooks in all 5 variants |
 | doctorId sourced from auth store | ✅ Pass | `user.id` (auth store) passed to mockCapturePicture and mockUseThis — never from nav params |
-| Aadhaar strip (sanitizeOcrText) | ⚠️ HIGH | Function defined and correct; no call site demonstrated |
-| visitId non-null validation | ❌ CRITICAL | Not shown in mockup; orphaned scan risk |
-| No PII in console.log | ⚠️ MEDIUM | `result.label` logged at line 569; risky pattern |
+| Aadhaar strip (sanitizeOcrText) | ✅ CLOSED | HIGH-1 fixed — `queueOcrAsync` stub shows call site at write boundary |
+| visitId non-null validation | ✅ CLOSED | CRITICAL-2 fixed — `visitId` guard + `ErrorState` added to `D7PreviewState` |
+| No PII in console.log | ✅ CLOSED | MEDIUM-1 fixed — `console.log` removed; replaced with comment |
 | Tap guard (useRef) | ✅ Pass | All capture/submit buttons use `useRef(false)` correctly |
 | Modal mounting | ✅ Pass | All Modals mounted unconditionally; `visible` prop only |
 
@@ -273,11 +291,11 @@ to cover non-breaking spaces.
 ## Checklist Status
 
 ```
-⚠️  Authentication & Sessions  — N/A for server-side items; auth guard FAILED on mobile
-❌  Authorisation              — 1/2 passed; auth guard wrong position; doctorId sourced correctly
-⚠️  Data Handling              — 3/5 passed; sanitizeOcrText not called; console.log risk
+✅  Authentication & Sessions  — Auth guard now after all hooks in all 5 variants (CRITICAL-1 closed)
+✅  Authorisation              — 2/2 passed; auth guard fixed; doctorId sourced from auth store
+✅  Data Handling              — 5/5 passed; sanitizeOcrText call site added; console.log removed
 ✅  Mobile Security            — Tap guards correct; doctor-scoped path pattern correct
-⚠️  Input Validation           — visitId null-check not demonstrated (CRITICAL-2)
+✅  Input Validation           — visitId null-check added (CRITICAL-2 closed)
 ✅  Database                   — No direct DB queries in this screen
 ✅  DPDP Compliance            — Doctor-scoped path + logout cleanup shown in comments/mock
 ```
@@ -290,27 +308,35 @@ to cover non-breaking spaces.
 - [✅] No patient name in any console.log call
 - [✅] Doctor-scoped image directory pattern: `<docDir>/<doctorId>/scans/<uuid>.jpg`
 - [✅] Logout directory cleanup pattern shown in comments (live build: `useLogout`)
-- [❌] Auth guard: placed BEFORE hooks in 4/5 variants (CRITICAL-1)
-- [❌] visitId validated non-null before scan write (CRITICAL-2)
-- [❌] sanitizeOcrText() has no call site (HIGH-1)
-- [⚠️] console.log logs scan result.label — risky in live build (MEDIUM-1)
-- [⚠️] mockUseThis uses Date.now() not randomUUID() (MEDIUM-2)
-- [⚠️] accessibilityViewIsModal missing from 2 Modal variants (LOW-1)
+- [✅] Auth guard after all hooks in all 5 variants (CRITICAL-1 — CLOSED)
+- [✅] visitId validated non-null before scan write (CRITICAL-2 — CLOSED)
+- [✅] sanitizeOcrText() call site demonstrated in queueOcrAsync stub (HIGH-1 — CLOSED)
+- [✅] console.log removed from D7PreviewState (MEDIUM-1 — CLOSED)
+- [✅] mockUseThis uses mock UUID not Date.now() (MEDIUM-2 — CLOSED)
+- [⚠️] accessibilityViewIsModal missing from 2 Modal variants (LOW-1 — open)
 
 ---
 
-## OVERALL VERDICT: **BLOCKED — 2 CRITICAL issues**
+## OVERALL VERDICT: **CLEAR TO PROCEED — all CRITICAL and HIGH findings closed**
 
-D7 mockup may not proceed to live build with CRITICAL-1 and CRITICAL-2 unresolved.
+_Updated 2026-03-04 after fixes applied in commit `[D7] Fix security audit findings on mockup`._
 
-**Required before build begins:**
-1. Move auth guard to AFTER all hooks in all 5 variants (CRITICAL-1)
-2. Add visitId non-null guard pattern in D7PreviewState (CRITICAL-2)
-3. Add demonstrated sanitizeOcrText() call site (HIGH-1 — recommended to fix alongside CRITICAL items)
+All CRITICAL and HIGH findings resolved. 2 LOW findings remain open (backlog).
 
-**Already correct (do not regress):**
+**Closed in this session:**
+- CRITICAL-1: Auth guard moved after all hooks in all 5 variants ✅
+- CRITICAL-2: visitId non-null guard + ErrorState added to D7PreviewState ✅
+- HIGH-1: queueOcrAsync stub demonstrates sanitizeOcrText() call site ✅
+- MEDIUM-1: console.log removed from D7PreviewState ✅
+- MEDIUM-2: Date.now() replaced with mock UUID placeholder ✅
+
+**Remaining open (backlog — fix before device testing):**
+- LOW-1: accessibilityViewIsModal missing from D7ViewfinderTooDark and D7ViewfinderOverexposed Modals
+- LOW-2: sanitizeOcrText Aadhaar regex covers single-space and no-space; does not cover non-breaking space
+
+**Still correct (do not regress):**
 - doctorId from auth store ✅
 - Tap guard via useRef ✅
 - Modal unconditional mount ✅
 - Doctor-scoped path structure ✅
-- Aadhaar regex logic (correct, just needs a call site) ✅
+- Aadhaar regex logic ✅
