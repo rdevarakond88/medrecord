@@ -45,6 +45,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -332,12 +333,20 @@ export default function NewVisitScreen() {
   }
 
   // ─── Derived values ──────────────────────────────────────────────────────
-  const clinicLine = `${user.clinic_name ?? 'Your Clinic'} · ${user.name}`;
+  const clinicLine   = `${user.clinic_name ?? 'Your Clinic'} · ${user.name}`;
+  // Mask mobile to last 5 digits — consistent with D2/D3 PII masking (MEDIUM-2)
+  const maskedMobile = patientMobile ? `••••• ${patientMobile.slice(-5)}` : '';
 
   // ─── Render ─────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* KeyboardAvoidingView — shifts content up when keyboard appears so the  */}
+      {/* note field and Save button stay visible (MEDIUM-2 / device test debt). */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
 
       {/* Offline banner — amber dot + message (checklist #13) */}
       {!isOnline && (
@@ -364,7 +373,7 @@ export default function NewVisitScreen() {
             New Visit
           </Text>
           <Text style={styles.headerSubtitle} numberOfLines={1}>
-            {patientName} · {patientMobile}
+            {patientName} · {maskedMobile}
           </Text>
           <Text style={styles.headerSubtitle} numberOfLines={1}>
             {clinicLine}
@@ -666,6 +675,7 @@ export default function NewVisitScreen() {
         )}
       </View>
 
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
