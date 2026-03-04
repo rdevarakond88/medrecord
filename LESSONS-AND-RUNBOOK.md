@@ -9,6 +9,7 @@ _Source of truth for environment setup, agent workflows, build mistakes, and the
 1. [Environment Setup — Issues and Fixes](#1-environment-setup--issues-and-fixes)
 2. [Agent Workflow Rules](#2-agent-workflow-rules)
 3. [Mistakes and Rules — D2, D3, D6 Builds](#3-mistakes-and-rules--d2-d3-d6-builds)
+   - [3.4 Device Testing Mistakes (D2, D3, D6)](#34-device-testing-mistakes-d2-d3-d6)
 4. [Standard Runbook — Building Each Screen](#4-standard-runbook--building-each-screen)
 
 ---
@@ -361,6 +362,97 @@ Examples:
 - **D6 must acknowledge "consent not yet established" state.** Build and show the no-consent variant. D9 will wire up later, but D6 must not assume consent is always pre-granted.
 
 - **D6 success metric gate:** Validate against the product-vision.md metric: doctor completes a visit record in under 60 seconds. If the screen requires more than 3 taps to reach a submittable state, redesign before persona review.
+
+### 3.4 Device Testing Mistakes (D2, D3, D6)
+
+These rules were learned exclusively through real-device testing. Web preview and simulator never surface them.
+
+---
+
+**RULE 1 — Visual hiding is not data hiding**
+_Learned in D3._
+
+Using opacity, colour, or CSS to visually hide sensitive data is not sufficient. Chief complaint was visible through gray opacity in no-consent cards. Fix: strip sensitive fields from the data before it reaches the component. Access control must happen at the data layer, not the display layer. Never rely on visual styling to protect patient data.
+
+---
+
+**RULE 2 — iOS keyboard behaviour requires explicit handling**
+_Learned in D2._
+
+On iOS, tapping outside a text input does not dismiss the keyboard by default. Wrap the entire screen in `TouchableWithoutFeedback` calling `Keyboard.dismiss()`. Without this, the keyboard stays open permanently after the user taps away from the input.
+
+---
+
+**RULE 3 — iOS search bar focus requires explicit state**
+_Learned in D2._
+
+On iOS, a custom search bar shows no visual feedback on tap without explicit `isFocused` state + `TouchableOpacity` wrapper + blinking cursor `Animated` loop. Web preview never reveals this — it only appears on a real device.
+
+---
+
+**RULE 4 — FAB overlap: never use `position:absolute` with hardcoded bottom values**
+_Learned in D2._
+
+`position:absolute` with hardcoded `bottom` values is fragile across device heights and overlaps other elements. This was fixed three times before the root cause was identified. Fix: always use flex row placement for FABs. Never hardcode bottom position values.
+
+---
+
+**RULE 5 — Two buttons for the same action must never appear simultaneously**
+_Learned in D2._
+
+The inline "Create New Patient" card and the FAB were both visible at the same time. Fix: control visibility logic so only one appears at a time based on screen state. Never fix overlap by adjusting positioning — fix the visibility logic.
+
+---
+
+**RULE 6 — Red consent banner is expected behaviour without a backend**
+_Learned in D3._
+
+"Could not verify consent — showing limited view" banner is correct behaviour when no backend server is running. Do not treat it as a bug during development. The app fails secure — shows no-consent view when the server is unreachable. This is by design.
+
+---
+
+**RULE 7 — Modal conditional mounting causes blank screen on iOS**
+_Learned in D6._
+
+Mounting a `Modal` conditionally with `{showModal && <Modal>}` causes a blank screen on iOS because the native presentation animation fires before content renders. Fix: always mount the `Modal` unconditionally in the React tree. Control visibility with the `visible` prop only:
+```tsx
+<Modal visible={showModal}>
+```
+
+---
+
+**RULE 8 — `display="spinner"` is unreliable on iOS**
+_Learned in D6 after 4 failed attempts._
+
+`@react-native-community/datetimepicker` with `display="spinner"` renders invisible wheels on some iOS versions. Use `display="compact"` for iOS date pickers — renders a native iOS popover calendar that works reliably on all iOS 14+.
+
+---
+
+**RULE 9 — Native components require an explicit parent container**
+_Learned in D6._
+
+Any third-party native component (`DateTimePicker`, `Camera`, `Maps`) must be wrapped in an explicit parent `View` with defined `width`, `backgroundColor` (`#FFFFFF`), `padding`, and `borderRadius`. Without a container, the native layer ignores the `value` prop and may render invisible or zero-height content.
+
+---
+
+**RULE 10 — UI contrast must be verified on device**
+_Learned in D6, occurred multiple times._
+
+Building UI components without verifying contrast on a real device results in invisible elements — white spinner wheels on white background, overlapping text on matching backgrounds. Before adding any new UI component, state explicitly what background colour it renders against. If contrast cannot be verified without a device, add a code comment flagging it as `// requires device contrast verification`.
+
+---
+
+**RULE 11 — Metro cache requires explicit clear after native changes**
+_Learned in D6._
+
+After any native component change or SQLite schema migration, shake → Reload in Expo Go is not sufficient. Always run `npm start -- --clear` and force-quit Expo Go completely before reloading. Failure to do this results in the old bundle running silently with no error.
+
+---
+
+**RULE 12 — Schema migrations are mandatory for existing device databases**
+_Learned in D6._
+
+Every new column added to any SQLite table must have a corresponding `ALTER TABLE` migration wrapped in `try/catch` immediately below the `CREATE TABLE` definition. Missing migrations cause "no such column" crash on existing device databases. This happened with `is_own_visit` during D6 device testing. A fresh install would not catch this — always test schema changes on a device with an existing database.
 
 ---
 
