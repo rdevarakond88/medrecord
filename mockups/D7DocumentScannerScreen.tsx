@@ -74,6 +74,7 @@ import {
   ActivityIndicator,
   Modal,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -214,6 +215,9 @@ async function queueOcrAsync(_localPath: string, _visitId: string): Promise<void
 // ---------------------------------------------------------------------------
 type ExposureState = 'too_dark' | 'good' | 'overexposed';
 type FlashMode    = 'off' | 'on' | 'auto';
+// D7-SF-1: document type selected at preview step; becomes scan.label returned to D6/D4
+type DocType = 'Prescription' | 'Lab Report' | 'Referral' | 'X-ray' | 'Other';
+const DOC_TYPES: DocType[] = ['Prescription', 'Lab Report', 'Referral', 'X-ray', 'Other'];
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -328,6 +332,46 @@ function CaptureButton({ onPress, disabled = false }: CaptureButtonProps) {
     >
       <View style={styles.captureCore} />
     </TouchableOpacity>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DocTypeSelector — D7-SF-1 (persona critique SHOULD FIX)
+//
+// Horizontal scrollable pill row shown on the preview screen above "Use This".
+// One option selected at a time. Default: "Prescription".
+// Selected: Primary Blue #1A6DB5 background, white text.
+// Unselected: white background, Text Secondary #64748B text.
+// Selected value becomes scan.label returned to D6/D4 via navigation params.
+// ---------------------------------------------------------------------------
+interface DocTypeSelectorProps {
+  selected: DocType;
+  onSelect: (type: DocType) => void;
+}
+function DocTypeSelector({ selected, onSelect }: DocTypeSelectorProps) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.docTypeScroll}
+      contentContainerStyle={styles.docTypeScrollContent}
+      accessibilityLabel="Select document type"
+    >
+      {DOC_TYPES.map(type => (
+        <TouchableOpacity
+          key={type}
+          style={[styles.docTypeOption, selected === type && styles.docTypeOptionSelected]}
+          onPress={() => onSelect(type)}
+          accessibilityLabel={`${type}${selected === type ? ', selected' : ''}`}
+          accessibilityRole="button"
+          accessibilityState={{ selected: selected === type }}
+        >
+          <Text style={[styles.docTypeLabel, selected === type && styles.docTypeLabelSelected]}>
+            {type}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
   );
 }
 
@@ -492,6 +536,8 @@ export function D7ViewfinderTooDark() {
           <View style={styles.bottomControls}>
             {/* Advisory indicator — does NOT disable capture */}
             <ExposureIndicator state="too_dark" />
+            {/* D7-SF-3: advisory sub-label — clarifies capture is not blocked */}
+            <Text style={styles.captureAdvisory}>Tap to capture anyway</Text>
             <CaptureButton onPress={handleCapture} />
             <TouchableOpacity style={styles.photoLibraryBtn} accessibilityLabel="Choose from photo library" accessibilityRole="button">
               <Text style={styles.photoLibraryText}>Use Photo Library</Text>
@@ -550,6 +596,8 @@ export function D7ViewfinderOverexposed() {
           <View style={styles.bottomControls}>
             {/* Advisory indicator — does NOT disable capture */}
             <ExposureIndicator state="overexposed" />
+            {/* D7-SF-3: advisory sub-label — clarifies capture is not blocked */}
+            <Text style={styles.captureAdvisory}>Tap to capture anyway</Text>
             <CaptureButton onPress={handleCapture} />
             <TouchableOpacity style={styles.photoLibraryBtn} accessibilityLabel="Choose from photo library" accessibilityRole="button">
               <Text style={styles.photoLibraryText}>Use Photo Library</Text>
@@ -611,6 +659,11 @@ export function D7PreviewState() {
   // Tap guard on "Use This" — useRef not useState (LESSONS-AND-RUNBOOK.md § 3.3)
   const isProcessingRef = useRef(false);
 
+  // D7-SF-1: document type selected at preview step; becomes scan.label.
+  // Default "Prescription" — most common scan type in Indian semi-urban clinics.
+  // Must be declared before auth guard to satisfy Rules of Hooks.
+  const [selectedType, setSelectedType] = useState<DocType>('Prescription');
+
   // Auth guard AFTER all hooks — Rules of Hooks (D2/D3/D6 pattern)
   if (!token || !user) return null;
 
@@ -629,11 +682,14 @@ export function D7PreviewState() {
       // Caller writes localPath + label to visits_draft and includes
       // scan in enqueueOperation payload — closes D6 MEDIUM-3.
       const result = await mockUseThis('mock-raw-path.jpg', user.id);
+      // D7-SF-1: override mockUseThis hardcoded label with user-selected type.
+      // Live build: pass selectedType into the compress/save path directly so
+      // the label is set before the file is written — no post-hoc override needed.
+      const labelledResult = { localPath: result.localPath, label: selectedType };
       // Live build:
-      //   navigation.navigate('NewVisit', { scan: result });
-      //   OR navigation.navigate('VisitDetail', { scan: result });
-      // [D7 mockup] result: { localPath, label } — do not log in live build
-      void result;
+      //   navigation.navigate('NewVisit', { scan: labelledResult });
+      //   OR navigation.navigate('VisitDetail', { scan: labelledResult });
+      void labelledResult;
     } finally {
       isProcessingRef.current = false;
     }
@@ -680,7 +736,115 @@ export function D7PreviewState() {
 
         <Text style={styles.cropHint}>Drag corners to adjust crop</Text>
 
+        {/* D7-SF-1: Document type selector — sets scan.label returned to D6/D4 */}
+        <DocTypeSelector selected={selectedType} onSelect={setSelectedType} />
+
+        {/* NICE TO HAVE: privacy reassurance — flagged by Arjun, Shantabai */}
+        <Text style={styles.privacyLine}>Saved only to this visit</Text>
+
         {/* Primary action */}
+        <View style={styles.previewActionBar}>
+          <TouchableOpacity
+            style={styles.useThisButton}
+            onPress={handleUseThis}
+            accessibilityLabel="Use this scan — confirm and attach to visit"
+            accessibilityRole="button"
+          >
+            <Text style={styles.useThisText}>Use This</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// State 2b — Photo Library Preview (D7-SF-2)
+//
+// Structurally identical to D7PreviewState. The difference is the entry point:
+// the user tapped "Use Photo Library" and selected an image from the native
+// picker instead of capturing with the camera. In the live build:
+//   - expo-image-picker: ImagePicker.launchImageLibraryAsync()
+//   - selected image URI enters the same preview → crop → "Use This" path
+//   - compression via expo-image-manipulator applied identically
+//   - { localPath, label } returned to D6/D4 — same as camera path
+// The picker cancel path returns to D7 viewfinder with no state change.
+// ---------------------------------------------------------------------------
+export function D7PhotoLibraryPreviewState() {
+  const token = MOCK_TOKEN;
+  const user  = MOCK_USER;
+
+  const visitId = VISIT.localId;
+  const isProcessingRef = useRef(false);
+
+  // D7-SF-1: same document type selector as camera preview path
+  const [selectedType, setSelectedType] = useState<DocType>('Prescription');
+
+  if (!token || !user) return null;
+
+  if (!visitId) {
+    return <ErrorState message="No visit context — cannot attach scan." />;
+  }
+
+  const handleUseThis = async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      const result = await mockUseThis('mock-library-photo.jpg', user.id);
+      // D7-SF-1: user-selected type replaces hardcoded label — same as camera path.
+      const labelledResult = { localPath: result.localPath, label: selectedType };
+      // Live build:
+      //   navigation.navigate('NewVisit', { scan: labelledResult });
+      //   OR navigation.navigate('VisitDetail', { scan: labelledResult });
+      void labelledResult;
+    } finally {
+      isProcessingRef.current = false;
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.fullScreenSafe}>
+      <View style={styles.previewContainer}>
+
+        {/* Top bar: Retake (left) + title (centre) */}
+        {/* requires device contrast verification (Rule 10) */}
+        <View style={styles.previewTopBar}>
+          <TouchableOpacity
+            style={styles.retakeButton}
+            accessibilityLabel="Retake — discard this photo and try again"
+            accessibilityRole="button"
+          >
+            <Text style={styles.retakeText}>‹  Retake</Text>
+          </TouchableOpacity>
+          <Text style={styles.previewTitle}>Review Scan</Text>
+          <View style={styles.previewTitleSpacer} />
+        </View>
+
+        {/* Selected photo from library — placeholder simulates library image source.
+            Real build: <Image source={{ uri: libraryImageUri }} style={StyleSheet.absoluteFill}
+                          resizeMode="contain" accessibilityLabel="Selected document" />
+            Entry point: ImagePicker.launchImageLibraryAsync() result URI.
+            No camera shutter involved — image already exists on device. */}
+        <View style={styles.previewImageWrapper}>
+          <View style={styles.previewImagePlaceholder}>
+            <Text style={styles.previewDocIcon}>📄</Text>
+            <Text style={styles.previewDocLabel}>
+              Blood Sugar Report — Arjun Mehta{'\n'}
+              Fasting Glucose · 04/03/2026{'\n'}
+              Sharma Diagnostics, Bhopal
+            </Text>
+          </View>
+          <CropHandles />
+        </View>
+
+        <Text style={styles.cropHint}>Drag corners to adjust crop</Text>
+
+        {/* D7-SF-1: document type selector — identical to camera preview path */}
+        <DocTypeSelector selected={selectedType} onSelect={setSelectedType} />
+
+        {/* NICE TO HAVE: privacy reassurance */}
+        <Text style={styles.privacyLine}>Saved only to this visit</Text>
+
         <View style={styles.previewActionBar}>
           <TouchableOpacity
             style={styles.useThisButton}
@@ -738,8 +902,11 @@ export function D7ProcessingState() {
           {/* Processing overlay — spinner centred on image */}
           {/* requires device contrast verification (Rule 10) */}
           <View style={styles.processingOverlay}>
+            {/* NICE TO HAVE (Dr. Nair): add "Text extraction will run in the background"
+                line here in live build to surface OCR queued status without blocking. */}
             <ActivityIndicator size="large" color={Colors.surface} />
-            <Text style={styles.processingLabel}>Compressing and saving…</Text>
+            {/* NICE TO HAVE (Shantabai): plain-language copy — not "Compressing" */}
+            <Text style={styles.processingLabel}>Saving your document…</Text>
           </View>
         </View>
 
@@ -1073,6 +1240,64 @@ const styles = StyleSheet.create({
     color:     'rgba(255,255,255,0.55)',
     fontSize:  13,
     textAlign: 'center',
+    marginBottom: 4,
+  },
+
+  // ── D7-SF-1: Document type selector ──────────────────────────────────────
+  // Horizontal scrollable pill row on preview screen, above "Use This".
+  docTypeScroll: {
+    flexGrow:       0,
+    marginHorizontal: 20,
+    marginBottom:   8,
+  },
+  docTypeScrollContent: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    gap:            8,
+    paddingVertical: 4,
+  },
+  docTypeOption: {
+    minHeight:       44,
+    paddingHorizontal: 16,
+    paddingVertical:  10,
+    borderRadius:    22,
+    backgroundColor: Colors.surface,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  docTypeOptionSelected: {
+    backgroundColor: Colors.primaryBlue,
+    borderColor:     Colors.primaryBlue,
+  },
+  docTypeLabel: {
+    fontSize:   14,
+    fontWeight: '500',
+    color:      Colors.textSecondary,
+  },
+  docTypeLabelSelected: {
+    color: Colors.surface,
+  },
+
+  // ── D7-SF-3: Exposure advisory sub-label ─────────────────────────────────
+  // Shown below exposure indicator in Too Dark + Overexposed states only.
+  // Not shown in Good state.
+  captureAdvisory: {
+    color:      Colors.textSecondary,
+    fontSize:   12,
+    fontStyle:  'italic',
+    textAlign:  'center',
+    // requires device contrast verification (Rule 10) — dark overlay behind
+    // bottomControls ensures this is legible on live camera feed
+  },
+
+  // ── NICE TO HAVE: privacy reassurance line ────────────────────────────────
+  // Shown below type selector on preview screen — addresses Arjun + Shantabai concern.
+  privacyLine: {
+    color:        Colors.textSecondary,
+    fontSize:     12,
+    textAlign:    'center',
     marginBottom: 4,
   },
 

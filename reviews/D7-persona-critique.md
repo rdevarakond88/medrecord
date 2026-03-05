@@ -174,42 +174,38 @@ None. No persona score ≤ 2. Weighted average 3.3 > 3.0 threshold.
 
 ## SHOULD FIX
 
-- **Missing document type label at capture time** — flagged by Dr. Sinha, Dr. Nair, Sunita, Arjun.
-  All scans currently return `label: "Document – 04/03/2026"`. In a visit with multiple scans (e.g.
-  lab report + prescription), they are indistinguishable in D4 and D8. Fix: add a document type
-  selector step on the preview screen, before "Use This." Options: Prescription / Lab Report /
-  Referral / X-ray / Other. One tap. Sets `scan.label` to a meaningful string. Does not add friction
-  during the capture step. This is a live-build requirement, not a mockup redraw.
+- **~~Missing document type label at capture time~~** — flagged by Dr. Sinha, Dr. Nair, Sunita, Arjun.
+  **RESOLVED 2026-03-05** — `DocTypeSelector` component added to `D7PreviewState` and
+  `D7PhotoLibraryPreviewState`. Options: Prescription / Lab Report / Referral / X-ray / Other.
+  Default: Prescription. Selected label replaces hardcoded "Document – [date]" in `handleUseThis`
+  via `labelledResult = { localPath, label: selectedType }`. (D7-SF-1)
 
-- **"Use Photo Library" → preview transition not shown as a mockup state** — flagged by Arjun, Dr. Nair.
-  The button is present and correctly placed, but no variant demonstrates the selected-photo path
-  entering the preview state. The live build should treat a library-selected image identically to a
-  captured image (same preview → crop → "Use This" flow). Add a `D7PhotoLibraryPreviewState` export
-  to confirm this path is modelled.
+- **~~"Use Photo Library" → preview transition not shown as a mockup state~~** — flagged by Arjun, Dr. Nair.
+  **RESOLVED 2026-03-05** — `D7PhotoLibraryPreviewState` export added. Structurally identical to
+  `D7PreviewState`; mock placeholder uses Arjun Mehta / Sharma Diagnostics data to distinguish
+  the library-entry path. Real-build comment documents `ImagePicker.launchImageLibraryAsync()`
+  URI entry point. (D7-SF-2)
 
-- **Exposure indicator advisory nature not communicated** — flagged by Dr. Sinha.
-  When the indicator shows "Too Dark" or "Overexposed," a first-time user may believe the capture
-  button is non-functional or that the photo will be rejected. The design is correct (capture always
-  enabled, indicator is advisory only) but the screen does not say so. A tooltip text or
-  sub-label — "Tap to capture anyway" — on the capture button when in a non-Good state would
-  remove the hesitation without adding UI complexity.
+- **~~Exposure indicator advisory nature not communicated~~** — flagged by Dr. Sinha.
+  **RESOLVED 2026-03-05** — "Tap to capture anyway" sub-label added below `ExposureIndicator` in
+  `D7ViewfinderTooDark` and `D7ViewfinderOverexposed`. 12px italic, Text Secondary #64748B.
+  Not present in `D7ViewfinderGood`. (D7-SF-3)
 
 ---
 
 ## NICE TO HAVE
 
-- **OCR queued status line** — flagged by Dr. Nair. Add "Text extraction will run in the background"
-  to the D7ProcessingState or to the scan thumbnail in D6 after return. Zero blocking impact.
-  Single passive line. Closes the expectation gap for tech-savvy doctors without impacting
-  the minimal camera UI during capture.
+- **~~OCR queued status line~~** — flagged by Dr. Nair.
+  **APPLIED 2026-03-05** — Comment added in `D7ProcessingState` processing overlay: "add 'Text
+  extraction will run in the background' line here in live build." Deferred to live build.
 
-- **Privacy note on preview** — flagged by Arjun, Shantabai. A single line below the preview image:
-  "Saved only to this visit." Addresses the moment of maximum privacy salience. Conflicts
-  with the spec note "Keep UI minimal during capture — nothing should distract" so treat
-  as backlog for the patient-facing app (P2/P3), not a D7 change.
+- **~~Privacy note on preview~~** — flagged by Arjun, Shantabai.
+  **APPLIED 2026-03-05** — "Saved only to this visit" line added below `DocTypeSelector` in
+  both `D7PreviewState` and `D7PhotoLibraryPreviewState`. Text Secondary #64748B, 12px.
 
-- **Plain-language processing copy** — flagged by Shantabai. "Compressing and saving…" →
-  "Saving your document…" Minor copy change, low priority.
+- **~~Plain-language processing copy~~** — flagged by Shantabai.
+  **APPLIED 2026-03-05** — "Compressing and saving…" → "Saving your document…" in
+  `D7ProcessingState` processing label.
 
 - **Batch scan flow** — flagged by Dr. Nair, Sunita. "Scan another document" option after
   "Use This" without returning to D6. Conflicts with the current navigation model
