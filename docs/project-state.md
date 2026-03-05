@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D6 complete. D7 static mockup built, security audit run, all CRITICAL + HIGH findings fixed — ready for live build.
-**Last Updated:** 2026-03-04
-**Last Session:** D7 security audit findings fixed in mockup (2026-03-04). All 5 findings closed: CRITICAL-1 (auth guard moved after hooks), CRITICAL-2 (visitId guard + ErrorState added), HIGH-1 (queueOcrAsync stub with sanitizeOcrText call site), MEDIUM-1 (console.log removed), MEDIUM-2 (Date.now() → mock UUID). 2 LOW findings remain (backlog). Audit: `reviews/D7-security-audit.md`. Previous session: D7 security audit initial run (2026-03-04). Previous: D7 PM pre-flow gate (2026-03-04). Previous: D6 security audit (2026-03-02). Fixed CRITICAL-2 (sync_queue no doctor_id column), CRITICAL-1 (sync_queue not cleared on logout), HIGH-1 (noteText omitted from API call), HIGH-2 (visits_draft not marked synced after createVisit), HIGH-3 (no DPDP audit event on visit creation), HIGH-4 (doctorId IDOR risk comment). Commits: `04f3e99`, `831f0dc`, `f888874`, `fb9b766`. 6 MEDIUM + 2 LOW findings open — fix before merge to main.
+**Phase:** D6 complete. D7 static mockup built, security audit cleared, persona critique complete — ready for live build (with SHOULD FIX items noted).
+**Last Updated:** 2026-03-05
+**Last Session:** D7 persona critique run (2026-03-05). Score: 3.3/5. Verdict: Revise. Two SHOULD FIX items before live build: (1) add document type label selector at preview step; (2) add D7PhotoLibraryPreviewState mockup variant. One exposure-indicator advisory clarification also SHOULD FIX. Critique: `reviews/D7-persona-critique.md`. Previous: D7 security audit findings fixed in mockup (2026-03-04). All 5 findings closed: CRITICAL-1 (auth guard moved after hooks), CRITICAL-2 (visitId guard + ErrorState added), HIGH-1 (queueOcrAsync stub with sanitizeOcrText call site), MEDIUM-1 (console.log removed), MEDIUM-2 (Date.now() → mock UUID). 2 LOW findings remain (backlog). Audit: `reviews/D7-security-audit.md`. Previous session: D7 security audit initial run (2026-03-04). Previous: D7 PM pre-flow gate (2026-03-04). Previous: D6 security audit (2026-03-02). Fixed CRITICAL-2 (sync_queue no doctor_id column), CRITICAL-1 (sync_queue not cleared on logout), HIGH-1 (noteText omitted from API call), HIGH-2 (visits_draft not marked synced after createVisit), HIGH-3 (no DPDP audit event on visit creation), HIGH-4 (doctorId IDOR risk comment). Commits: `04f3e99`, `831f0dc`, `f888874`, `fb9b766`. 6 MEDIUM + 2 LOW findings open — fix before merge to main.
 
 ---
 
@@ -55,7 +55,7 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|
 | D6 — New Visit | **Live screen built. Security audit complete — CRITICAL and HIGH closed (commits `04f3e99`, `831f0dc`, `f888874`, `fb9b766`). Device testing complete for core workflow. 33 items confirmed. 9 items deferred pending D7 and backend. 2 MEDIUM debt items open (KeyboardAvoidingView, mobile number in header). 6 security MEDIUM + 2 LOW open before merge.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
-| D7 — Document Scanner | **PM pre-flow gate complete (2026-03-04). Static mockup built and security audit CLEARED (2026-03-04). All CRITICAL + HIGH findings fixed in mockup. See `reviews/D7-security-audit.md`. 2 LOW findings remain (backlog). Ready for live build.** | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
+| D7 — Document Scanner | **PM pre-flow gate complete (2026-03-04). Static mockup built and security audit CLEARED (2026-03-04). All CRITICAL + HIGH findings fixed in mockup. See `reviews/D7-security-audit.md`. Persona critique run (2026-03-05): score 3.3/5, verdict REVISE. 2 SHOULD FIX items before live build (document type label, photo library mockup state). See `reviews/D7-persona-critique.md`. Checklist gate: persona score 3.3 ≥ 3.5 threshold NOT met — address SHOULD FIX items then re-score or proceed at builder discretion.** | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
 | D1 — Login / OTP | Stub only (seeds fake token) | Tier 3. Replace stub when OTP auth is implemented. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
@@ -197,6 +197,14 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|---|
 | **LOW-1:** `isSavingRef.current` never reset on success path — Save button permanently locked if `navigation.goBack()` fails to unmount the screen | D6 | D6 security audit | Reset `isSavingRef.current = false` immediately before `navigation.goBack()` on the success path, or in a `finally` block. |
 | **LOW-2:** Visit date validation enforced only at picker layer, not at save time in `handleSave()` — future-dated visits possible via state manipulation | D6 | D6 security audit | Add a guard at the top of `handleSave()`: if `visitDate > todayISO()`, set `saveError` and return early. |
+
+### SHOULD FIX — D7 persona critique (before live build)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D7-SF-1:** No document type label at capture time — all scans saved as "Document – [date]"; indistinguishable when multiple scans attached to a visit in D4/D8 | D7 | Persona critique 2026-03-05 — Dr. Sinha, Dr. Nair, Sunita, Arjun | Add document type selector (Prescription / Lab Report / Referral / X-ray / Other) on preview screen before "Use This". Sets `scan.label` to a meaningful string. Required before live build. |
+| **D7-SF-2:** "Use Photo Library" → preview transition not shown as a mockup state — button present but no variant demonstrates selected-photo entering preview flow | D7 | Persona critique 2026-03-05 — Arjun, Dr. Nair | Add `D7PhotoLibraryPreviewState` export to mockup. Selected library photo should enter same preview → crop → "Use This" flow as camera capture. |
+| **D7-SF-3:** Exposure indicator advisory nature not communicated — "Too Dark" state may cause first-time users to believe capture is blocked | D7 | Persona critique 2026-03-05 — Dr. Sinha | Add sub-label or tooltip near capture button when in non-Good state: "Tap to capture anyway." Does not block the capture path. |
 
 ### CRITICAL — D7 mockup security audit (all closed)
 

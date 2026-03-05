@@ -222,7 +222,7 @@ These items were deferred in `reviews/D6-VALIDATION-CHECKLIST.md` pending D7 bei
 | PM pre-flow gate passed | agent-pm.md (reviews/D7-pm-preflow.md) | 2026-03-04 |
 | Visual layout approved (Section 1, items 1–22) | | |
 | Security audit: no CRITICAL or HIGH findings | | |
-| Persona critique score ≥ 3.5 | | |
+| Persona critique score ≥ 3.5 | agent-persona-critic.md (reviews/D7-persona-critique.md) — score 3.3/5, below gate; SHOULD FIX items D7-SF-1, D7-SF-2, D7-SF-3 before live build | 2026-03-05 |
 | All 95 checklist items confirmed or deferred with written reason | | |
 | Three PM pre-flow requirements confirmed (#44, #45, #46, #47, #48, #49, #59, #60) | | |
 | Six D6 deferred items closed (#25, #36, #37, #57, #59, #63) | | |
