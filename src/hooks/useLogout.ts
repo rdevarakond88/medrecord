@@ -24,6 +24,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/useAuthStore';
 import { clearDoctorPatients } from '../db/patients';
 import { clearDoctorVisits, clearDoctorDraftVisits } from '../db/visits';
+import { clearDoctorScans } from '../db/scans';
 import { clearDoctorSyncQueue } from '../sync/syncQueue';
 
 export function useLogout(): () => Promise<void> {
@@ -41,6 +42,7 @@ export function useLogout(): () => Promise<void> {
       await clearDoctorPatients(db, doctorId);
       await clearDoctorVisits(db, doctorId);          // D3-H-3: server-cached visits cleared
       await clearDoctorDraftVisits(db, doctorId);     // D6: locally-created draft visits cleared
+      await clearDoctorScans(doctorId);               // D7 PM REQ 1: doctor-scoped scan images deleted
       await clearDoctorSyncQueue(db, doctorId);       // CRITICAL-1: sync queue cleared on logout
     }
 

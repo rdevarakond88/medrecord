@@ -180,6 +180,24 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
     // Column already exists — safe to ignore.
   }
 
+  // Migration: D7 scan columns for visits_draft.
+  // scan_local_path stores the doctor-scoped file path; scan_label stores the DocTypeSelector value.
+  // Rule 12: each ALTER TABLE is in its own try/catch — no-op on fresh installs.
+  try {
+    await db.execAsync(
+      `ALTER TABLE visits_draft ADD COLUMN scan_local_path TEXT;`,
+    );
+  } catch {
+    // Column already exists — safe to ignore.
+  }
+  try {
+    await db.execAsync(
+      `ALTER TABLE visits_draft ADD COLUMN scan_label TEXT;`,
+    );
+  } catch {
+    // Column already exists — safe to ignore.
+  }
+
   // Create indexes that reference migrated columns — must run AFTER the ALTER TABLE
   // migrations above so the columns exist on existing databases. CREATE INDEX IF NOT
   // EXISTS is idempotent; this is a no-op on fresh installs where the indexes already exist.

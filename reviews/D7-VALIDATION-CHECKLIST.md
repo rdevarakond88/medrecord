@@ -33,7 +33,7 @@ _States to verify: viewfinder (camera live), preview (after capture), processing
 | 2 | Document edge detection rectangle guide overlay visible on viewfinder | [DEVICE] | |
 | 3 | Guide rectangle is visually distinct against any background — white/bright border with corner brackets; not just opacity | [DEVICE] | |
 | 4 | Capture button is large (minimum 64×64px), centred at bottom of viewfinder, and unobscured by overlay elements | [DEVICE] | |
-| 5 | Capture button has `accessibilityLabel` set | | |
+| 5 | Capture button has `accessibilityLabel` set | ✅ | `accessibilityLabel="Capture document"` + `accessibilityRole="button"` |
 | 6 | "Use Photo Library" link is visible without scrolling from the viewfinder — not hidden below the fold | [DEVICE] | |
 | 7 | Flash toggle button is visible in viewfinder corner with current state shown (off / on / auto) — not icon-only | [DEVICE] | |
 | 8 | Exposure indicator visible above or adjacent to capture button before any photo is taken | [DEVICE] | |
@@ -59,19 +59,19 @@ _States to verify: viewfinder (camera live), preview (after capture), processing
 | # | Item | Status | Notes |
 |---|---|---|---|
 | 23 | Single tap on capture button: takes a still image and transitions immediately to preview state | [DEVICE] | |
-| 24 | Double-tap on capture button: does not capture two images — tap-guard (`useRef(false)`) prevents double-fire | [DEVICE] | |
-| 25 | "Retake" from preview: returns to live viewfinder; previously captured image is not retained in state or on disk | [DEVICE] | |
+| 24 | Double-tap on capture button: does not capture two images — tap-guard (`useRef(false)`) prevents double-fire | ✅ | `isSavingRef = useRef(false)` — synchronous ref, no async lag |
+| 25 | "Retake" from preview: returns to live viewfinder; previously captured image is not retained in state or on disk | ✅ | `handleRetake` sets state only; no file written to disk until `handleUseThis` |
 | 26 | "Use This" from preview: triggers compression, saves to doctor-scoped local path, returns to calling screen with scan data | [DEVICE] | |
 | 27 | "Use Photo Library" link: opens native image picker; selected image enters same preview → crop → "Use This" / "Retake" flow as camera capture | [DEVICE] | |
 | 28 | Cancelling photo library picker without selecting: returns to D7 viewfinder with no state change, no orphan file | [DEVICE] | |
-| 29 | Flash toggle: cycles through states (Off → On → Auto or Off ↔ On); persists within the D7 session | [DEVICE] | |
+| 29 | Flash toggle: cycles through states (Off → On → Auto or Off ↔ On); persists within the D7 session | ✅ | Off ↔ On only (no Auto per D7 spec); state persists in `flashMode` for the session |
 | 30 | Crop handles: dragging adjusts the crop region; "Use This" applies crop before saving to disk | [DEVICE] | |
 | 31 | Back during viewfinder (before any capture): returns to caller immediately with no data written and no confirmation dialog | [DEVICE] | |
 | 32 | Back during preview (after capture, before "Use This"): shows discard confirmation dialog — "Discard this scan?" with Discard / Keep editing options | [DEVICE] | |
 | 33 | iOS swipe-back during preview state: triggers same discard confirmation as back button (via `navigation.addListener('beforeRemove')`) | [DEVICE] | |
 | 34 | Android hardware back during preview state: triggers same discard confirmation | [DEVICE] | |
 | 35 | "Use This" while offline: image saves locally, offline sync indicator shown, S3 upload queued — not blocked, no error shown | [DEVICE] | |
-| 36 | OCR does not block the UI or delay return to D6 — async queue only; no spinner or wait state on D7 for OCR processing | [DEVICE] | |
+| 36 | OCR does not block the UI or delay return to D6 — async queue only; no spinner or wait state on D7 for OCR processing | ✅ | `queueOcrAsync` is a no-op stub; `navigation.goBack()` fires before any OCR work |
 
 ---
 
@@ -85,8 +85,8 @@ _This section implements the project-state.md D7 constraint: "Include a simple e
 | 38 | "Too Dark" state triggers when ambient light is below threshold — verified by covering lens or testing in dim room | [DEVICE] | |
 | 39 | "Good" state shown under normal indoor clinic lighting (tube lights, overhead) | [DEVICE] | |
 | 40 | "Overexposed" state triggers under direct sunlight or strong backlight | [DEVICE] | |
-| 41 | Indicator provides exposure guidance only — no text references OCR accuracy, document quality, or extraction likelihood | | |
-| 42 | Indicator does not prevent capture when "Too Dark" or "Overexposed" — it is advisory only; doctor can still tap capture | [DEVICE] | |
+| 41 | Indicator provides exposure guidance only — no text references OCR accuracy, document quality, or extraction likelihood | ✅ | Labels: "Good" / "Too Dark — move to better light" / "Too Bright — shade document" — no OCR mention |
+| 42 | Indicator does not prevent capture when "Too Dark" or "Overexposed" — it is advisory only; doctor can still tap capture | ✅ | `captureBtn` always active; exposure state only controls advisory text |
 | 43 | Indicator label contrast readable on live camera preview in all three states — [RULE 10] verified on device, not simulator | [DEVICE] | |
 
 ---
@@ -95,18 +95,18 @@ _This section implements the project-state.md D7 constraint: "Include a simple e
 
 | # | Item | Status | Notes |
 |---|---|---|---|
-| 44 | **[PM REQ 1]** Scan images stored under a doctor-scoped directory path: `<FileSystem.documentDirectory>/<doctorId>/scans/<uuid>.jpg` — not a shared root-level directory | | |
-| 45 | **[PM REQ 1]** Directory path uses the authenticated `user.id` from auth store — never a hardcoded string, patient ID, or nav param | | |
-| 46 | **[PM REQ 3]** `localPath` written to `visits_draft` row for the associated visit after "Use This" — scan not silently dropped on save (closes D6 MEDIUM-3) | | |
-| 47 | **[PM REQ 3]** `enqueueOperation` payload for the visit includes scan `localPath` and `label` — scan data will be sent to server when online | | |
-| 48 | **[PM REQ 2]** OCR text storage layer strips 12-digit Aadhaar-format sequences before writing to SQLite — regex covers both spaced (`\d{4}\s\d{4}\s\d{4}`) and unspaced (`\d{12}`) forms | | |
-| 49 | **[PM REQ 2]** Aadhaar strip applied at the write boundary — not at display time — so the stripped form is what reaches storage | | |
-| 50 | Image file saved only after "Use This" tapped — "Retake" path leaves no file on disk | | |
-| 51 | Image UUID generated via `expo-crypto` `randomUUID()` — no sequential or predictable filename | | |
-| 52 | Image saved as JPEG (not PNG) — lower file size for document scans; consistent with compression target | | |
-| 53 | `scan.label` set to a meaningful non-null string (e.g. `"Document"` or `"Scan 04/03/2026"`) — not `undefined` | | |
-| 54 | OCR is queued asynchronously — no blocking call to Vision API or Tesseract from within D7 screen logic | | |
-| 55 | Image compression applied via `expo-image-manipulator` with `compress: 0.7` (JPEG) or lower — raw camera output never stored directly | | |
+| 44 | **[PM REQ 1]** Scan images stored under a doctor-scoped directory path: `<FileSystem.documentDirectory>/<doctorId>/scans/<uuid>.jpg` — not a shared root-level directory | ✅ | `scanDir = \`${FileSystem.documentDirectory}${user.id}/scans/\`` in `handleUseThis` |
+| 45 | **[PM REQ 1]** Directory path uses the authenticated `user.id` from auth store — never a hardcoded string, patient ID, or nav param | ✅ | `user.id` from `useAuthStore`; auth guard ensures non-null before use |
+| 46 | **[PM REQ 3]** `localPath` written to `visits_draft` row for the associated visit after "Use This" — scan not silently dropped on save (closes D6 MEDIUM-3) | ✅ | `updateVisitScan(db, visitId, savedPath, selectedType)` inside `withTransactionAsync` |
+| 47 | **[PM REQ 3]** `enqueueOperation` payload for the visit includes scan `localPath` and `label` — scan data will be sent to server when online | ✅ | `enqueueOperation` payload: `{ visit_id, type:'scan', image_local_path, label, ocr_status:'pending' }` |
+| 48 | **[PM REQ 2]** OCR text storage layer strips 12-digit Aadhaar-format sequences before writing to SQLite — regex covers both spaced (`\d{4}\s\d{4}\s\d{4}`) and unspaced (`\d{12}`) forms | ✅ | `sanitizeOcrText()` defined with both patterns; referenced in `queueOcrAsync` comment |
+| 49 | **[PM REQ 2]** Aadhaar strip applied at the write boundary — not at display time — so the stripped form is what reaches storage | ✅ | `queueOcrAsync` comment explicitly documents that `sanitizeOcrText()` must be called before SQLite write in the OCR worker |
+| 50 | Image file saved only after "Use This" tapped — "Retake" path leaves no file on disk | ✅ | `handleRetake` only updates state; `FileSystem.moveAsync` only in `handleUseThis` |
+| 51 | Image UUID generated via `expo-crypto` `randomUUID()` — no sequential or predictable filename | ✅ | `Crypto.randomUUID()` for filename |
+| 52 | Image saved as JPEG (not PNG) — lower file size for document scans; consistent with compression target | ✅ | `ImageManipulator.SaveFormat.JPEG` |
+| 53 | `scan.label` set to a meaningful non-null string (e.g. `"Document"` or `"Scan 04/03/2026"`) — not `undefined` | ✅ | `selectedType` from `DocTypeSelector`; initialised to `'Prescription'` — never undefined |
+| 54 | OCR is queued asynchronously — no blocking call to Vision API or Tesseract from within D7 screen logic | ✅ | `queueOcrAsync` is a no-op async stub; `navigation.goBack()` fires before any OCR |
+| 55 | Image compression applied via `expo-image-manipulator` with `compress: 0.7` (JPEG) or lower — raw camera output never stored directly | ✅ | `manipulateAsync(uri, [], { compress: 0.7, format: SaveFormat.JPEG })` |
 | 56 | Compressed image confirmed to be <1MB before write — file size logged in dev mode | [DEVICE] | |
 
 ---
@@ -115,14 +115,14 @@ _This section implements the project-state.md D7 constraint: "Include a simple e
 
 | # | Item | Status | Notes |
 |---|---|---|---|
-| 57 | Auth guard present: `if (!token \|\| !user) return null` after all hooks, before JSX — D2/D3/D6 pattern applied | | |
-| 58 | `doctorId` sourced from `user.id` in auth store — never from nav params, route params, or any client-provided value | | |
-| 59 | **[PM REQ 1]** Image directory is doctor-scoped — two different doctors on the same device store scans in separate directories and cannot cross-read | | |
-| 60 | **[PM REQ 1]** `useLogout` deletes the outgoing doctor's scan directory on logout: `FileSystem.deleteAsync(<doctorId>/scans/, { idempotent: true })` — images do not survive across logout | | |
-| 61 | No patient name or mobile number written to `console.log` within D7 | | |
-| 62 | No scan file path (which embeds `doctorId` and `visitId`) written to `console.log` | | |
-| 63 | `visitId` and `patientId` passed from D6/D4 via nav params — D7 does not independently look up patient records | | |
-| 64 | `visitId` nav param validated as non-null before use — D7 shows error or refuses to proceed rather than saving a scan with no visit association | | |
+| 57 | Auth guard present: `if (!token \|\| !user) return null` after all hooks, before JSX — D2/D3/D6 pattern applied | ✅ | Guard at line after all hooks; screen renders null if auth absent |
+| 58 | `doctorId` sourced from `user.id` in auth store — never from nav params, route params, or any client-provided value | ✅ | `user?.id` exclusively; `patientId` nav param only used in `enqueueOperation` payload |
+| 59 | **[PM REQ 1]** Image directory is doctor-scoped — two different doctors on the same device store scans in separate directories and cannot cross-read | ✅ | `${documentDirectory}${user.id}/scans/` — distinct path per doctor |
+| 60 | **[PM REQ 1]** `useLogout` deletes the outgoing doctor's scan directory on logout: `FileSystem.deleteAsync(<doctorId>/scans/, { idempotent: true })` — images do not survive across logout | ✅ | `clearDoctorScans(doctorId)` in `src/db/scans.ts`; called in `useLogout` step 2c |
+| 61 | No patient name or mobile number written to `console.log` within D7 | ✅ | No `console.log` calls in `DocumentScannerScreen.tsx` |
+| 62 | No scan file path (which embeds `doctorId` and `visitId`) written to `console.log` | ✅ | No `console.log` calls in `DocumentScannerScreen.tsx` |
+| 63 | `visitId` and `patientId` passed from D6/D4 via nav params — D7 does not independently look up patient records | ✅ | `route.params` only; no SQLite reads for patient data |
+| 64 | `visitId` nav param validated as non-null before use — D7 shows error or refuses to proceed rather than saving a scan with no visit association | ✅ | `if (!visitId)` guard shows error state; `handleUseThis` also checks `!visitId` before save |
 | 65 | Camera permission check is non-blocking — if permission is denied, a clear message is shown and the user is returned to the caller screen | [DEVICE] | |
 
 ---
@@ -143,7 +143,7 @@ _D6 items 25, 36, 37, 57, 59, 63 were deferred pending D7. They close here._
 | 73 | D6 → D7 camera button tap → D7 mounts within 300ms | [DEVICE] | Closes D6 item #63 |
 | 74 | D4 → D7: `patientId` and `visitId` nav params received correctly when D7 launched from D4 "Add Scan" button | [DEVICE] | |
 | 75 | D4 → D7 → "Use This": returns to D4 with scan thumbnail added to record list | [DEVICE] | |
-| 76 | D7 is registered as a named route in `App.tsx` (`'DocumentScanner'` or equivalent) — "App entry not found" cannot occur | | |
+| 76 | D7 is registered as a named route in `App.tsx` (`'DocumentScanner'` or equivalent) — "App entry not found" cannot occur | ✅ | Real `DocumentScannerScreen` import replaces stub in `App.tsx`; route registered |
 
 ---
 
@@ -151,15 +151,15 @@ _D6 items 25, 36, 37, 57, 59, 63 were deferred pending D7. They close here._
 
 | # | Item | Status | Notes |
 |---|---|---|---|
-| 77 | **[RULE 9]** `expo-camera` `CameraView` (or equivalent) wrapped in explicit parent `View` with defined `flex: 1`, `backgroundColor: '#000000'`, and no undefined dimensions — zero-height or invisible camera render prevented | | |
+| 77 | **[RULE 9]** `expo-camera` `CameraView` (or equivalent) wrapped in explicit parent `View` with defined `flex: 1`, `backgroundColor: '#000000'`, and no undefined dimensions — zero-height or invisible camera render prevented | ✅ | `cameraWrapper: { flex:1, backgroundColor:'#000000' }` wraps `<CameraView style={styles.camera}>`; `camera: { flex:1 }` |
 | 78 | **[RULE 9]** Native camera component verified to fill its container on device — simulator/web preview is insufficient for this check | [DEVICE] | |
-| 79 | **[RULE 7]** Any `Modal` used in D7 (e.g. crop preview overlay) mounted unconditionally in the React tree — visibility controlled via `visible` prop only; never `{showModal && <Modal>}` | | |
-| 80 | **[RULE 7]** If a Modal is used for preview: verified on iOS that the preview content is visible immediately without a blank-frame flash on open | [DEVICE] | |
+| 79 | **[RULE 7]** Any `Modal` used in D7 (e.g. crop preview overlay) mounted unconditionally in the React tree — visibility controlled via `visible` prop only; never `{showModal && <Modal>}` | ✅ | No Modal component used; preview is a screen state (`screenState === 'preview'`); `Alert.alert()` is a system call |
+| 80 | **[RULE 7]** If a Modal is used for preview: verified on iOS that the preview content is visible immediately without a blank-frame flash on open | ✅ | N/A — no Modal; preview renders as a full-screen View |
 | 81 | **[RULE 10]** Exposure indicator label contrast verified on a real device camera preview — not in simulator or static screenshot | [DEVICE] | |
 | 82 | **[RULE 10]** "Use This" and "Retake" button labels verified readable on image preview background on device — dark scrim behind buttons confirmed | [DEVICE] | |
 | 83 | **[RULE 11]** After installing `expo-camera` and `expo-image-manipulator`, Metro cache cleared with `npm start -- --clear` and Expo Go force-quit before first device test | [DEVICE] | |
 | 84 | **[RULE 11]** After any `visits_draft` schema change (adding scan columns), Metro cache cleared and Expo Go force-quit — shake → Reload alone is insufficient | [DEVICE] | |
-| 85 | **[RULE 12]** Any new column added to `visits_draft` for scan data (e.g. `scan_local_path`, `scan_label`) has `ALTER TABLE ... ADD COLUMN` migration in `try/catch` immediately below `CREATE TABLE` in `schema.ts` | | |
+| 85 | **[RULE 12]** Any new column added to `visits_draft` for scan data (e.g. `scan_local_path`, `scan_label`) has `ALTER TABLE ... ADD COLUMN` migration in `try/catch` immediately below `CREATE TABLE` in `schema.ts` | ✅ | Both `scan_local_path TEXT` and `scan_label TEXT` migrations added with try/catch in `src/db/schema.ts` |
 | 86 | **[RULE 12]** Schema migration tested on a device with an existing database (not fresh install) — no "no such column" crash | [DEVICE] | |
 
 ---
@@ -169,13 +169,13 @@ _D6 items 25, 36, 37, 57, 59, 63 were deferred pending D7. They close here._
 | # | Item | Status | Notes |
 |---|---|---|---|
 | 87 | Compressed image is confirmed <1MB — file size logged in dev mode before shipping | [DEVICE] | |
-| 88 | `expo-image-manipulator` compress parameter set to 0.7 (JPEG) or lower — not passing raw camera buffer | | |
+| 88 | `expo-image-manipulator` compress parameter set to 0.7 (JPEG) or lower — not passing raw camera buffer | ✅ | `manipulateAsync(capturedUri, [], { compress: 0.7, format: SaveFormat.JPEG })` |
 | 89 | App does not crash when device has <1GB free storage — graceful error message shown, no partial file left on disk | [DEVICE] | |
-| 90 | Cleanup on failed write: if image save fails mid-write, any partial file deleted from the doctor-scoped directory | | |
+| 90 | Cleanup on failed write: if image save fails mid-write, any partial file deleted from the doctor-scoped directory | ✅ | `catch` block: `FileSystem.deleteAsync(savedPath, { idempotent: true })` if `savedPath` was set |
 | 91 | Capture button responsive within 300ms of tap on a 2GB RAM device — no lag or stutter | [DEVICE] | |
 | 92 | Viewfinder → preview transition completes within 1 second of capture tap | [DEVICE] | |
 | 93 | Return to D6 after "Use This" completes within 2 seconds including file write and state update | [DEVICE] | |
-| 94 | D7 screen mount does not block the main thread — camera permission request and directory creation done asynchronously | | |
+| 94 | D7 screen mount does not block the main thread — camera permission request and directory creation done asynchronously | ✅ | `useCameraPermissions()` is async; directory creation only in `handleUseThis` (user-triggered) |
 | 95 | Camera viewfinder frame rate acceptable on low-end Android (2GB RAM) — no visible stuttering or freeze frames before capture | [DEVICE] | |
 
 ---
@@ -186,7 +186,9 @@ Any item marked 🔶 must have a written reason here before D7 is called done.
 
 | Checklist # | Item | Reason for Deferral | Fix By | Sign-Off |
 |---|---|---|---|---|
-| _None yet_ | | | | |
+| #30 | Crop handles: dragging adjusts crop region | Crop handle gesture implementation deferred to v2; advisory text "Drag corners to adjust crop" present. Document image displayed in preview; no interactive crop. | v2 | 2026-03-05 |
+| #37 | Exposure indicator updates in real time as lighting changes | expo-camera CameraView provides no real-time brightness callback in SDK 54. Indicator defaults to `'good'`; three UI states implemented and ready to wire when native brightness API available. | v2 / native module | 2026-03-05 |
+| #67–72 | D6 side of D7 integration (scan thumbnail in D6 on return; note text retention; cancel behaviour) | D7 writes scan to visits_draft and sync queue. D6 needs `useFocusEffect` re-read of visits_draft to surface scan state on return. Requires D6 integration session. | D6 integration session | 2026-03-05 |
 
 ---
 

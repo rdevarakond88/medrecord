@@ -260,6 +260,28 @@ export async function clearDoctorDraftVisits(
 }
 
 /**
+ * Attach a scan to an existing draft visit after "Use This" completes in D7.
+ * Updates scan_local_path and scan_label on the visits_draft row.
+ * Called inside db.withTransactionAsync() alongside enqueueOperation (PM REQ 3).
+ */
+export async function updateVisitScan(
+  db: SQLite.SQLiteDatabase,
+  visitLocalId: string,
+  scanLocalPath: string,
+  scanLabel: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `UPDATE visits_draft
+     SET scan_local_path = ?,
+         scan_label      = ?,
+         updated_at      = ?
+     WHERE local_id = ?`,
+    [scanLocalPath, scanLabel, now, visitLocalId],
+  );
+}
+
+/**
  * Write a visit_created audit event to the local audit_events table.
  * Called by D6 immediately after insertLocalVisit() succeeds.
  *

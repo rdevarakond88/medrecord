@@ -30,6 +30,7 @@ import { upsertPatientFromServer } from './src/db/patients';
 import PatientSearchScreen from './src/screens/doctor/PatientSearchScreen';
 import PatientDetailScreen from './src/screens/doctor/PatientDetailScreen';
 import NewVisitScreen from './src/screens/doctor/NewVisitScreen';
+import DocumentScannerScreen from './src/screens/doctor/DocumentScannerScreen';
 
 // ─── Login stub ────────────────────────────────────────────────────────────
 // D1 (Login screen) is not built yet. This stub:
@@ -92,24 +93,6 @@ const loginStyles = StyleSheet.create({
   btnText:   { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
 
-// ─── DocumentScanner stub (D7) ────────────────────────────────────────────
-// D7 (Document Scanner) is not built yet. Prevents a navigation crash when
-// D6's "Scan a Document" button fires. Replace with the real DocumentScannerScreen
-// when D7 is built. The stub receives patientId + visitId from D6 — both are
-// available so the scan can be correctly associated when D7 is real.
-function DocumentScannerScreen() {
-  const navigation = useNavigation<any>();
-  return (
-    <View style={stubStyles.container}>
-      <Text style={stubStyles.title}>Document Scanner</Text>
-      <Text style={stubStyles.sub}>D7 — not built yet</Text>
-      <TouchableOpacity style={stubStyles.btn} onPress={() => navigation.goBack()}>
-        <Text style={stubStyles.btnText}>← Back to Visit</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 // ─── NewPatientForm stub ───────────────────────────────────────────────────
 // D5 is not built yet. Prevents a navigation crash when D2's "Add New Patient"
 // button fires. Replace with the real NewPatientFormScreen when D5 is built.
@@ -151,8 +134,9 @@ export type RootStackParamList = {
     consentGranted:  boolean;
   };
   DocumentScanner: {
-    patientId: string;
-    visitId:   string;   // pre-generated local visit ID — not yet written to SQLite
+    patientId:          string;
+    visitId:            string;   // pre-generated local visit ID — not yet written to SQLite
+    existingScanCount?: number;   // D7-SF-6: shows "N scan(s) attached" pill in viewfinder top bar
   };
   NewPatientForm: { prefillMobile?: string };
 };
