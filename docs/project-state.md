@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D7 live screen built. QA findings CRITICAL-1/2/3 + HIGH-1/2/3 fixed.
+**Phase:** D7 live screen built. QA findings CRITICAL-1/2/3 + HIGH-1/2/3 fixed. Security re-audit v2 complete — no CRITICAL or HIGH findings. Three PM REQs confirmed.
 **Last Updated:** 2026-03-05
-**Last Session:** D7 QA fixes applied (2026-03-05). CRITICAL-1: `scans` table added to schema.ts; `insertVisitScan()` + `resolveScanPath()` + `clearDoctorScanRecords()` added to src/db/scans.ts; DocumentScannerScreen.tsx switched from `updateVisitScan` (single-column overwrite) to `insertVisitScan` (one row per scan). CRITICAL-2: relative path stored in SQLite (`${doctorId}/scans/${uuid}.jpg`); absolute path reconstructed at read time via `resolveScanPath()`. CRITICAL-3: `FileSystem.moveAsync` moved inside `withTransactionAsync` — orphan-file window reduced to microseconds. HIGH-1: `sanitizeOcrText` regex changed to `/\b\d{4}\s?\d{4}\s?\d{4}\b/g` (word boundaries). HIGH-2: `ocr_status` changed to `'deferred'` in enqueueOperation payload. HIGH-3: `max_attempts INTEGER NOT NULL DEFAULT 5` added to `sync_queue` + migration. `clearDoctorScanRecords` wired into useLogout. D7 ready for device testing. HIGH-4 (JWT refresh) deferred to sync worker session. Previous: D7 QA test plan produced (2026-03-05). Previous: D7 live screen built (2026-03-05). `src/screens/doctor/DocumentScannerScreen.tsx` created. `src/db/scans.ts` created (clearDoctorScans, PM REQ 1 logout cleanup). `src/db/schema.ts` — scan_local_path + scan_label migrations added (Rule 12). `src/db/visits.ts` — updateVisitScan() added. `src/hooks/useLogout.ts` — clearDoctorScans added (PM REQ 1). `App.tsx` — real DocumentScannerScreen import replaces stub; existingScanCount param added. D7-SF-4/5/6 applied. D6 MEDIUM-3 CLOSED. All three PM REQs addressed in code. Previous: D7 persona critique v2 (2026-03-05, score 3.8/5, gate PASSED). Previous: D7 SF-1/SF-2/SF-3 + NICE TO HAVE fixes applied to mockup (commit `f84c947`). Previous: D7 security audit cleared (2026-03-04). Previous: D6 security audit (2026-03-02).
+**Last Session:** D7 security re-audit v2 (2026-03-05). Confirmed CRITICAL-1 (auth guard after all hooks) and CRITICAL-2 (visitId null guards) survived from mockup into live screen. All three PM REQs verified in live code. No new CRITICAL or HIGH findings. New findings: MEDIUM-1 (no audit event for scan creation), LOW-1 (queueOcrAsync receives absolutePath — v2 OCR wiring risk), LOW-2 (user?.id ?? '' fallback dead code). Audit saved to reviews/D7-security-audit-v2.md. Previous: D7 QA fixes applied (2026-03-05). CRITICAL-1: `scans` table added to schema.ts; `insertVisitScan()` + `resolveScanPath()` + `clearDoctorScanRecords()` added to src/db/scans.ts; DocumentScannerScreen.tsx switched from `updateVisitScan` (single-column overwrite) to `insertVisitScan` (one row per scan). CRITICAL-2: relative path stored in SQLite (`${doctorId}/scans/${uuid}.jpg`); absolute path reconstructed at read time via `resolveScanPath()`. CRITICAL-3: `FileSystem.moveAsync` moved inside `withTransactionAsync` — orphan-file window reduced to microseconds. HIGH-1: `sanitizeOcrText` regex changed to `/\b\d{4}\s?\d{4}\s?\d{4}\b/g` (word boundaries). HIGH-2: `ocr_status` changed to `'deferred'` in enqueueOperation payload. HIGH-3: `max_attempts INTEGER NOT NULL DEFAULT 5` added to `sync_queue` + migration. `clearDoctorScanRecords` wired into useLogout. D7 ready for device testing. HIGH-4 (JWT refresh) deferred to sync worker session. Previous: D7 live screen built (2026-03-05). D6 MEDIUM-3 CLOSED. Previous: D7 security audit cleared (2026-03-04). Previous: D6 security audit (2026-03-02).
 
 ---
 
@@ -76,7 +76,7 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|
 | D6 — New Visit | **Live screen built. Security audit complete — CRITICAL and HIGH closed (commits `04f3e99`, `831f0dc`, `f888874`, `fb9b766`). Device testing complete for core workflow. 33 items confirmed. 9 items deferred pending D7 and backend. 2 MEDIUM debt items open (KeyboardAvoidingView, mobile number in header). 6 security MEDIUM + 2 LOW open before merge.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
-| D7 — Document Scanner | **Live screen built (2026-03-05). QA findings CRITICAL-1/2/3 + HIGH-1/2/3 fixed (2026-03-05). Ready for device testing. `scans` table replaces `visits_draft.scan_local_path`; relative path storage; moveAsync inside transaction; word-boundary Aadhaar regex; ocr_status:'deferred'; max_attempts in sync_queue. clearDoctorScanRecords wired in useLogout. HIGH-4 (JWT refresh) deferred to sync worker. D6 integration session still needed for checklist items 66–75.** | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. QA: reviews/D7-qa-test-plan.md. |
+| D7 — Document Scanner | **Live screen built (2026-03-05). QA findings CRITICAL-1/2/3 + HIGH-1/2/3 fixed (2026-03-05). Security re-audit v2 complete (2026-03-05) — no CRITICAL or HIGH findings. CRITICAL-1 (auth guard) and CRITICAL-2 (visitId guard) confirmed in live screen. All three PM REQs confirmed. 1 MEDIUM + 2 LOW open (see D7 security audit section below). Ready for device testing. D6 integration session still needed for checklist items 66–75.** | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. QA: reviews/D7-qa-test-plan.md. Security: reviews/D7-security-audit-v2.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
 | D1 — Login / OTP | Stub only (seeds fake token) | Tier 3. Replace stub when OTP auth is implemented. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
@@ -218,6 +218,20 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|---|
 | **LOW-1:** `isSavingRef.current` never reset on success path — Save button permanently locked if `navigation.goBack()` fails to unmount the screen | D6 | D6 security audit | Reset `isSavingRef.current = false` immediately before `navigation.goBack()` on the success path, or in a `finally` block. |
 | **LOW-2:** Visit date validation enforced only at picker layer, not at save time in `handleSave()` — future-dated visits possible via state manipulation | D6 | D6 security audit | Add a guard at the top of `handleSave()`: if `visitDate > todayISO()`, set `saveError` and return early. |
+
+### MEDIUM — D7 live screen security audit v2
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **MEDIUM-1:** No `record_created` audit event written to `audit_events` when a scan is saved — D6 writes `visit_created` events; D7 should write the equivalent for scan records (DPDP §8 audit trail completeness) | D7 | D7 security audit v2 | Add `logScanCreated()` to `src/db/visits.ts` (or `src/db/auditLog.ts` when created for D2 H-3). Call inside `withTransactionAsync` after `insertVisitScan()`. Fix before production. |
+
+### LOW — D7 live screen security audit v2
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **LOW-1:** `queueOcrAsync` receives `absolutePath` parameter — when OCR is wired in v2, developer may use the passed absolute path instead of reading `scans.local_path` + `resolveScanPath()`, reintroducing KFM-3 path drift | D7 | D7 security audit v2 | Rename stub parameter to `_scanId`; document that OCR worker must query `scans` table and call `resolveScanPath()`. |
+| **LOW-2:** `user?.id ?? ''` fallback at lines 262/266/282/287 is dead code after auth guard — if guard is bypassed by future refactor, scans land in unscoped `{documentDirectory}/scans/` root | D7 | D7 security audit v2 | Extract `const doctorId = user.id` at top of `handleUseThis`; assert non-empty; replace all `user?.id ?? ''` uses. |
+| **LOW-3:** `sanitizeOcrText` regex does not cover non-breaking space (`\u00A0`) between Aadhaar digit groups — inherited from mockup audit LOW-2 | D7 | D7 security audit v1 LOW-2 | Change `\s?` to `[\s\u00A0]*`. Fix before OCR is wired. |
 
 ### SHOULD FIX — D7 persona critique (before live build)
 
