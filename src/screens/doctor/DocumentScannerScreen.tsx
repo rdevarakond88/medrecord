@@ -19,6 +19,9 @@
  *   HIGH-2     — ocr_status: 'deferred' (was 'pending'; OCR worker not yet wired)
  *   HIGH-3     — max_attempts column added to sync_queue schema (schema.ts)
  *
+ * Security re-audit fix (reviews/D7-security-audit-v2.md):
+ *   MEDIUM-1   — logScanCreated() writes audit event to audit_events table (DPDP §8)
+ *
  * SHOULD FIX items from D7-persona-critique-v2.md applied here:
  *   D7-SF-4 — captureAdvisory: dark pill background + Colors.surface text (Rule 10)
  *   D7-SF-5 — privacyLine: rgba(255,255,255,0.55) on dark preview background
@@ -53,7 +56,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Crypto from 'expo-crypto';
 import { useAuthStore } from '../../store/useAuthStore';
 import { enqueueOperation } from '../../sync/syncQueue';
-import { insertVisitScan, resolveScanPath } from '../../db/scans';
+import { insertVisitScan, resolveScanPath, logScanCreated } from '../../db/scans';
 import type { RootStackParamList } from '../../../App';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -282,6 +285,14 @@ export default function DocumentScannerScreen() {
           doctorId:     user?.id ?? '',
           localPath:    relativePath,  // relative — never absolute (CRITICAL-2)
           label:        selectedType,
+        });
+        // DPDP Act 2023 §8 — audit every write to a patient's health record (MEDIUM-1 fix)
+        await logScanCreated(db, {
+          scanId,
+          visitId,
+          doctorId:  user?.id ?? '',
+          patientId,
+          label:     selectedType,
         });
         await enqueueOperation(db, {
           doctor_id:       user?.id ?? '',

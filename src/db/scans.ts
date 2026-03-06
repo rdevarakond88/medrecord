@@ -14,6 +14,7 @@
 
 import * as FileSystem from 'expo-file-system';
 import * as SQLite from 'expo-sqlite';
+import * as Crypto from 'expo-crypto';
 
 export function getScanDirectory(doctorId: string): string {
   return `${FileSystem.documentDirectory}${doctorId}/scans/`;
@@ -87,4 +88,40 @@ export async function clearDoctorScanRecords(
 export async function clearDoctorScans(doctorId: string): Promise<void> {
   const dir = getScanDirectory(doctorId);
   await FileSystem.deleteAsync(dir, { idempotent: true });
+}
+
+/**
+ * Write a scan_created audit event to the local audit_events table.
+ * Called by D7 immediately after insertVisitScan() inside withTransactionAsync().
+ *
+ * DPDP Act 2023 §8 — patients can request a log of who wrote data to their record.
+ * scan_id, visit_id, and label are stored in metadata for event correlation.
+ * Events are flushed to the server audit log via POST /sync on reconnect
+ * (same pattern as logVisitCreated in src/db/visits.ts).
+ */
+export async function logScanCreated(
+  db: SQLite.SQLiteDatabase,
+  params: {
+    scanId:    string;
+    visitId:   string;
+    doctorId:  string;
+    patientId: string;
+    label:     string;
+  },
+): Promise<void> {
+  const id  = Crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `INSERT OR IGNORE INTO audit_events
+       (id, event_type, doctor_id, patient_id, metadata, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      'scan_created',
+      params.doctorId,
+      params.patientId,
+      JSON.stringify({ scanId: params.scanId, visitId: params.visitId, label: params.label }),
+      now,
+    ],
+  );
 }

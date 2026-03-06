@@ -52,7 +52,14 @@ between the failed attempt and the retry, causing "file not found" errors on sub
 
 ## MEDIUM (fix in next sprint)
 
-### MEDIUM-1 (new): No audit event written for scan record creation
+### ~~MEDIUM-1: No audit event written for scan record creation~~
+
+**CLOSED 2026-03-05** — `logScanCreated()` added to `src/db/scans.ts`. Called inside
+`withTransactionAsync` after `insertVisitScan()` and before `enqueueOperation()`. Writes
+a `scan_created` event to `audit_events` with `scanId`, `visitId`, and `label` in metadata.
+Pattern matches `logVisitCreated()` in `src/db/visits.ts`.
+
+_Original finding:_
 
 D7 saves a medical document scan to the `scans` table and `sync_queue` but does not write an
 audit event to `audit_events`. D6 writes a `visit_created` audit event via `logVisitCreated()`
@@ -63,13 +70,9 @@ audit trail for all data written to a patient's record must be preserved.
 **Risk:** Incomplete DPDP §8 audit trail. Scan records (images, labels) written to a patient's
 health record with no audit log entry. If a patient requests a data access report, scan
 attachment events will be absent from the audit log.
-**Fix:** Add a `logScanCreated()` function to `src/db/visits.ts` (or `src/db/auditLog.ts`
-when that module is created for D2 H-3), and call it after `insertVisitScan()` completes
-inside the `withTransactionAsync` block:
-```tsx
-await logScanCreated(db, user.id, patientId, scanId, visitId);
-```
-Pattern mirrors `logVisitCreated()` in `src/db/visits.ts:294–308`.
+**Fix applied:** `logScanCreated()` in `src/db/scans.ts`; called at
+`DocumentScannerScreen.tsx` inside `withTransactionAsync` between `insertVisitScan()` and
+`enqueueOperation()`.
 
 ---
 
@@ -297,8 +300,7 @@ confirmed closed.
                                   (no free-text input); ImagePicker restricts to Images media type
 ✅  Database                    — all queries parameterized; scans.doctor_id NOT NULL;
                                   INSERT-only on scan records; no cross-doctor reads
-⚠️  DPDP Compliance             — 3/4 checks passed;
-                                  FAIL: no audit event for scan record creation (MEDIUM-1)
+✅  DPDP Compliance             — 4/4 checks passed; MEDIUM-1 closed (logScanCreated)
 ```
 
 **Detailed checklist (security-relevant items):**
@@ -320,7 +322,7 @@ confirmed closed.
 - [✅] PM REQ 2 confirmed: sanitizeOcrText defined with correct regex + documented
 - [✅] PM REQ 3 confirmed: full scan → scans table → enqueueOperation path atomic
 - [✅] D6 MEDIUM-3 closed
-- [⚠️] No `record_created` audit event for scan saves (MEDIUM-1 — open)
+- [✅] `logScanCreated()` writes `scan_created` event to `audit_events` (MEDIUM-1 — CLOSED)
 - [⚠️] `queueOcrAsync` receives absolutePath — v2 OCR wiring risk (LOW-1 — open)
 - [⚠️] `user?.id ?? ''` fallback creates theoretical unscoped path if guard bypassed (LOW-2 — open)
 - [⚠️] `sanitizeOcrText` regex does not cover non-breaking space (LOW-3 — inherited from v1)
@@ -328,22 +330,20 @@ confirmed closed.
 
 ---
 
-## OVERALL VERDICT: **CLEAR TO MERGE — no CRITICAL or HIGH findings**
+## OVERALL VERDICT: **CLEAR TO MERGE — no CRITICAL, HIGH, or MEDIUM findings**
 
-_Signed off 2026-03-05._
+_Signed off 2026-03-05. Updated 2026-03-05 after MEDIUM-1 fixed._
 
-### Closed in this session (v2 re-audit):
-- CRITICAL-1 (mockup): Auth guard after all hooks ✅ **confirmed in live screen**
-- CRITICAL-2 (mockup): visitId non-null guard + ErrorState ✅ **confirmed in live screen**
+### Closed in v2 re-audit:
+- CRITICAL-1 (mockup): Auth guard after all hooks ✅ confirmed in live screen
+- CRITICAL-2 (mockup): visitId non-null guard + ErrorState ✅ confirmed in live screen
 - PM REQ 1: Doctor-scoped path + clearDoctorScans + clearDoctorScanRecords in useLogout ✅
 - PM REQ 2: sanitizeOcrText with word-boundary regex, documented at write boundary ✅
 - PM REQ 3: scan → scans table → enqueueOperation, atomic in withTransactionAsync ✅
-
-### New findings (live screen, not in mockup audit):
-- MEDIUM-1: No `record_created` audit event for scan saves (DPDP §8 completeness)
-- LOW-1: `queueOcrAsync` receives absolutePath — v2 OCR wiring risk
-- LOW-2: `user?.id ?? ''` fallback is dead code that obscures a scoping invariant
+- MEDIUM-1: `logScanCreated()` added to `src/db/scans.ts`; called inside `withTransactionAsync` ✅
 
 ### Remaining open (carry forward):
 - HIGH-4: JWT refresh for scan sync entries — deferred to sync worker session
+- LOW-1: `queueOcrAsync` receives absolutePath — v2 OCR wiring risk (backlog)
+- LOW-2: `user?.id ?? ''` fallback dead code (backlog)
 - LOW-3: sanitizeOcrText regex missing non-breaking space coverage (inherited from v1)

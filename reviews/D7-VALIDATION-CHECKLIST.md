@@ -97,9 +97,9 @@ _This section implements the project-state.md D7 constraint: "Include a simple e
 |---|---|---|---|
 | 44 | **[PM REQ 1]** Scan images stored under a doctor-scoped directory path: `<FileSystem.documentDirectory>/<doctorId>/scans/<uuid>.jpg` — not a shared root-level directory | ✅ | `scanDir = \`${FileSystem.documentDirectory}${user.id}/scans/\`` in `handleUseThis` |
 | 45 | **[PM REQ 1]** Directory path uses the authenticated `user.id` from auth store — never a hardcoded string, patient ID, or nav param | ✅ | `user.id` from `useAuthStore`; auth guard ensures non-null before use |
-| 46 | **[PM REQ 3]** `localPath` written to `visits_draft` row for the associated visit after "Use This" — scan not silently dropped on save (closes D6 MEDIUM-3) | ✅ | `updateVisitScan(db, visitId, savedPath, selectedType)` inside `withTransactionAsync` |
-| 47 | **[PM REQ 3]** `enqueueOperation` payload for the visit includes scan `localPath` and `label` — scan data will be sent to server when online | ✅ | `enqueueOperation` payload: `{ visit_id, type:'scan', image_local_path, label, ocr_status:'pending' }` |
-| 48 | **[PM REQ 2]** OCR text storage layer strips 12-digit Aadhaar-format sequences before writing to SQLite — regex covers both spaced (`\d{4}\s\d{4}\s\d{4}`) and unspaced (`\d{12}`) forms | ✅ | `sanitizeOcrText()` defined with both patterns; referenced in `queueOcrAsync` comment |
+| 46 | **[PM REQ 3]** `localPath` written to `scans` table row for the associated visit after "Use This" — scan not silently dropped on save (closes D6 MEDIUM-3) | ✅ | `insertVisitScan(db, { scanId, visitLocalId: visitId, ... relativePath })` inside `withTransactionAsync` (QA CRITICAL-1 fix — one row per scan, no overwrite) |
+| 47 | **[PM REQ 3]** `enqueueOperation` payload for the scan includes `localPath` and `label` — scan data will be sent to server when online | ✅ | `enqueueOperation` payload: `{ scan_id, visit_id, type:'scan', image_local_path: relativePath, label, ocr_status:'deferred' }` |
+| 48 | **[PM REQ 2]** OCR text storage layer strips 12-digit Aadhaar-format sequences before writing to SQLite — regex covers spaced (`\d{4} \d{4} \d{4}`) and unspaced forms with word boundaries | ✅ | `sanitizeOcrText()` uses `/\b\d{4}\s?\d{4}\s?\d{4}\b/g` — word boundaries prevent false positives on 13-digit bank refs (QA HIGH-1 fix) |
 | 49 | **[PM REQ 2]** Aadhaar strip applied at the write boundary — not at display time — so the stripped form is what reaches storage | ✅ | `queueOcrAsync` comment explicitly documents that `sanitizeOcrText()` must be called before SQLite write in the OCR worker |
 | 50 | Image file saved only after "Use This" tapped — "Retake" path leaves no file on disk | ✅ | `handleRetake` only updates state; `FileSystem.moveAsync` only in `handleUseThis` |
 | 51 | Image UUID generated via `expo-crypto` `randomUUID()` — no sequential or predictable filename | ✅ | `Crypto.randomUUID()` for filename |
@@ -118,7 +118,7 @@ _This section implements the project-state.md D7 constraint: "Include a simple e
 | 57 | Auth guard present: `if (!token \|\| !user) return null` after all hooks, before JSX — D2/D3/D6 pattern applied | ✅ | Guard at line after all hooks; screen renders null if auth absent |
 | 58 | `doctorId` sourced from `user.id` in auth store — never from nav params, route params, or any client-provided value | ✅ | `user?.id` exclusively; `patientId` nav param only used in `enqueueOperation` payload |
 | 59 | **[PM REQ 1]** Image directory is doctor-scoped — two different doctors on the same device store scans in separate directories and cannot cross-read | ✅ | `${documentDirectory}${user.id}/scans/` — distinct path per doctor |
-| 60 | **[PM REQ 1]** `useLogout` deletes the outgoing doctor's scan directory on logout: `FileSystem.deleteAsync(<doctorId>/scans/, { idempotent: true })` — images do not survive across logout | ✅ | `clearDoctorScans(doctorId)` in `src/db/scans.ts`; called in `useLogout` step 2c |
+| 60 | **[PM REQ 1]** `useLogout` deletes the outgoing doctor's scan directory on logout: `FileSystem.deleteAsync(<doctorId>/scans/, { idempotent: true })` — images do not survive across logout | ✅ | `clearDoctorScans(doctorId)` in `src/db/scans.ts`; called in `useLogout` step 2d; `clearDoctorScanRecords(db, doctorId)` called in step 2c |
 | 61 | No patient name or mobile number written to `console.log` within D7 | ✅ | No `console.log` calls in `DocumentScannerScreen.tsx` |
 | 62 | No scan file path (which embeds `doctorId` and `visitId`) written to `console.log` | ✅ | No `console.log` calls in `DocumentScannerScreen.tsx` |
 | 63 | `visitId` and `patientId` passed from D6/D4 via nav params — D7 does not independently look up patient records | ✅ | `route.params` only; no SQLite reads for patient data |
@@ -223,13 +223,13 @@ These items were deferred in `reviews/D6-VALIDATION-CHECKLIST.md` pending D7 bei
 |---|---|---|
 | PM pre-flow gate passed | agent-pm.md (reviews/D7-pm-preflow.md) | 2026-03-04 |
 | Visual layout approved (Section 1, items 1–22) | | |
-| Security audit: no CRITICAL or HIGH findings | | |
+| Security audit: no CRITICAL or HIGH findings | agent-security.md (reviews/D7-security-audit-v2.md) — CLEAR TO MERGE. No CRITICAL or HIGH findings. MEDIUM-1 (audit event) CLOSED. LOW-1/2/3 in backlog. | 2026-03-05 |
 | Persona critique score ≥ 3.5 | agent-persona-critic.md (reviews/D7-persona-critique-v2.md) — score 3.8/5, gate PASSED. Two live-build SHOULD FIX items: D7-SF-4 (captureAdvisory Rule 10), D7-SF-5 (privacyLine contrast). | 2026-03-05 |
-| All 95 checklist items confirmed or deferred with written reason | | |
-| Three PM pre-flow requirements confirmed (#44, #45, #46, #47, #48, #49, #59, #60) | | |
-| Six D6 deferred items closed (#25, #36, #37, #57, #59, #63) | | |
-| `docs/project-state.md` updated as clean snapshot | | |
-| Committed and pushed to GitHub | | |
+| All 95 checklist items confirmed or deferred with written reason | Code-reviewable items all ✅. Device items marked [DEVICE]. Deferred items logged in Deferred Items Log. | 2026-03-05 |
+| Three PM pre-flow requirements confirmed (#44, #45, #46, #47, #48, #49, #59, #60) | All confirmed in live screen code and security re-audit v2. | 2026-03-05 |
+| Six D6 deferred items closed (#25, #36, #37, #57, #59, #63) | Closed by D7 write path (scans table + enqueueOperation). Device confirmation pending D6 integration session. | 2026-03-05 |
+| `docs/project-state.md` updated as clean snapshot | Updated 2026-03-05 — D7 moved to Screens Built. | 2026-03-05 |
+| Committed and pushed to GitHub | dev branch — commit confirmed | 2026-03-05 |
 | **D7 is DONE** | | |
 
 ---
