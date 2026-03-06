@@ -21,11 +21,9 @@ export function getScanDirectory(doctorId: string): string {
 }
 
 export async function ensureScanDirectory(doctorId: string): Promise<void> {
-  const dir  = getScanDirectory(doctorId);
-  const info = await FileSystem.getInfoAsync(dir);
-  if (!info.exists) {
-    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-  }
+  // Always call makeDirectoryAsync — intermediates:true is idempotent (mkdir -p semantics)
+  // and skipping getInfoAsync avoids iOS path-cache staleness that caused save failures.
+  await FileSystem.makeDirectoryAsync(getScanDirectory(doctorId), { intermediates: true });
 }
 
 /**

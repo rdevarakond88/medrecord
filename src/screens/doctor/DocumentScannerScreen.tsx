@@ -56,7 +56,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Crypto from 'expo-crypto';
 import { useAuthStore } from '../../store/useAuthStore';
 import { enqueueOperation } from '../../sync/syncQueue';
-import { insertVisitScan, resolveScanPath, logScanCreated } from '../../db/scans';
+import { insertVisitScan, resolveScanPath, logScanCreated, ensureScanDirectory } from '../../db/scans';
 import type { RootStackParamList } from '../../../App';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -265,12 +265,10 @@ export default function DocumentScannerScreen() {
       const relativePath = `${user?.id ?? ''}/scans/${uuid}.jpg`;
       absolutePath       = resolveScanPath(relativePath);
 
-      // 3. Ensure doctor-scoped directory exists before opening the transaction (PM REQ 1)
-      const scanDir = `${FileSystem.documentDirectory}${user?.id ?? ''}/scans/`;
-      const dirInfo = await FileSystem.getInfoAsync(scanDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(scanDir, { intermediates: true });
-      }
+      // 3. Ensure doctor-scoped directory exists before opening the transaction (PM REQ 1).
+      //    ensureScanDirectory() calls makeDirectoryAsync unconditionally with
+      //    intermediates:true — avoids iOS path-cache staleness from getInfoAsync.
+      await ensureScanDirectory(user.id);
 
       // 4. Atomic write: move file + insert scan row + enqueue sync op (PM REQ 3).
       //    moveAsync is inside the transaction so a SQLite failure rolls back before
