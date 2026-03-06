@@ -136,7 +136,7 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
       id             TEXT PRIMARY KEY,
       visit_local_id TEXT NOT NULL,   -- FK → visits_draft.local_id
       doctor_id      TEXT NOT NULL,   -- auth-scoped: enables per-doctor logout cleanup
-      local_path     TEXT NOT NULL,   -- relative path: ${doctorId}/scans/${uuid}.jpg
+      local_path     TEXT NOT NULL,   -- relative path: <doctorId>/scans/<uuid>.jpg
       label          TEXT NOT NULL,   -- DocType value from DocTypeSelector
       ocr_status     TEXT NOT NULL DEFAULT 'deferred',  -- deferred | pending | success | failed
       created_at     TEXT NOT NULL
