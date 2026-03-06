@@ -230,7 +230,10 @@ export default function DocumentScannerScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
+      // quality < 1 forces expo-image-picker to write a local file:// JPEG on iOS.
+      // quality:1 can return a ph:// or HEIC asset reference that
+      // expo-image-manipulator cannot encode, causing "Saving image failed."
+      quality: 0.9,
     });
     if (!result.canceled && result.assets[0]?.uri) {
       setCapturedUri(result.assets[0].uri);
