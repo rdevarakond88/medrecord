@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D7 live screen built. D6 MEDIUM-3 closed.
+**Phase:** D7 live screen built. QA test plan complete.
 **Last Updated:** 2026-03-05
-**Last Session:** D7 live screen built (2026-03-05). `src/screens/doctor/DocumentScannerScreen.tsx` created. `src/db/scans.ts` created (clearDoctorScans, PM REQ 1 logout cleanup). `src/db/schema.ts` — scan_local_path + scan_label migrations added (Rule 12). `src/db/visits.ts` — updateVisitScan() added. `src/hooks/useLogout.ts` — clearDoctorScans added (PM REQ 1). `App.tsx` — real DocumentScannerScreen import replaces stub; existingScanCount param added. D7-SF-4 (captureAdvisory Rule 10), D7-SF-5 (privacyLine rgba white), D7-SF-6 (existingScanCount pill) applied. D6 MEDIUM-3 (scan silently dropped) CLOSED — visits_draft updated via withTransactionAsync alongside enqueueOperation. All three PM REQs addressed in code. Device testing and D6 integration session pending. Previous: D7 persona critique v2 (2026-03-05, score 3.8/5, gate PASSED). Previous: D7 SF-1/SF-2/SF-3 + NICE TO HAVE fixes applied to mockup (commit `f84c947`). Previous: D7 security audit cleared (2026-03-04). Previous: D6 security audit (2026-03-02).
+**Last Session:** D7 QA test plan produced (2026-03-05). `reviews/D7-qa-test-plan.md` written covering all 8 test categories. 3 CRITICAL and 4 HIGH bugs identified: CRITICAL-1 (two scans for same visit overwrite each other — data loss), CRITICAL-2 (absolute path stored in SQLite — Android path drift after app update), CRITICAL-3 (orphaned file if app killed between moveAsync and withTransactionAsync), HIGH-1 (sanitizeOcrText `\d{12}` regex strips non-Aadhaar 12-digit strings including bank refs), HIGH-2 (queueOcrAsync is a no-op but payload says ocr_status: 'pending'), HIGH-3 (no max retry in sync_queue), HIGH-4 (JWT refresh not handled for scan sync). CRITICAL-1 and CRITICAL-2 must be fixed before device testing. Previous: D7 live screen built (2026-03-05). `src/screens/doctor/DocumentScannerScreen.tsx` created. `src/db/scans.ts` created (clearDoctorScans, PM REQ 1 logout cleanup). `src/db/schema.ts` — scan_local_path + scan_label migrations added (Rule 12). `src/db/visits.ts` — updateVisitScan() added. `src/hooks/useLogout.ts` — clearDoctorScans added (PM REQ 1). `App.tsx` — real DocumentScannerScreen import replaces stub; existingScanCount param added. D7-SF-4/5/6 applied. D6 MEDIUM-3 CLOSED. All three PM REQs addressed in code. Previous: D7 persona critique v2 (2026-03-05, score 3.8/5, gate PASSED). Previous: D7 SF-1/SF-2/SF-3 + NICE TO HAVE fixes applied to mockup (commit `f84c947`). Previous: D7 security audit cleared (2026-03-04). Previous: D6 security audit (2026-03-02).
 
 ---
 
@@ -44,6 +44,27 @@ _Carry these into every build/mockup session for these screens._
 
 ## Screens Built
 
+### CRITICAL — D7 QA findings (must fix before device testing)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D7-QA-C1:** `updateVisitScan` overwrites `scan_local_path` — second scan for same visit silently destroys first scan's DB reference; first scan file orphaned on disk | D7 | D7 QA test plan CRITICAL-1 | `visits_draft` has one `scan_local_path` column; multiple scans per visit require a `scan_records` table or JSON array column. Fix before device testing. |
+| **D7-QA-C2:** Absolute file path stored in `visits_draft.scan_local_path` and `sync_queue` payload — Android path drift after app update will break image loading | D7 | D7 QA test plan CRITICAL-2 | Store relative path (e.g. `${doctorId}/scans/${filename}`); resolve to absolute via `FileSystem.documentDirectory` at read time. |
+| **D7-QA-C3:** Orphaned scan file if app is killed between `FileSystem.moveAsync` and `db.withTransactionAsync` commit — file exists on disk with no DB reference | D7 | D7 QA test plan CRITICAL-3 | Add startup orphan-scan-cleaner that cross-references scan files against `visits_draft.scan_local_path`. Acceptable for v1 per spec trade-off but file accumulation is a storage leak. |
+
+### HIGH — D7 QA findings
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D7-QA-H1:** `sanitizeOcrText` regex `/\d{12}/g` has no word boundaries — strips substrings of longer digit sequences (e.g. 13-digit bank refs) and over-redacts non-Aadhaar numbers | D7 | D7 QA test plan HIGH-1 | Fix: use `/(?<!\d)\d{12}(?!\d)/g` (negative lookahead/lookbehind) to match only standalone 12-digit sequences. |
+| **D7-QA-H2:** `queueOcrAsync` is a complete no-op but `enqueueOperation` payload sets `ocr_status: 'pending'` — misleading; no OCR will ever be processed for these entries | D7 | D7 QA test plan HIGH-2 | Change payload field to `ocr_status: 'deferred'` until OCR worker is wired. |
+| **D7-QA-H3:** No max retry count in `sync_queue` schema — queue runaway risk for scan entries that reference a moved/deleted file | D7 | D7 QA test plan HIGH-3 | Add `max_attempts INTEGER NOT NULL DEFAULT 5` column (with ALTER TABLE migration); sync worker must enforce dead-letter state. |
+| **D7-QA-H4:** JWT refresh not handled for scan sync entries — if access token expires during sync worker batch processing, scan upload fails silently | D7 | D7 QA test plan HIGH-4 | API client must intercept 401 + silent refresh before sync worker ships. Inherited from D6. |
+
+---
+
+## Screens Built
+
 | Screen | File | Session | Notes |
 |---|---|---|---|
 | D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit v1 (BLOCKED), persona critique (3.2/5), QA test plan (`reviews/D2-qa-test-plan.md`). C-1/C-2/C-3 fixed (2026-02-20). Security re-audit v2 passed. All HIGH debt items closed (2026-02-22). **Real device verified (2026-02-22) on iPhone via Expo Go:** search bar focus/unfocus, cursor after digit, FAB position, digit entry — all confirmed. Checklist: `reviews/D2-VALIDATION-CHECKLIST.md`. **On `dev`. Do not merge to `main` until H-2 + H-3 resolved.** |
@@ -55,7 +76,7 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|
 | D6 — New Visit | **Live screen built. Security audit complete — CRITICAL and HIGH closed (commits `04f3e99`, `831f0dc`, `f888874`, `fb9b766`). Device testing complete for core workflow. 33 items confirmed. 9 items deferred pending D7 and backend. 2 MEDIUM debt items open (KeyboardAvoidingView, mobile number in header). 6 security MEDIUM + 2 LOW open before merge.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
-| D7 — Document Scanner | **Live screen built (2026-03-05). `src/screens/doctor/DocumentScannerScreen.tsx` complete. PM REQ 1/2/3 addressed. D7-SF-4/5/6 applied. D6 MEDIUM-3 CLOSED. Schema migrations added. clearDoctorScans in useLogout. Checklist: 25 items confirmed (code review); remainder [DEVICE] pending device testing session. Three deferred items: crop handles (v2), real-time exposure detection (v2 / native module), D6 integration (next session).** | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
+| D7 — Document Scanner | **Live screen built (2026-03-05). QA test plan complete (2026-03-05, reviews/D7-qa-test-plan.md). 3 CRITICAL + 4 HIGH bugs identified — must fix before device testing. Key issues: multi-scan overwrite (D7-QA-C1), absolute path drift (D7-QA-C2), orphan on process kill (D7-QA-C3), Aadhaar regex too broad (D7-QA-H1). PM REQ 1/2/3 addressed in code. D7-SF-4/5/6 applied. D6 MEDIUM-3 CLOSED. Schema migrations added. clearDoctorScans in useLogout. Checklist: 25 items confirmed (code review); remainder [DEVICE] pending fix + device testing session. Three deferred items: crop handles (v2), real-time exposure detection (v2 / native module), D6 integration (next session).** | Tier 1 Critical. Exposure indicator required per project-state.md constraint. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
 | D1 — Login / OTP | Stub only (seeds fake token) | Tier 3. Replace stub when OTP auth is implemented. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
