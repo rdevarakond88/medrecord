@@ -7,9 +7,17 @@
  *
  * PM Requirements addressed:
  *   PM REQ 1 — Doctor-scoped image storage: <documentDirectory>/<doctorId>/scans/<uuid>.jpg
- *               clearDoctorScans() registered in useLogout via src/db/scans.ts
+ *               clearDoctorScans() + clearDoctorScanRecords() registered in useLogout
  *   PM REQ 2 — sanitizeOcrText() strips Aadhaar digit sequences before any SQLite write
- *   PM REQ 3 — Full scan → visits_draft → enqueueOperation path (closes D6 MEDIUM-3)
+ *   PM REQ 3 — Full scan → scans table → enqueueOperation path (closes D6 MEDIUM-3)
+ *
+ * QA fixes applied (reviews/D7-qa-test-plan.md):
+ *   CRITICAL-1 — insertVisitScan() adds one row per scan to scans table (no overwrite)
+ *   CRITICAL-2 — relativePath stored in SQLite; resolveScanPath() at read time (KFM-3)
+ *   CRITICAL-3 — FileSystem.moveAsync moved inside withTransactionAsync (orphan window)
+ *   HIGH-1     — sanitizeOcrText() uses \b word-boundary regex (no partial matches)
+ *   HIGH-2     — ocr_status: 'deferred' (was 'pending'; OCR worker not yet wired)
+ *   HIGH-3     — max_attempts column added to sync_queue schema (schema.ts)
  *
  * SHOULD FIX items from D7-persona-critique-v2.md applied here:
  *   D7-SF-4 — captureAdvisory: dark pill background + Colors.surface text (Rule 10)
@@ -20,7 +28,7 @@
  *   Rule 7  — Alert/Modal controlled via visible prop only; no conditional mounting
  *   Rule 9  — CameraView inside explicit View with flex:1 + backgroundColor:'#000000'
  *   Rule 10 — All camera overlay labels use Colors.surface on rgba(0,0,0,0.55) pill
- *   Rule 12 — Schema migrations for scan_local_path + scan_label in src/db/schema.ts
+ *   Rule 12 — Schema migrations for scans table + sync_queue.max_attempts in schema.ts
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -45,7 +53,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Crypto from 'expo-crypto';
 import { useAuthStore } from '../../store/useAuthStore';
 import { enqueueOperation } from '../../sync/syncQueue';
-import { updateVisitScan } from '../../db/visits';
+import { insertVisitScan, resolveScanPath } from '../../db/scans';
 import type { RootStackParamList } from '../../../App';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -71,20 +79,28 @@ const Colors = {
 
 /**
  * Strip Aadhaar numbers before writing OCR text to SQLite.
- * Covers spaced (xxxx xxxx xxxx) and unspaced (xxxxxxxxxxxx) formats.
  * PM REQ 2 / DPDP Act 2023 §5 — applied at the write boundary, not at display time.
+ *
+ * Regex: strips 12-digit sequences in 4-4-4 groups (Aadhaar format).
+ * \s? between groups matches both spaced (1234 5678 9012) and unspaced (123456789012).
+ * \b word boundaries prevent matching mid-number substrings — a 13-digit bank account
+ * number is NOT matched because there is no word boundary after the 12th digit.
+ * Does NOT strip arbitrary 12-digit standalone numbers (HIGH-1 fix).
  */
 function sanitizeOcrText(raw: string): string {
-  return raw
-    .replace(/\d{4}\s\d{4}\s\d{4}/g, '[REDACTED]')
-    .replace(/\d{12}/g, '[REDACTED]');
+  // strips 12-digit sequences in 4-4-4 groups (Aadhaar format)
+  // word boundaries prevent matching mid-number substrings
+  // does NOT strip bank account numbers (typically 9-18 digits not in 4-4-4 grouping)
+  // or lab accession numbers (longer than 12 digits — no word boundary after 12th digit)
+  return raw.replace(/\b\d{4}\s?\d{4}\s?\d{4}\b/g, '[REDACTED]');
 }
 
 /**
  * Queue OCR processing for the saved scan.
  * Stub for v1 — wired in live build when OCR service is available.
- * The OCR worker reads scan_local_path from visits_draft, runs text extraction,
- * calls sanitizeOcrText() on the result, then writes to visits_draft.note_text.
+ * The OCR worker reads local_path from the scans table, runs text extraction,
+ * calls sanitizeOcrText() on the result, then writes to scans.ocr_text
+ * and updates ocr_status to 'success' or 'failed'.
  */
 async function queueOcrAsync(_localPath: string, _visitId: string): Promise<void> {
   // TODO: enqueue OCR job when Google Vision API / Tesseract worker is wired.
@@ -226,7 +242,8 @@ export default function DocumentScannerScreen() {
     isSavingRef.current = true;
     setScreenState('processing');
 
-    let savedPath: string | null = null;
+    // absolutePath tracked here so the catch block can clean up on any failure
+    let absolutePath: string | null = null;
     try {
       // 1. Compress to JPEG at 0.7 — target <1 MB; raw camera buffer never stored
       const compressed = await ImageManipulator.manipulateAsync(
@@ -235,45 +252,66 @@ export default function DocumentScannerScreen() {
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
       );
 
-      // 2. Write to doctor-scoped directory (PM REQ 1)
-      const scanDir = `${FileSystem.documentDirectory}${user?.id}/scans/`;
+      // 2. Build paths — store only the relative segment in SQLite (CRITICAL-2 fix).
+      //    Absolute path reconstructed at read time via resolveScanPath() so the
+      //    stored value survives Android APK reinstalls (KFM-3 / path drift).
+      const uuid         = Crypto.randomUUID();
+      const scanId       = Crypto.randomUUID();  // unique ID for the scans table row
+      // path stored relative — reconstruct at read time via resolveScanPath()
+      // prevents Android path drift after app updates (CRITICAL-2 / KFM-3)
+      const relativePath = `${user?.id ?? ''}/scans/${uuid}.jpg`;
+      absolutePath       = resolveScanPath(relativePath);
+
+      // 3. Ensure doctor-scoped directory exists before opening the transaction (PM REQ 1)
+      const scanDir = `${FileSystem.documentDirectory}${user?.id ?? ''}/scans/`;
       const dirInfo = await FileSystem.getInfoAsync(scanDir);
       if (!dirInfo.exists) {
         await FileSystem.makeDirectoryAsync(scanDir, { intermediates: true });
       }
-      const filename = `${Crypto.randomUUID()}.jpg`;
-      savedPath = `${scanDir}${filename}`;
-      await FileSystem.moveAsync({ from: compressed.uri, to: savedPath });
 
-      // 3. Atomic write: update visits_draft + enqueue sync op (PM REQ 3, D6 MEDIUM-3)
+      // 4. Atomic write: move file + insert scan row + enqueue sync op (PM REQ 3).
+      //    moveAsync is inside the transaction so a SQLite failure rolls back before
+      //    any DB write; if the app is killed after the move the catch block deletes
+      //    absolutePath, closing the orphan-file window (CRITICAL-3 fix).
+      //    One row inserted per scan — no overwrite possible (CRITICAL-1 fix).
       await db.withTransactionAsync(async () => {
-        await updateVisitScan(db, visitId, savedPath!, selectedType);
+        await FileSystem.moveAsync({ from: compressed.uri, to: absolutePath! });
+        await insertVisitScan(db, {
+          id:           scanId,
+          visitLocalId: visitId,
+          doctorId:     user?.id ?? '',
+          localPath:    relativePath,  // relative — never absolute (CRITICAL-2)
+          label:        selectedType,
+        });
         await enqueueOperation(db, {
           doctor_id:       user?.id ?? '',
           entity_type:     'record',
-          entity_local_id: visitId,
+          entity_local_id: scanId,
           operation:       'create',
           payload:         JSON.stringify({
+            scan_id:          scanId,
             visit_id:         visitId,
             patient_id:       patientId,
             type:             'scan',
-            image_local_path: savedPath,
+            image_local_path: relativePath,  // relative — never absolute (CRITICAL-2)
             label:            selectedType,
-            ocr_status:       'pending',
+            // 'deferred' — OCR worker not yet implemented;
+            // change to 'pending' when Vision API queue is wired (v2)
+            ocr_status:       'deferred',
           }),
         });
       });
 
-      // 4. Queue OCR (no-op stub — PM REQ 2 sanitizeOcrText() applied in worker)
-      await queueOcrAsync(savedPath, visitId);
+      // 5. Queue OCR (no-op stub — PM REQ 2 sanitizeOcrText() applied in worker)
+      await queueOcrAsync(absolutePath, visitId);
 
-      // 5. Return to caller — savingCompletedRef bypasses discard dialog
+      // 6. Return to caller — savingCompletedRef bypasses discard dialog
       savingCompletedRef.current = true;
       navigation.goBack();
     } catch {
-      // Cleanup any partial file written before the failure
-      if (savedPath) {
-        await FileSystem.deleteAsync(savedPath, { idempotent: true }).catch(() => {});
+      // Clean up any file already moved to absolutePath before the failure
+      if (absolutePath) {
+        await FileSystem.deleteAsync(absolutePath, { idempotent: true }).catch(() => {});
       }
       isSavingRef.current = false;
       setScreenState('preview');

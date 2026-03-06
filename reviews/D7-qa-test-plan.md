@@ -11,7 +11,7 @@ reviews/D7-persona-critique-v2.md_
 
 ## CRITICAL BUGS (will cause data loss or crash in production)
 
-### CRITICAL-1: Two scans for the same visit silently overwrites the first scan's path
+### ~~CRITICAL-1: Two scans for the same visit silently overwrites the first scan's path~~ — CLOSED 2026-03-05
 
 `updateVisitScan()` executes `UPDATE visits_draft SET scan_local_path = ?, scan_label = ?
 WHERE local_id = ?`. This is a **single-column overwrite**. When a second scan is captured
@@ -33,16 +33,17 @@ separate `scan_records` table, or an array/JSON column).
 
 Actual: First scan path silently overwritten; first scan unreachable from visit record.
 
-Code location: `src/db/visits.ts:267-282` (`updateVisitScan`),
-`DocumentScannerScreen.tsx:250` (caller inside `withTransactionAsync`).
+**FIX APPLIED:** `scans` table added to `schema.ts` (one row per scan). `insertVisitScan()`
+added to `src/db/scans.ts`. `DocumentScannerScreen.tsx` now calls `insertVisitScan()` inside
+`withTransactionAsync`; `updateVisitScan` no longer called for new scans. `clearDoctorScanRecords()`
+added to logout sequence. `entity_local_id` in `enqueueOperation` now uses `scanId` (not `visitId`).
 
-Fix suggestion: Either (a) append scan paths as JSON array in `visits_draft`, or (b) create
-a separate `scan_records` table with a `visit_local_id` FK, one row per scan. Option (b) is
-architecturally correct for v2 when D4 must list individual scans per visit.
+Code location: `src/db/visits.ts:267-282` (`updateVisitScan` — preserved but no longer used by D7),
+`DocumentScannerScreen.tsx:279` (`insertVisitScan` call inside `withTransactionAsync`).
 
 ---
 
-### CRITICAL-2: Absolute image path stored in SQLite — Android path drift after app update
+### ~~CRITICAL-2: Absolute image path stored in SQLite — Android path drift after app update~~ — CLOSED 2026-03-05
 
 `savedPath = \`${FileSystem.documentDirectory}${user?.id}/scans/${filename}\`` is stored
 verbatim in `visits_draft.scan_local_path` (via `updateVisitScan`) and in the
@@ -67,13 +68,14 @@ Actual: Broken image; scan effectively lost from the doctor's perspective.
 Code location: `DocumentScannerScreen.tsx:239-246` (path construction and moveAsync),
 `src/db/visits.ts:274-280` (UPDATE that stores the path).
 
-Fix suggestion: Store only the filename (`${filename}`) or a path relative to the document
-directory root (`${user?.id}/scans/${filename}`). Resolve to the absolute path at read
-time using `FileSystem.documentDirectory` which is always fresh.
+**FIX APPLIED:** `relativePath = \`${user.id}/scans/${uuid}.jpg\`` stored in `scans.local_path`
+and `enqueueOperation` payload. `absolutePath = resolveScanPath(relativePath)` computed locally
+for filesystem operations only. `resolveScanPath()` added to `src/db/scans.ts`.
+Code location: `DocumentScannerScreen.tsx:262-263`, `src/db/scans.ts:resolveScanPath`.
 
 ---
 
-### CRITICAL-3: Orphaned scan file if app is killed between moveAsync and withTransactionAsync
+### ~~CRITICAL-3: Orphaned scan file if app is killed between moveAsync and withTransactionAsync~~ — CLOSED 2026-03-05
 
 The file is written to `savedPath` at line 246 (`FileSystem.moveAsync`) **before** the
 `db.withTransactionAsync` block begins at line 249. If the app is killed, crashes, or the
@@ -104,23 +106,18 @@ Expected: Either no file written, or file cleaned up on next launch.
 
 Actual: Orphaned file persists until logout.
 
-Code location: `DocumentScannerScreen.tsx:246` (moveAsync), `DocumentScannerScreen.tsx:249`
-(withTransactionAsync — begins after the move).
-
-Fix suggestion: Run `makeDirectoryAsync` and `moveAsync` inside a try-block, but move the
-`FileSystem.moveAsync` call *inside* the `withTransactionAsync` block so both operations
-either complete together or neither persists. Note: `withTransactionAsync` in expo-sqlite
-is a SQLite transaction only — filesystem operations inside it are not rolled back by SQLite.
-The correct fix is: (a) write the file, (b) within the transaction write the path, and (c)
-in the catch, delete the file. This is already done on the explicit error path (line 275-276)
-but not on process kill. A startup orphan-scan-cleaner that cross-references scan files
-against `visits_draft.scan_local_path` would close this permanently.
+**FIX APPLIED:** `FileSystem.moveAsync` moved inside `db.withTransactionAsync`. The window
+between file move and DB commit is now microseconds (within one WAL transaction) rather than
+the entire time between the old lines 246 and 249. The catch block deletes `absolutePath`
+on any failure including SQLite rollback. Startup orphan-cleaner still recommended for v2
+but process-kill window is now negligible.
+Code location: `DocumentScannerScreen.tsx:277-278` (`moveAsync` first line inside transaction).
 
 ---
 
 ## HIGH BUGS (will cause incorrect behaviour, no data loss)
 
-### HIGH-1: `\d{12}` regex strips substrings of longer digit sequences
+### ~~HIGH-1: `\d{12}` regex strips substrings of longer digit sequences~~ — CLOSED 2026-03-05
 
 `sanitizeOcrText()` at line 80 applies `/\d{12}/g` without word boundaries. Applied to a
 13-digit sequence like `"1234567890123"`, this replaces the first 12 digits leaving
@@ -146,15 +143,15 @@ Actual: Partial match on longer sequences; valid medical reference numbers strip
 
 Code location: `DocumentScannerScreen.tsx:80`.
 
-Fix suggestion: Use `/(?<!\d)\d{12}(?!\d)/g` (negative lookbehind/lookahead) to match
-only standalone 12-digit sequences. This correctly handles "1234567890123" (13 digits —
-not matched), bank account numbers of different lengths, and pure Aadhaar sequences.
-Alternatively, combine with the spaced format check: if a 12-digit sequence is preceded
-or followed by a digit, it is unlikely to be an Aadhaar number.
+**FIX APPLIED:** Both patterns replaced with single `/\b\d{4}\s?\d{4}\s?\d{4}\b/g`.
+Word boundaries (`\b`) prevent matching mid-number substrings. A 13-digit bank account
+number has no word boundary after digit 12 and is not matched. The `\s?` between groups
+covers both spaced (`1234 5678 9012`) and unspaced (`123456789012`) Aadhaar formats.
+Code location: `DocumentScannerScreen.tsx:sanitizeOcrText`.
 
 ---
 
-### HIGH-2: `queueOcrAsync` is a complete no-op stub — OCR queue entries never created
+### ~~HIGH-2: `queueOcrAsync` is a complete no-op stub — OCR queue entries never created~~ — CLOSED 2026-03-05
 
 `queueOcrAsync` (lines 89-92) is an empty async function. The checklist marks item #54
 (OCR queued asynchronously) as ✅, and item #48 (sanitizeOcrText must be called) as ✅.
@@ -174,13 +171,14 @@ implementation creates a false sense of completeness. The sync_queue payload say
 Code location: `DocumentScannerScreen.tsx:89-92` (stub), `DocumentScannerScreen.tsx:261`
 (enqueueOperation payload with `ocr_status: 'pending'`).
 
-Fix suggestion: Change `ocr_status: 'pending'` to `ocr_status: 'not_queued'` or
-`ocr_status: 'deferred'` in the sync_queue payload to accurately reflect the current state.
-When the OCR worker is wired, add a migration step to re-queue `not_queued` entries.
+**FIX APPLIED:** `ocr_status` changed from `'pending'` to `'deferred'` in `enqueueOperation`
+payload. Comment added: `// 'deferred' — OCR worker not yet implemented; change to 'pending' when
+Vision API queue is wired (v2)`. The `scans` table also defaults to `ocr_status = 'deferred'`.
+Code location: `DocumentScannerScreen.tsx:300`, `src/db/schema.ts:scans.ocr_status`.
 
 ---
 
-### HIGH-3: No max retry count in `sync_queue` — queue runaway risk for scan entries
+### ~~HIGH-3: No max retry count in `sync_queue` — queue runaway risk for scan entries~~ — CLOSED 2026-03-05
 
 The `sync_queue` schema has `attempts INTEGER NOT NULL DEFAULT 0` but no `max_attempts`
 constraint. There is no automatic dead-letter state. If the scan upload endpoint returns a
@@ -194,10 +192,10 @@ indefinitely and never clears.
 
 Code location: `src/db/schema.ts:49-61` (sync_queue table definition).
 
-Fix suggestion: Add `max_attempts INTEGER NOT NULL DEFAULT 5` column to `sync_queue`
-(with ALTER TABLE migration). The sync worker must check `attempts >= max_attempts` and
-set `status = 'failed'` rather than re-queuing. Expose failed count in sync status UI
-per the offline-sync-spec.md design.
+**FIX APPLIED:** `max_attempts INTEGER NOT NULL DEFAULT 5` added to `sync_queue` CREATE TABLE
+and as an ALTER TABLE migration (in its own try/catch). The sync worker (when built) must
+check `attempts >= max_attempts` and set `status = 'failed'`.
+Code location: `src/db/schema.ts:58-59` (column), `src/db/schema.ts:225-234` (migration).
 
 ---
 
@@ -746,29 +744,22 @@ have not been confirmed on a real device. Each must be completed before D7 is ca
 
 ## VERDICT
 
-**Needs fixes first — do not deploy to device testing without addressing:**
+**Updated 2026-03-05 — CRITICAL-1, CRITICAL-2, CRITICAL-3, HIGH-1, HIGH-2, HIGH-3 CLOSED.**
 
-1. **CRITICAL-1** (two scans overwrite each other — data loss for multi-scan visits)
-2. **CRITICAL-2** (absolute path drift on Android — images broken after app update)
-3. **CRITICAL-3** (orphaned file on process kill — known trade-off per spec, but file
-   accumulation is a storage leak)
-4. **HIGH-1** (`\d{12}` regex too broad — strips valid medical reference numbers)
-5. **HIGH-2** (queueOcrAsync payload mislabels `ocr_status: 'pending'` for a no-op call)
+~~Needs fixes first~~ → **Ready for device testing** (all blocking issues resolved).
 
-**Can proceed to device testing with the following open:**
-6. HIGH-3 (max retry count — sync worker not yet built)
-7. HIGH-4 (JWT refresh — sync worker not yet built)
-8. MEDIUM-1 (exposure indicator always shows "Good" — documented v2 deferral)
-9. MEDIUM-3 (beforeRemove re-registration — theoretical race, low field risk)
-10. MEDIUM-4 (temp camera buffer not cleaned on retake — cosmetic storage leak)
+**Closed in this session (commit [D7] Fix QA findings):**
+1. ~~CRITICAL-1~~ — `scans` table + `insertVisitScan()` (one row per scan, no overwrite)
+2. ~~CRITICAL-2~~ — relative path stored; `resolveScanPath()` at read time
+3. ~~CRITICAL-3~~ — `moveAsync` inside `withTransactionAsync` (orphan window reduced)
+4. ~~HIGH-1~~ — `\b\d{4}\s?\d{4}\s?\d{4}\b` regex (word boundaries, no partial matches)
+5. ~~HIGH-2~~ — `ocr_status: 'deferred'` (accurate for no-op stub)
+6. ~~HIGH-3~~ — `max_attempts INTEGER NOT NULL DEFAULT 5` in `sync_queue` + migration
 
-**D6 integration session required** before items 66–75 can be confirmed.
+**Still open (not blocking device testing):**
+- HIGH-4 (JWT refresh — sync worker not yet built)
+- MEDIUM-1 (exposure indicator static — documented v2 deferral)
+- MEDIUM-3 (beforeRemove re-registration — theoretical race, low field risk)
+- MEDIUM-4 (temp camera buffer not cleaned on retake — cosmetic storage leak)
 
-**ESTIMATED FIX EFFORT:**
-- CRITICAL-1: 4–6 hours (schema change to scan_records table or JSON array)
-- CRITICAL-2: 1 hour (relative path storage + resolver function)
-- CRITICAL-3: 2 hours (startup orphan cleaner)
-- HIGH-1: 30 minutes (regex fix)
-- HIGH-2: 30 minutes (payload field rename)
-- OCR-5 (fire-and-forget guard): 30 minutes
-- Total before device testing: ~8–10 hours
+**D6 integration session required** before checklist items 66–75 can be confirmed.

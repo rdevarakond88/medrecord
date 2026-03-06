@@ -55,6 +55,8 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
       payload         TEXT NOT NULL,      -- JSON snapshot of entity at queue time
       queued_at       TEXT NOT NULL,
       attempts        INTEGER NOT NULL DEFAULT 0,
+      max_attempts    INTEGER NOT NULL DEFAULT 5,  -- max 5 attempts then dead-letter state
+                                                   -- prevents queue runaway on permanently-failing entries (HIGH-3)
       last_attempt_at TEXT,
       status          TEXT NOT NULL DEFAULT 'pending',  -- pending | in_progress | success | failed
       error_message   TEXT
@@ -122,6 +124,28 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
     CREATE INDEX IF NOT EXISTS idx_visits_draft_pending
       ON visits_draft (sync_status, created_at ASC)
       WHERE sync_status = 'pending';
+
+    -- Scan records — one row per scan captured in D7.
+    -- Separate from visits_draft so multiple scans per visit are stored correctly
+    -- (fixes CRITICAL-1: visits_draft.scan_local_path was a single column that
+    -- overwrote on each scan save).
+    -- local_path is stored as a RELATIVE path segment — use resolveScanPath()
+    -- at read time to prevent Android path drift after app updates (CRITICAL-2 / KFM-3).
+    -- doctor_id is NOT NULL — every row is auth-scoped; cleared on logout.
+    CREATE TABLE IF NOT EXISTS scans (
+      id             TEXT PRIMARY KEY,
+      visit_local_id TEXT NOT NULL,   -- FK → visits_draft.local_id
+      doctor_id      TEXT NOT NULL,   -- auth-scoped: enables per-doctor logout cleanup
+      local_path     TEXT NOT NULL,   -- relative path: ${doctorId}/scans/${uuid}.jpg
+      label          TEXT NOT NULL,   -- DocType value from DocTypeSelector
+      ocr_status     TEXT NOT NULL DEFAULT 'deferred',  -- deferred | pending | success | failed
+      created_at     TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_scans_visit
+      ON scans (visit_local_id);
+    CREATE INDEX IF NOT EXISTS idx_scans_doctor
+      ON scans (doctor_id);
 
     -- Audit event log — DPDP Act 2023 §§ 5, 8 (data access audit trail).
     -- Tracks consent_accessed, patient_searched, and similar auditable events.
@@ -193,6 +217,17 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
   try {
     await db.execAsync(
       `ALTER TABLE visits_draft ADD COLUMN scan_label TEXT;`,
+    );
+  } catch {
+    // Column already exists — safe to ignore.
+  }
+
+  // Migration: HIGH-3 fix — add max_attempts to sync_queue for dead-letter protection.
+  // Prevents queue runaway when a sync entry fails permanently (e.g. missing file after
+  // path drift). The sync worker must check attempts >= max_attempts and set status='failed'.
+  try {
+    await db.execAsync(
+      `ALTER TABLE sync_queue ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 5;`,
     );
   } catch {
     // Column already exists — safe to ignore.
