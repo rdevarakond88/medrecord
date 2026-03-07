@@ -52,7 +52,9 @@ import type { RouteProp } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
+// expo-file-system legacy import — SDK 54 deprecated moveAsync, deleteAsync etc.
+// Import from /legacy to keep existing call sites until full API migration.
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Crypto from 'expo-crypto';
 import { useAuthStore } from '../../store/useAuthStore';
 import { enqueueOperation } from '../../sync/syncQueue';

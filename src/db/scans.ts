@@ -12,7 +12,10 @@
  *   base path can change on APK reinstall or data-partition remount).
  */
 
-import * as FileSystem from 'expo-file-system';
+// expo-file-system legacy import — SDK 54 moved makeDirectoryAsync, deleteAsync etc.
+// to a new File/Directory class API. Import from /legacy to keep the same call sites
+// until a full migration to the new API is done.
+import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 import * as Crypto from 'expo-crypto';
 
