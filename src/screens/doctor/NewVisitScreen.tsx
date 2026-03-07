@@ -33,7 +33,7 @@
  *   is called from the save-success path.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -48,7 +48,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import * as Crypto from 'expo-crypto';
@@ -57,6 +57,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNetworkStatus } from '../../utils/useNetworkStatus';
 import { insertLocalVisit, markVisitSynced, logVisitCreated } from '../../db/visits';
+import { getScansForVisit, deleteScan } from '../../db/scans';
 import { createVisit } from '../../api/visits';
 import { enqueueOperation } from '../../sync/syncQueue';
 import { ApiError } from '../../api/apiClient';
@@ -116,8 +117,9 @@ type NavProp      = NativeStackNavigationProp<RootStackParamList, 'NewVisit'>;
 type RoutePropTyp = RouteProp<RootStackParamList, 'NewVisit'>;
 
 interface AttachedScan {
+  id:        string;   // scans table PK — needed for deleteScan()
   localPath: string;
-  label:     string;   // e.g. "Prescription (25/02/2026)"
+  label:     string;   // e.g. "Prescription"
 }
 
 // ─── Screen ────────────────────────────────────────────────────────────────
@@ -149,6 +151,7 @@ export default function NewVisitScreen() {
   const [chiefComplaint,  setChiefComplaint]   = useState('');
   const [noteText,        setNoteText]         = useState('');
   const [scan,            setScan]             = useState<AttachedScan | null>(null);
+  const [scanCount,       setScanCount]        = useState(0);
   const [isSaving,        setIsSaving]         = useState(false);
   const [saveError,       setSaveError]        = useState<string | null>(null);
   const [hintHighlighted, setHintHighlighted]  = useState(false);
@@ -189,6 +192,29 @@ export default function NewVisitScreen() {
     return unsubscribe;
   }, [navigation, hasNote]);
 
+  // ─── Re-read scans from DB on every focus ───────────────────────────────
+  // D7 writes directly to the scans table and calls navigation.goBack().
+  // useFocusEffect fires when D6 regains focus so the thumbnail appears
+  // without requiring the doctor to do anything extra.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      async function loadScans() {
+        const rows = await getScansForVisit(db, visitLocalId);
+        if (!active) return;
+        setScanCount(rows.length);
+        if (rows.length > 0) {
+          const latest = rows[rows.length - 1];
+          setScan({ id: latest.id, localPath: latest.localPath, label: latest.label });
+        } else {
+          setScan(null);
+        }
+      }
+      loadScans();
+      return () => { active = false; };
+    }, [db, visitLocalId]),
+  );
+
   // ─── Auth guard (D3-H-3 pattern — must appear after all hooks) ────────
   if (!token || !user) return null;
 
@@ -217,18 +243,20 @@ export default function NewVisitScreen() {
 
   /** Navigate to D7 Document Scanner with this visit's context. */
   function handleScanTap() {
-    // D7 stub navigation — passes patientId + visitId so scan is associated.
-    // When D7 is built, it returns the scan to D6 via navigation.navigate back
-    // and D6 calls setScan({ localPath, label }).
     navigation.navigate('DocumentScanner', {
       patientId,
-      visitId: visitLocalId,
+      visitId:           visitLocalId,
+      existingScanCount: scanCount,
     });
   }
 
-  /** Remove the attached scan — Save returns to disabled state. */
-  function handleRemoveScan() {
+  /** Remove the attached scan from DB + UI state. */
+  async function handleRemoveScan() {
+    if (scan) {
+      await deleteScan(db, scan.id);
+    }
     setScan(null);
+    setScanCount(0);
   }
 
   /**

@@ -67,6 +67,33 @@ export async function insertVisitScan(
 }
 
 /**
+ * Return all scans attached to a visit, ordered oldest-first.
+ * Called by D6 on focus after returning from D7 so the thumbnail updates.
+ */
+export async function getScansForVisit(
+  db: SQLite.SQLiteDatabase,
+  visitLocalId: string,
+): Promise<Array<{ id: string; localPath: string; label: string }>> {
+  const rows = await db.getAllAsync<{ id: string; local_path: string; label: string }>(
+    `SELECT id, local_path, label FROM scans WHERE visit_local_id = ? ORDER BY created_at ASC`,
+    [visitLocalId],
+  );
+  return rows.map((r) => ({ id: r.id, localPath: r.local_path, label: r.label }));
+}
+
+/**
+ * Delete a single scan record from SQLite.
+ * Called by D6 handleRemoveScan so the DB stays in sync with UI state.
+ * Note: does NOT delete the image file — orphan-file cleanup is a v2 startup task.
+ */
+export async function deleteScan(
+  db: SQLite.SQLiteDatabase,
+  scanId: string,
+): Promise<void> {
+  await db.runAsync(`DELETE FROM scans WHERE id = ?`, [scanId]);
+}
+
+/**
  * Delete all scan records for the given doctor from SQLite.
  * Called during logout alongside clearDoctorScans() (filesystem cleanup) so both
  * the scans table rows and the image files are removed atomically per doctor.
