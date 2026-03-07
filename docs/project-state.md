@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D7 — BLOCKED (device testing). All code steps complete (mockup → build → QA → security re-audit v3). Device testing incomplete — camera save path fix applied, awaiting device confirmation.
+**Phase:** D7 — COMPLETE. Full agent workflow done (mockup → build → QA → security re-audit v3 → device testing). All 95 checklist items confirmed or deferred with written reason. Ready to merge to main.
 **Last Updated:** 2026-03-06
-**Last Session:** D7 device testing (2026-03-06). Three iOS device bug fixes applied via Builder + Security agent workflow: (1) `ensureScanDirectory()` called unconditionally with `intermediates:true`. (2) `handlePickFromLibrary` `quality:0.9` forces local `file://` JPEG — photo library save confirmed working on device. (3) Camera path fix: `takePictureAsync({ quality:0.9 })` + immediate `ImageManipulator.manipulateAsync` in `handleCapture` forces stable `file://` JPEG; `FileSystem.moveAsync` moved before `withTransactionAsync` in `handleUseThis` — iOS native dispatch queue contention between expo-sqlite and expo-file-system resolved. Security audit v3 complete — Clear to merge. Camera path not yet device-confirmed. Checklist items #1–13, #23–24, #37–40 unconfirmed. Previous: D7 MEDIUM-1 fix (2026-03-05) — `logScanCreated()` added; D7 security audit v2 verdict: Clear to merge. Previous: D7 QA fixes applied (2026-03-05) — CRITICAL-1/2/3 + HIGH-1/2/3 closed. Previous: D7 live screen built (2026-03-05). D6 MEDIUM-3 CLOSED.
+**Last Session:** D7 device testing complete (2026-03-06). All 95 checklist items confirmed or deferred with written reason — zero blank rows. iOS bug fixes applied: expo-file-system/legacy import (deprecated API); camera JPEG conversion in handleCapture; FileSystem.moveAsync moved before withTransactionAsync. D6 integration items #67–72 resolved via useFocusEffect scan re-read + deleteScan. Six D6 deferred items closed on device (#25, #36, #37, #57, #59, #63). Security audit v3: Clear to merge.
 
 ---
 
@@ -76,7 +76,7 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|
 | D6 — New Visit | **Live screen built. Security audit complete — CRITICAL and HIGH closed (commits `04f3e99`, `831f0dc`, `f888874`, `fb9b766`). Device testing complete for core workflow. 33 items confirmed. 9 items deferred pending D7 and backend. 2 MEDIUM debt items open (KeyboardAvoidingView, mobile number in header). 6 security MEDIUM + 2 LOW open before merge.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
-| D7 — Document Scanner | **BLOCKED — device testing incomplete.** All code steps done (build, QA, security re-audit — clear to merge). Two iOS device bug fixes applied (directory creation + photo library JPEG). Photo library save confirmed working on device. Camera checklist items #1–13, #23–24, #37–40 pending rear camera device. Do not merge to main until device testing complete. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
+| D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
 | D1 — Login / OTP | Stub only (seeds fake token) | Tier 3. Replace stub when OTP auth is implemented. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
@@ -223,7 +223,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D7-DEVICE-1:** Camera save fix applied but not yet device-confirmed. Checklist items #1–13, #23–24, #37–40 in `reviews/D7-VALIDATION-CHECKLIST.md` unconfirmed. Retest on iPhone before merge to main. | D7 | Device testing 2026-03-06 | Photo library save confirmed working. Camera fix: `takePictureAsync({ quality:0.9 })` + immediate ImageManipulator JPEG in `handleCapture`; `FileSystem.moveAsync` moved before `withTransactionAsync` in `handleUseThis` (iOS native dispatch queue fix). Security audit v3: Clear to merge. |
+| ~~**D7-DEVICE-1:** Camera save fix applied but not yet device-confirmed.~~ | D7 | Device testing 2026-03-06 | **CLOSED 2026-03-06** — All 95 checklist items confirmed or deferred on iPhone. Camera capture, photo library, offline save, discard guard, D6 integration all confirmed working. |
 
 ### MEDIUM — D7 live screen security audit v2
 
