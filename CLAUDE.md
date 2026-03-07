@@ -6,6 +6,18 @@
 
 ---
 
+## Mandatory Opening Declaration
+
+Before taking any action — reading code, suggesting fixes, writing anything — state:
+
+> "Operating as: [Agent Name]
+> Step: [step number and name from AGENT_ORCHESTRATION.md]
+> Spec files I will read before starting: [list]"
+
+If you cannot identify which agent and which step applies, stop and ask the user before proceeding.
+
+---
+
 ## The Five Agents
 
 Each agent has a defined role. Never perform a task that belongs to an agent without invoking it.
@@ -13,7 +25,7 @@ Each agent has a defined role. Never perform a task that belongs to an agent wit
 | Agent | File | Invoke when |
 |---|---|---|
 | PM | `agents/agent-pm.md` | Starting a new flow; after a full flow is complete; before launch |
-| Builder | `agents/agent-builder.md` | Before writing or changing any code |
+| Builder | `agents/agent-builder.md` | Before writing or changing any code — including bug fixes, device-testing fixes, and one-line changes |
 | Persona Critic | `agents/agent-persona-critic.md` | After every mockup is built |
 | Security | `agents/agent-security.md` | After every live screen build; whenever a fix touches storage, auth, or PII |
 | QA | `agents/agent-qa.md` | After every live screen passes security audit |
@@ -24,12 +36,14 @@ Each agent has a defined role. Never perform a task that belongs to an agent wit
 
 Never silently do a task that belongs to an agent.
 
-This includes: critiquing UX or mockups, producing security audits, writing QA test plans, or making any PM-level flow assessment. These belong to their respective agents — even for small fixes or reviews.
+This includes: critiquing UX or mockups, producing security audits, writing QA test plans, making any PM-level flow assessment, or writing any code change regardless of size. These belong to their respective agents — no exceptions for bug fixes, device-testing issues, or "minor" changes.
 
-If you must deviate (e.g. a minor in-session fix that cannot wait for a new session), you MUST explicitly state:
-> "Note: performing [task] outside [agent name] workflow because [specific reason]. Flagging for follow-up."
+There is no such thing as a fix too small to require the Builder agent. There is no such thing as a storage change too minor to require the Security agent.
 
-Silence is not acceptable. Deviation must always be declared.
+Deviation is only acceptable when the user explicitly instructs it in that session. In that case, state:
+> "Note: performing [task] outside [agent name] workflow because the user has explicitly instructed it. Flagging for follow-up."
+
+Silence is not acceptable. Self-justified deviation is not acceptable.
 
 ---
 
