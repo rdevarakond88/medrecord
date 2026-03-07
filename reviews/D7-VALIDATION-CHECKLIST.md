@@ -5,9 +5,20 @@ Created before build starts. Every item must be confirmed or explicitly deferred
 
 **Source files:** `docs/ui-ux-spec.md` (D7 section) · `docs/project-state.md` (D7 constraints) · `LESSONS-AND-RUNBOOK.md` (Rules 7, 9, 10, 11, 12) · `reviews/D7-pm-preflow.md`
 
+### Device Testing Context
+
+| Session | Date | Device | Platform | Tester |
+|---|---|---|---|---|
+| D7 device testing | 2026-03-06 | iPhone (Expo Go) | iOS only | Owner |
+
+**Android device testing: NOT YET DONE.**
+All items marked ✅ in this checklist were confirmed on iPhone only. No Android device testing has been performed. Before v1 clinic pilot, all `[DEVICE]` items must be re-verified on an Android device. Items #34 (Android hardware back button) and #95 (Android frame rate on 2GB RAM) are explicitly deferred pending an Android device.
+
+---
+
 ### How to Use This Checklist
 
-- ✅ Confirmed — tested and verified working
+- ✅ Confirmed — tested and verified working on iPhone (iOS)
 - 🔶 Deferred — explicitly deferred with reason written below
 - 🔴 Blocked — cannot proceed; must fix before moving forward
 - `[DEVICE]` — can only be confirmed on a real device via Expo Go; simulator/web preview is insufficient
