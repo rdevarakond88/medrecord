@@ -207,9 +207,18 @@ export default function DocumentScannerScreen() {
     if (isSavingRef.current) return;
     isSavingRef.current = true;
     try {
-      const result = await cameraRef.current?.takePictureAsync({ quality: 1 });
+      const result = await cameraRef.current?.takePictureAsync({ quality: 0.9 });
       if (result?.uri) {
-        setCapturedUri(result.uri);
+        // Force a stable file:// JPEG immediately after capture on iOS.
+        // takePictureAsync({ quality: 1 }) can return a HEIC image or a
+        // temp-cache URI that ImageManipulator cannot process at save time.
+        // Same root cause and fix as handlePickFromLibrary quality:0.9.
+        const jpeg = await ImageManipulator.manipulateAsync(
+          result.uri,
+          [],
+          { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG },
+        );
+        setCapturedUri(jpeg.uri);
         setSelectedType('Prescription');
         setScreenState('preview');
       }
@@ -268,22 +277,27 @@ export default function DocumentScannerScreen() {
       const relativePath = `${user?.id ?? ''}/scans/${uuid}.jpg`;
       absolutePath       = resolveScanPath(relativePath);
 
-      // 3. Ensure doctor-scoped directory exists before opening the transaction (PM REQ 1).
+      // 3. Ensure doctor-scoped directory exists (PM REQ 1).
       //    ensureScanDirectory() calls makeDirectoryAsync unconditionally with
       //    intermediates:true — avoids iOS path-cache staleness from getInfoAsync.
       await ensureScanDirectory(user.id);
 
-      // 4. Atomic write: move file + insert scan row + enqueue sync op (PM REQ 3).
-      //    moveAsync is inside the transaction so a SQLite failure rolls back before
-      //    any DB write; if the app is killed after the move the catch block deletes
-      //    absolutePath, closing the orphan-file window (CRITICAL-3 fix).
+      // 4. Move compressed file to its final path BEFORE opening the DB transaction.
+      //    On iOS, expo-sqlite holds the DB connection locked during withTransactionAsync.
+      //    Calling FileSystem (a separate native module) from within that lock fails on
+      //    iOS because the two native modules run on different dispatch queues.
+      //    The withTransactionAsync block below covers only SQLite operations.
+      //    If the DB transaction fails, the catch block deletes absolutePath.
+      await FileSystem.moveAsync({ from: compressed.uri, to: absolutePath });
+
+      // 5. Atomic SQLite writes: scan row + audit event + sync queue entry (PM REQ 3).
+      //    withTransactionAsync ensures all three succeed or all three roll back.
       //    One row inserted per scan — no overwrite possible (CRITICAL-1 fix).
       await db.withTransactionAsync(async () => {
-        await FileSystem.moveAsync({ from: compressed.uri, to: absolutePath! });
         await insertVisitScan(db, {
           id:           scanId,
           visitLocalId: visitId,
-          doctorId:     user?.id ?? '',
+          doctorId:     user.id,
           localPath:    relativePath,  // relative — never absolute (CRITICAL-2)
           label:        selectedType,
         });
@@ -291,12 +305,12 @@ export default function DocumentScannerScreen() {
         await logScanCreated(db, {
           scanId,
           visitId,
-          doctorId:  user?.id ?? '',
+          doctorId:  user.id,
           patientId,
           label:     selectedType,
         });
         await enqueueOperation(db, {
-          doctor_id:       user?.id ?? '',
+          doctor_id:       user.id,
           entity_type:     'record',
           entity_local_id: scanId,
           operation:       'create',
@@ -314,20 +328,22 @@ export default function DocumentScannerScreen() {
         });
       });
 
-      // 5. Queue OCR (no-op stub — PM REQ 2 sanitizeOcrText() applied in worker)
+      // 6. Queue OCR (no-op stub — PM REQ 2 sanitizeOcrText() applied in worker)
       await queueOcrAsync(absolutePath, visitId);
 
-      // 6. Return to caller — savingCompletedRef bypasses discard dialog
+      // 7. Return to caller — savingCompletedRef bypasses discard dialog
       savingCompletedRef.current = true;
       navigation.goBack();
-    } catch {
-      // Clean up any file already moved to absolutePath before the failure
+    } catch (err) {
+      // Clean up any file moved to absolutePath before the failure
       if (absolutePath) {
         await FileSystem.deleteAsync(absolutePath, { idempotent: true }).catch(() => {});
       }
       isSavingRef.current = false;
       setScreenState('preview');
-      Alert.alert('Save failed', 'Could not save the scan. Please try again.');
+      // Surface the actual error message — "Save failed" with no detail is undiagnosable
+      const errMsg = err instanceof Error ? err.message : String(err);
+      Alert.alert('Save failed', `Could not save the scan. Please try again.\n\n${errMsg}`);
     }
   }, [capturedUri, db, navigation, patientId, selectedType, user, visitId]);
 

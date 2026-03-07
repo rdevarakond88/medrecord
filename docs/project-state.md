@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D7 — BLOCKED. All code steps complete (mockup → build → QA → security re-audit). Device testing incomplete — rear camera unavailable on test device.
+**Phase:** D7 — BLOCKED (device testing). All code steps complete (mockup → build → QA → security re-audit v3). Device testing incomplete — camera save path fix applied, awaiting device confirmation.
 **Last Updated:** 2026-03-06
-**Last Session:** D7 device testing (2026-03-06). Two iOS device bug fixes applied: (1) `ensureScanDirectory()` now called unconditionally with `intermediates:true` — replaces inline `getInfoAsync` check that could return stale results on iOS (`src/db/scans.ts`). (2) `launchImageLibraryAsync` `quality` changed from `1` to `0.9` in `handlePickFromLibrary` — forces expo-image-picker to write a local `file://` JPEG on iOS, avoiding `ph://`/HEIC asset references that `expo-image-manipulator` cannot encode (`src/screens/doctor/DocumentScannerScreen.tsx`). Photo library save path confirmed working on device after fix. Camera path blocked — rear camera unavailable on test device. Checklist items #1–13, #23–24, #37–40 unconfirmed. Previous: D7 MEDIUM-1 fix (2026-03-05) — `logScanCreated()` added; D7 security audit v2 verdict: Clear to merge. Previous: D7 QA fixes applied (2026-03-05) — CRITICAL-1/2/3 + HIGH-1/2/3 closed. Previous: D7 live screen built (2026-03-05). D6 MEDIUM-3 CLOSED.
+**Last Session:** D7 device testing (2026-03-06). Three iOS device bug fixes applied via Builder + Security agent workflow: (1) `ensureScanDirectory()` called unconditionally with `intermediates:true`. (2) `handlePickFromLibrary` `quality:0.9` forces local `file://` JPEG — photo library save confirmed working on device. (3) Camera path fix: `takePictureAsync({ quality:0.9 })` + immediate `ImageManipulator.manipulateAsync` in `handleCapture` forces stable `file://` JPEG; `FileSystem.moveAsync` moved before `withTransactionAsync` in `handleUseThis` — iOS native dispatch queue contention between expo-sqlite and expo-file-system resolved. Security audit v3 complete — Clear to merge. Camera path not yet device-confirmed. Checklist items #1–13, #23–24, #37–40 unconfirmed. Previous: D7 MEDIUM-1 fix (2026-03-05) — `logScanCreated()` added; D7 security audit v2 verdict: Clear to merge. Previous: D7 QA fixes applied (2026-03-05) — CRITICAL-1/2/3 + HIGH-1/2/3 closed. Previous: D7 live screen built (2026-03-05). D6 MEDIUM-3 CLOSED.
 
 ---
 
@@ -223,7 +223,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D7-DEVICE-1:** Device testing blocked — rear camera unavailable on test device. Checklist items #1–13, #23–24, #37–40 in `reviews/D7-VALIDATION-CHECKLIST.md` unconfirmed. Retest on clinic device or repaired phone before merge to main. | D7 | Device testing 2026-03-06 | Photo library save path confirmed working after iOS bug fixes (commits `9e64561`, `dce2c38`). Camera path (viewfinder, capture, exposure indicator) cannot be confirmed until a device with working rear camera is available. |
+| **D7-DEVICE-1:** Camera save fix applied but not yet device-confirmed. Checklist items #1–13, #23–24, #37–40 in `reviews/D7-VALIDATION-CHECKLIST.md` unconfirmed. Retest on iPhone before merge to main. | D7 | Device testing 2026-03-06 | Photo library save confirmed working. Camera fix: `takePictureAsync({ quality:0.9 })` + immediate ImageManipulator JPEG in `handleCapture`; `FileSystem.moveAsync` moved before `withTransactionAsync` in `handleUseThis` (iOS native dispatch queue fix). Security audit v3: Clear to merge. |
 
 ### MEDIUM — D7 live screen security audit v2
 
