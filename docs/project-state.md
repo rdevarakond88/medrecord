@@ -2,9 +2,20 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D7 — COMPLETE. Full agent workflow done (mockup → build → QA → security re-audit v3 → device testing). All 95 checklist items confirmed or deferred with written reason. Ready to merge to main.
-**Last Updated:** 2026-03-06
-**Last Session:** D7 device testing complete (2026-03-06). All 95 checklist items confirmed or deferred with written reason — zero blank rows. iOS bug fixes applied: expo-file-system/legacy import (deprecated API); camera JPEG conversion in handleCapture; FileSystem.moveAsync moved before withTransactionAsync. D6 integration items #67–72 resolved via useFocusEffect scan re-read + deleteScan. Six D6 deferred items closed on device (#25, #36, #37, #57, #59, #63). Security audit v3: Clear to merge.
+**Phase:** Doctor Visit Flow (D2, D3, D6, D7) — COMPLETE. PM Moment 2 post-flow review done. Pre-merge blockers and sync worker are next priority before any pilot.
+**Last Updated:** 2026-03-13
+**Last Session:** PM Agent Moment 2 post-flow review (2026-03-13). Doctor Visit Flow assessed as coherent and on-device verified, but three pilot blockers identified: sync worker missing, D5 (new patient) is a stub, D4 (visit detail) disabled. Pre-merge security blockers in D2/D6 must close before merging to main. Full review: `reviews/doctor-visit-flow-pm-review-moment2.md`.
+
+### Recommended Next Build Order
+| Priority | Item | Reason |
+|---|---|---|
+| 1 | Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6) | Foundation — must close before merging D2/D6 to main |
+| 2 | Sync worker | Non-negotiable before any pilot or live data |
+| 3 | D1 (Login / OTP) | Required for real auth before pilot |
+| 4 | D5 (New Patient Form) | New patients break the flow without it |
+| 5 | D4 (Visit Detail) | Unlocks D3 history list value |
+| 6 | D9 (Consent Request) | Unlocks multi-doctor use cases |
+| 7 | D8 (Full Scan View) | Additive, not blocking anything |
 
 ---
 
