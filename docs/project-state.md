@@ -2,16 +2,16 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** Sync Worker — Builder complete (2026-03-13). Security audit next.
+**Phase:** Sync Worker — Security audit complete (2026-03-13). BLOCKED: 3 HIGH findings. Builder must fix before device testing.
 **Last Updated:** 2026-03-13
-**Last Session:** Builder — Sync worker built. Files: `src/sync/syncWorker.ts`, `src/sync/useSyncWorker.ts`, `src/store/useSyncStore.ts`, `src/auth/constants.ts`. App.tsx updated with SyncWorkerMount. CRITICAL duplicate-upload bug confirmed already closed (was fixed in commit `c36f43e`).
+**Last Session:** Security — Sync worker audited (commit `6ecf8e1`). Report: `reviews/sync-worker-security-audit.md`. 3 HIGH findings: H-1 (sync_queue not scoped to doctor_id), H-2 (refresh token rotation not completed on client), H-3 (audit_events flush not scoped to doctor_id). 2 MEDIUM, 2 LOW. No CRITICALs. Certificate pinning, dead-letter protection, 401 retry logic, SyncWorkerMount placement all verified correct.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
 |---|---|---|
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
-| 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE.~~ | **CLOSED 2026-03-13** — Security audit is next step |
-| 2 | **Sync worker — Security audit** | Run Security agent before device testing |
+| 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
+| 2 | **Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1** | Builder agent. See Known Technical Debt — Sync Worker section. |
 | 3 | D1 (Login / OTP) | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
@@ -71,7 +71,7 @@ _Carry these into every build/mockup session for these screens._
 | ~~**D7-QA-H1:** `sanitizeOcrText` regex `/\d{12}/g` strips non-Aadhaar 12-digit strings~~ | D7 | D7 QA test plan HIGH-1 | **CLOSED 2026-03-05** — replaced with `/\b\d{4}\s?\d{4}\s?\d{4}\b/g`. Word boundaries prevent partial matches; covers both spaced and unspaced Aadhaar; 13-digit bank refs not matched. |
 | ~~**D7-QA-H2:** `ocr_status: 'pending'` in enqueueOperation payload for a no-op stub~~ | D7 | D7 QA test plan HIGH-2 | **CLOSED 2026-03-05** — changed to `'deferred'` with comment. `scans` table also defaults to `'deferred'`. Change to `'pending'` when OCR worker is wired. |
 | ~~**D7-QA-H3:** No max retry count in `sync_queue` — queue runaway risk~~ | D7 | D7 QA test plan HIGH-3 | **CLOSED 2026-03-05** — `max_attempts INTEGER NOT NULL DEFAULT 5` added to CREATE TABLE + ALTER TABLE migration. Sync worker must check `attempts >= max_attempts` → `status = 'failed'`. |
-| **D7-QA-H4:** JWT refresh not handled for scan sync entries — if access token expires during sync worker batch processing, scan upload fails silently | D7 | D7 QA test plan HIGH-4 | **Scoped to sync worker session.** Sync worker must: on 401 from POST /sync, read refresh token from expo-secure-store (`REFRESH_TOKEN_KEY`), call POST /auth/refresh, update auth store, retry once. If refresh fails, abort run and leave entries as `pending`. Do NOT navigate from the worker. |
+| ~~**D7-QA-H4:** JWT refresh not handled for scan sync entries — if access token expires during sync worker batch processing, scan upload fails silently~~ | D7 | D7 QA test plan HIGH-4 | **CLOSED 2026-03-13** — `tryRefreshToken()` in `syncWorker.ts`: reads refresh token from `expo-secure-store (REFRESH_TOKEN_KEY)`, calls POST /auth/refresh via `pinnedFetch`, updates auth store, retries once. If refresh fails, resets in_progress entries to pending and aborts run. Never navigates. Partial gap: new refresh token not stored back to SecureStore — tracked as Sync Worker H-2. |
 
 ---
 
@@ -79,7 +79,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | File | Session | Notes |
 |---|---|---|---|
-| Sync Worker | `src/sync/syncWorker.ts`, `src/sync/useSyncWorker.ts`, `src/store/useSyncStore.ts`, `src/auth/constants.ts` | 2026-03-13 | Builder complete. Drain loop: batches 20 entries, strict queued_at ASC order, record entries deferred (S3 v2), JWT 401 refresh + retry once, per-result id_mapping + entity updates, audit event flush. Three triggers: AppState active, NetInfo restored, 5-min interval. App.tsx mounted via SyncWorkerMount. Security audit next. |
+| Sync Worker | `src/sync/syncWorker.ts`, `src/sync/useSyncWorker.ts`, `src/store/useSyncStore.ts`, `src/auth/constants.ts` | 2026-03-13 | Builder complete. Drain loop: batches 20 entries, strict queued_at ASC order, record entries deferred (S3 v2), JWT 401 refresh + retry once, per-result id_mapping + entity updates, audit event flush. Three triggers: AppState active, NetInfo restored, 5-min interval. App.tsx mounted via SyncWorkerMount. **Security audit complete (2026-03-13) — BLOCKED: 3 HIGH findings. See Known Technical Debt — Sync Worker.** |
 | D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit v1 (BLOCKED), persona critique (3.2/5), QA test plan (`reviews/D2-qa-test-plan.md`). C-1/C-2/C-3 fixed (2026-02-20). Security re-audit v2 passed. All HIGH debt items closed (2026-02-22). **Real device verified (2026-02-22) on iPhone via Expo Go:** search bar focus/unfocus, cursor after digit, FAB position, digit entry — all confirmed. Checklist: `reviews/D2-VALIDATION-CHECKLIST.md`. **On `dev`. Do not merge to `main` until H-2 + H-3 resolved.** |
 | D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) / `src/screens/doctor/PatientDetailScreen.tsx` (live) | 2026-02-23 / 2026-02-24 | Static mockup with four variants approved. Live screen wired: `getPatientVisits()` two-list API (`myVisits` + `otherDoctorVisits`), loading skeleton on mount, server consent gate (D3-H-2), offline SQLite fallback (`getCachedVisits()`), synchronous auth guard (D3-H-3), `useFocusEffect` for dynamic consent transition on D9 return, AppState foreground re-verify, offline guard on Request Access, DPDP audit event to `audit_events` table, FlatList with `maxToRenderPerBatch={10}` + client-side pagination, `recordCount=0 → 'Draft'`, `numberOfLines={1}` on patient name, no consent badge on empty state, last-verified timestamp in offline banner, per-variant consent gate box, "View Full Visit" disabled stub until D4. Supporting modules: `src/api/visits.ts`, `src/db/visits.ts`, `getPatientByLocalId()` in db/patients. Schema: visits + audit_events tables. All D3 HIGH pre-merge debt closed. |
 
@@ -301,6 +301,28 @@ _Carry these into every build/mockup session for these screens._
 | No name search — mobile-only lookup frustrates staff and tech-savvy doctors | D2 | Persona critique | Locked design decision (mobile as primary key); flag for product discussion before D3 build |
 | Certificate pinning absent from API client | D2 | Security audit H-2 | Tracked above as pre-merge blocker. |
 | Offline patient access generates no audit log | D2 | Security audit H-3 / QA E-9 | Tracked above as pre-merge blocker. |
+
+### HIGH — Sync worker security audit (fix before device testing)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **SW-H-1:** `sync_queue` drain loop reads ALL pending entries — not filtered by `doctor_id`. If `clearDoctorSyncQueue()` fails silently on logout, Doctor A's entries are sent under Doctor B's JWT. | Sync Worker | Security audit H-1 | Pass authenticated `doctor_id` into `runSyncWorker()`. Add `AND doctor_id = ?` to the drain SELECT and to the startup in_progress reset UPDATE. |
+| **SW-H-2:** `tryRefreshToken` does not store the new refresh token returned by the server. When the server rotates the token (spec requirement), the new token is silently dropped. Next refresh attempt uses the now-invalidated old token and silently aborts all future syncs. | Sync Worker | Security audit H-2 | Add `refresh_token?: string` to `RefreshResponse` interface. After updating auth store, call `SecureStore.setItemAsync(REFRESH_TOKEN_KEY, body.refresh_token)` if present. |
+| **SW-H-3:** `flushAuditEvents` reads ALL unsynced audit events — not filtered by `doctor_id`. Audit events from Doctor A's session could be transmitted under Doctor B's JWT, misattributing access records. | Sync Worker | Security audit H-3 | Add `AND doctor_id = ?` to the `flushAuditEvents` SELECT. Thread the same `doctor_id` parameter from H-1 fix. |
+
+### MEDIUM — Sync worker security audit
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **SW-M-1:** Audit events never flush when `sync_queue` is empty. `batchSucceeded` gate prevents the flush in read-only sessions (e.g., doctor only views records, no new visits). DPDP §8 requires server-side audit trail for access events. | Sync Worker | Security audit M-1 | Remove the `if (batchSucceeded)` gate. `flushAuditEvents` returns immediately if nothing to flush. |
+| **SW-M-2:** `hasResetInProgress` module-level flag is never reset on doctor change. If Doctor B logs in within the same app process lifetime, the in_progress startup cleanup does not run for their first sync session. | Sync Worker | Security audit M-2 | Reset `hasResetInProgress` in the `useLogout` sequence, or tie it to a session counter in `useAuthStore`. |
+
+### LOW — Sync worker security audit
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **SW-L-1:** `ACCESS_TOKEN_KEY` exported in `constants.ts` but unused — creates ambiguity about whether access tokens should be stored in SecureStore vs in-memory only. | Sync Worker | Security audit L-1 | Remove or add a comment clarifying its intended use by D1 for cold-start token recovery. |
+| **SW-L-2:** Mid-sync logout does not abort the in-flight run. The `?? currentToken` fallback on token re-read means `clearAuth()` during a sync run does not stop the current batch. | Sync Worker | Security audit L-2 | Remove the `?? currentToken` fallback; treat null token mid-run as an abort signal. |
 
 ---
 
