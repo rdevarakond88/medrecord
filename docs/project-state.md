@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** Sync Worker — Security fixes applied (2026-03-13). SW-H-1, SW-H-2, SW-H-3, SW-M-1 closed. Ready for device testing.
+**Phase:** D1 (Login / OTP) — PM pre-flight complete (2026-03-13). Ready for Builder.
 **Last Updated:** 2026-03-13
-**Last Session:** Builder — Sync worker security fixes (commit after 35662b4). Closed SW-H-1 (doctor_id scope on sync_queue drain), SW-H-2 (refresh token rotation write-back to SecureStore), SW-H-3 (doctor_id scope on audit_events flush), SW-M-1 (unconditional audit flush). Files changed: src/sync/syncWorker.ts, src/sync/useSyncWorker.ts.
+**Last Session:** PM — D1 pre-flight review. PROCEED with 4 required changes: WhatsApp fallback link in UI, Android SMS OTP autofill, prop-ised subtitle for P1 reuse, distinct "OTP sent" and error-state messages. Review saved to `reviews/D1-pm-preflow.md`.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -12,7 +12,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
 | 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
 | 2 | ~~Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1~~ | **CLOSED 2026-03-13** |
-| 3 | D1 (Login / OTP) | Required for real auth before pilot |
+| 3 | D1 (Login / OTP) — **PM pre-flight DONE** | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
 | 6 | D9 (Consent Request) | Unlocks multi-doctor use cases |
@@ -91,7 +91,7 @@ _Carry these into every build/mockup session for these screens._
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
-| D1 — Login / OTP | Stub only (seeds fake token) | Tier 3. Replace stub when OTP auth is implemented. |
+| D1 — Login / OTP | **PM pre-flight DONE (2026-03-13). Ready for Builder.** Stub only (seeds fake token). | Tier 3. PM required changes: WhatsApp fallback link, Android SMS autofill, subtitle prop, distinct OTP-sent/error states. See `reviews/D1-pm-preflow.md`. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
