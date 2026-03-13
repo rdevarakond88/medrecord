@@ -56,6 +56,7 @@ import {
   getRecentPatients,
   searchPatientsByMobile,
   upsertPatientFromServer,
+  logLocalPatientAccess,
 } from '../../db/patients';
 
 // ─────────────────────────────────────────────────────────────
@@ -102,20 +103,42 @@ export default function PatientSearchScreen() {
   }, [token, user, navigation]);
 
   // ── Load recent patients once on mount ────────────────────
+  // H-3: write audit event after every read — PII returned even offline must be logged.
+  // queryLength not included here because this is a list view, not a targeted lookup.
   useEffect(() => {
     if (!token || !user) return;
-    getRecentPatients(db, user.id).then(setRecentPatients);
+    getRecentPatients(db, user.id).then((patients) => {
+      setRecentPatients(patients);
+      if (patients.length > 0) {
+        // Fire-and-forget: audit write failure must not block the UI.
+        logLocalPatientAccess(db, user.id, 'recent_patients_viewed', {
+          count: patients.length,
+        }).catch(() => {/* non-fatal */});
+      }
+    });
   }, [db, token, user]);
 
   // ── SQLite search on every query change ──────────────────
   // Fires immediately from 3 digits to give instant local feedback.
+  // H-3: write audit event when search returns PII — logged even when offline.
+  // queryLength (digit count) is logged rather than the digits themselves — PII must
+  // not be embedded in the audit log; the partial number is not needed for audit purposes.
   useEffect(() => {
     if (!user) return;
     if (query.length < 3) {
       setLocalResults([]);
       return;
     }
-    searchPatientsByMobile(db, query, user.id).then(setLocalResults);
+    searchPatientsByMobile(db, query, user.id).then((results) => {
+      setLocalResults(results);
+      if (results.length > 0) {
+        // Fire-and-forget: audit write failure must not block the UI.
+        logLocalPatientAccess(db, user.id, 'patient_searched', {
+          queryLength: query.length,  // digits typed — NOT the digits themselves
+          resultCount: results.length,
+        }).catch(() => {/* non-fatal */});
+      }
+    });
   }, [db, query, user]);
 
   // ── Server lookup via React Query ────────────────────────

@@ -2,14 +2,14 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** Doctor Visit Flow (D2, D3, D6, D7) — COMPLETE. PM Moment 2 post-flow review done. Pre-merge blockers and sync worker are next priority before any pilot.
+**Phase:** Doctor Visit Flow (D2, D3, D6, D7) — COMPLETE. Pre-merge security blockers closed (2026-03-13). D2/D6/D7 ready to merge to main. Sync worker is next priority.
 **Last Updated:** 2026-03-13
-**Last Session:** PM Agent Moment 2 post-flow review (2026-03-13). Doctor Visit Flow assessed as coherent and on-device verified, but three pilot blockers identified: sync worker missing, D5 (new patient) is a stub, D4 (visit detail) disabled. Pre-merge security blockers in D2/D6 must close before merging to main. Full review: `reviews/doctor-visit-flow-pm-review-moment2.md`.
+**Last Session:** Builder Agent — pre-merge security blockers fixed (2026-03-13). All 6 items closed: D2 H-2 (cert pinning), D2 H-3 (offline audit log), D6 M-1 (consent re-read), D6 M-4 (atomic transaction), D6 M-5 (getCachedVisits UNION fix), D6 M-6 (logout warning). See Known Technical Debt for closed items.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
 |---|---|---|
-| 1 | Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6) | Foundation — must close before merging D2/D6 to main |
+| 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
 | 2 | Sync worker | Non-negotiable before any pilot or live data |
 | 3 | D1 (Login / OTP) | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
@@ -120,8 +120,8 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **H-2:** Certificate pinning not implemented — `apiFetch` uses bare `fetch()` with no SPKI pin; MITM possible on shared clinic WiFi | D2 | Security audit v2 H-2 | Required before merge to main. Use `expo-build-properties` OkHttp interceptor (Android) + NSURLSession delegate (iOS), or `react-native-ssl-pinning`. Pin leaf cert + one intermediate. |
-| **H-3:** Offline patient access generates no audit log — `getRecentPatients` and `searchPatientsByMobile` return PII with zero audit trail when offline | D2 | Security audit v2 H-3 | Required before merge to main. Add `audit_events` SQLite table; call `logLocalAccess()` after each read; flush to server audit log on reconnect via `POST /sync`. |
+| ~~**H-2:** Certificate pinning not implemented — `apiFetch` uses bare `fetch()` with no SPKI pin; MITM possible on shared clinic WiFi~~ | D2 | Security audit v2 H-2 | **CLOSED** — `src/api/pinnedFetch.ts` added; wraps `react-native-ssl-pinning` with two cert pins (`api_medrecord_leaf`, `api_medrecord_intermediate`). `apiFetch` now calls `pinnedFetch` instead of bare `fetch`. Requires: (1) `npx expo install react-native-ssl-pinning`, (2) `.cer` cert files bundled in native assets, (3) EAS/custom dev build — does NOT work in Expo Go. Cert hash setup instructions in `src/api/pinnedFetch.ts` file header. |
+| ~~**H-3:** Offline patient access generates no audit log — `getRecentPatients` and `searchPatientsByMobile` return PII with zero audit trail when offline~~ | D2 | Security audit v2 H-3 | **CLOSED** — `logLocalPatientAccess()` added to `src/db/patients.ts`; called fire-and-forget after `getRecentPatients` and `searchPatientsByMobile` in `PatientSearchScreen.tsx`. Logs `recent_patients_viewed` (with count) and `patient_searched` (with queryLength, not digits — PII not embedded in audit log) to `audit_events` table. Flush to server via POST /sync deferred to sync worker session (same as D3 audit pattern). |
 
 ### CRITICAL — D3 live screen security audit
 
@@ -216,12 +216,12 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **MEDIUM-1:** `consentGranted` nav param stored without re-verification at save time — stale consent value may be written to `visits_draft` and sent to server | D6 | D6 security audit | Fix before merge to main. Re-read `consent_granted` from SQLite via `getPatientByLocalId()` inside `handleSave()` before calling `insertLocalVisit()`, same pattern as D3 offline consent fix. |
+| ~~**MEDIUM-1:** `consentGranted` nav param stored without re-verification at save time — stale consent value may be written to `visits_draft` and sent to server~~ | D6 | D6 security audit | **CLOSED** — `getPatientByLocalId(db, patientId)` called at the start of `handleSave()` before any write; `freshConsentGranted` used for `insertLocalVisit`, `enqueueOperation`, and `createVisit` instead of the nav param. |
 | ~~**MEDIUM-2:** Full patient mobile number rendered in D6 header — PII visible to bystanders in shared clinic spaces~~ | D6 | D6 security audit | **CLOSED 2026-03-03** — `maskedMobile = patientMobile.slice(-5)` with `•••••` prefix; header subtitle now shows masked number, matching D2/D3 pattern. |
 | ~~**MEDIUM-3:** Attached scan silently dropped on save — `scan.localPath` and `scan.label` never written to any storage layer~~ | D6 | D6 security audit | **CLOSED 2026-03-05** — D7 live build adds `updateVisitScan()` to `src/db/visits.ts`; D7 `handleUseThis` calls `updateVisitScan(db, visitId, savedPath, selectedType)` + `enqueueOperation` inside `db.withTransactionAsync()`. Scan path + label now reach `visits_draft` and sync queue atomically. |
-| **MEDIUM-4:** `insertLocalVisit()` and `enqueueOperation()` not wrapped in a transaction — UNIQUE constraint violation on retry leaves sync queue entry without a matching `visits_draft` row | D6 | D6 security audit | Fix before merge to main. Wrap both calls in `db.withTransactionAsync()` so they succeed or fail atomically. |
-| **MEDIUM-5:** `getCachedVisits` UNION query filters `visits_draft` on `patient_server_id = ?` — offline-only patients with `NULL patient_server_id` return zero draft rows in D3 | D6 | D6 security audit | Fix before merge to main. Add `OR (patient_server_id IS NULL AND patient_id = ?)` branch to the `visits_draft` leg of the UNION, bound to the local patient ID. |
-| **MEDIUM-6:** Unsynced draft visits deleted on logout without warning — silent, irreversible data loss for visits not yet synced to server | D6 | D6 security audit | Fix before merge to main. Check for pending `visits_draft` rows before logout; warn doctor with count and require explicit confirmation before proceeding. |
+| ~~**MEDIUM-4:** `insertLocalVisit()` and `enqueueOperation()` not wrapped in a transaction — UNIQUE constraint violation on retry leaves sync queue entry without a matching `visits_draft` row~~ | D6 | D6 security audit | **CLOSED** — both calls (plus `logVisitCreated`) wrapped in `db.withTransactionAsync()` in `handleSave()`. They succeed or fail atomically. |
+| ~~**MEDIUM-5:** `getCachedVisits` UNION query filters `visits_draft` on `patient_server_id = ?` — offline-only patients with `NULL patient_server_id` return zero draft rows in D3~~ | D6 | D6 security audit | **CLOSED** — `getCachedVisits` signature updated to `(db, patientServerId: string \| null, patientLocalId: string, doctorId)`. `visits_draft` WHERE clause now: `doctor_id = ? AND (patient_server_id = ? OR (patient_server_id IS NULL AND patient_id = ?))`. Both D3 call sites updated. |
+| ~~**MEDIUM-6:** Unsynced draft visits deleted on logout without warning — silent, irreversible data loss for visits not yet synced to server~~ | D6 | D6 security audit | **CLOSED** — `countPendingDraftVisits()` added to `src/db/visits.ts`; called in `useLogout` before any data is cleared. If count > 0, `Alert.alert` requires explicit "Log out" confirmation. Doctor can choose "Stay logged in" to abort without state change. |
 
 ### LOW — D6 live screen security audit
 

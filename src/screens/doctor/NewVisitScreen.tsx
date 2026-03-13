@@ -57,6 +57,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNetworkStatus } from '../../utils/useNetworkStatus';
 import { insertLocalVisit, markVisitSynced, logVisitCreated } from '../../db/visits';
+import { getPatientByLocalId } from '../../db/patients';
 import { getScansForVisit, deleteScan } from '../../db/scans';
 import { createVisit } from '../../api/visits';
 import { enqueueOperation } from '../../sync/syncQueue';
@@ -280,29 +281,23 @@ export default function NewVisitScreen() {
     const trimmedComplaint = chiefComplaint.trim() || null;
 
     try {
-      // ── 1. SQLite write FIRST — visit survives any server outage ────────
-      await insertLocalVisit(db, {
-        localId:         visitLocalId,
-        doctorId:        user.id,
-        patientId,
-        patientServerId,
-        visitDate,
-        chiefComplaint:  trimmedComplaint,
-        noteText:        trimmedNote,
-        consentGranted,
-      });
+      // ── M-1: Re-read consent_granted from SQLite ─────────────────────────
+      // The `consentGranted` nav param is set at D3 navigation time and may be
+      // stale if the patient's consent status changed during this session
+      // (e.g. consent revoked via D9 while D6 was open, or a background sync
+      // updated the SQLite row). Writing a stale value to visits_draft and to
+      // the server would be a silent consent-layer violation.
+      const freshPatient = await getPatientByLocalId(db, patientId);
+      const freshConsentGranted = freshPatient?.consent_granted ?? false;
 
-      // ── 1b. DPDP audit event — personal health data written (HIGH-3) ────
-      // Fires for both online and offline saves — audit trail is always complete.
-      await logVisitCreated(db, user.id, patientId, visitLocalId);
-
-      // ── 2. Enqueue for background sync ──────────────────────────────────
-      await enqueueOperation(db, {
-        doctor_id:       user.id,
-        entity_type:     'visit',
-        entity_local_id: visitLocalId,
-        operation:       'create',
-        payload: {
+      // ── M-4: Atomic transaction — SQLite write + enqueue ─────────────────
+      // Wrapping both in withTransactionAsync ensures they succeed or fail
+      // together. Without this, a UNIQUE constraint violation on enqueueOperation
+      // (e.g. from a retry after a partial failure) could leave a visits_draft
+      // row without a matching sync_queue entry, silently losing the upload.
+      await db.withTransactionAsync(async () => {
+        // ── 1. SQLite write FIRST — visit survives any server outage ─────
+        await insertLocalVisit(db, {
           localId:         visitLocalId,
           doctorId:        user.id,
           patientId,
@@ -310,8 +305,30 @@ export default function NewVisitScreen() {
           visitDate,
           chiefComplaint:  trimmedComplaint,
           noteText:        trimmedNote,
-          consentGranted,
-        },
+          consentGranted:  freshConsentGranted,  // M-1: use re-read value
+        });
+
+        // ── 1b. DPDP audit event — personal health data written ──────────
+        // Fires for both online and offline saves — audit trail is always complete.
+        await logVisitCreated(db, user.id, patientId, visitLocalId);
+
+        // ── 2. Enqueue for background sync ────────────────────────────────
+        await enqueueOperation(db, {
+          doctor_id:       user.id,
+          entity_type:     'visit',
+          entity_local_id: visitLocalId,
+          operation:       'create',
+          payload: {
+            localId:         visitLocalId,
+            doctorId:        user.id,
+            patientId,
+            patientServerId,
+            visitDate,
+            chiefComplaint:  trimmedComplaint,
+            noteText:        trimmedNote,
+            consentGranted:  freshConsentGranted,  // M-1: use re-read value
+          },
+        });
       });
 
       // ── 3. Online server call ────────────────────────────────────────────
@@ -325,7 +342,7 @@ export default function NewVisitScreen() {
             visitDate,
             chiefComplaint: trimmedComplaint,
             noteText:       trimmedNote,
-            consentGranted,
+            consentGranted: freshConsentGranted,  // M-1: use re-read value
           }, token);
           // Mark draft row as synced so the sync worker does not re-POST (HIGH-2).
           await markVisitSynced(db, visitLocalId, serverVisit.visitId);

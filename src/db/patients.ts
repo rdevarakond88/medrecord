@@ -145,6 +145,35 @@ export async function getPatientByLocalId(
 }
 
 /**
+ * Write a patient access audit event to the local audit_events table.
+ * Called by D2 whenever getRecentPatients() or searchPatientsByMobile() returns
+ * patient PII, regardless of online state — this closes the H-3 pre-merge blocker
+ * (offline patient access had no audit trail at all).
+ *
+ * DPDP Act 2023 §8 — patients can request a log of who accessed their data.
+ * Events are flushed to the server via POST /sync on reconnect.
+ *
+ * patient_id uses '*' sentinel for batch list events where no single patient
+ * is the subject. Event-specific detail (count, query length) is in metadata.
+ * NOTE: metadata must NOT include the actual digits typed — only the length.
+ */
+export async function logLocalPatientAccess(
+  db: SQLite.SQLiteDatabase,
+  doctorId: string,
+  eventType: 'recent_patients_viewed' | 'patient_searched',
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  const id  = Crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `INSERT OR IGNORE INTO audit_events
+       (id, event_type, doctor_id, patient_id, metadata, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, eventType, doctorId, '*', JSON.stringify(metadata), now],
+  );
+}
+
+/**
  * Delete all locally cached patients belonging to the given doctor.
  * Called as part of the logout sequence (before clearAuth) to prevent
  * cross-doctor data leakage on shared clinic devices.

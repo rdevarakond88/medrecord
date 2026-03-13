@@ -172,10 +172,10 @@ export default function PatientDetailScreen() {
         const offlineFreshPatient = await getPatientByLocalId(db, patientLocalId);
         const offlineConsent = offlineFreshPatient?.consent_granted ?? false;
 
-        // H-2: scope cache read to this doctor's rows only
-        const cached = patientServerId
-          ? await getCachedVisits(db, patientServerId, user.id)
-          : { myVisits: [], otherVisits: [], lastSyncAt: null };
+        // H-2: scope cache read to this doctor's rows only.
+        // M-5: pass patientLocalId so offline-only patients (patientServerId=null)
+        // see their draft visits via the OR branch added to getCachedVisits.
+        const cached = await getCachedVisits(db, patientServerId, patientLocalId, user.id);
 
         setConsentGranted(offlineConsent);
         setMyVisits(cached.myVisits);
@@ -201,10 +201,8 @@ export default function PatientDetailScreen() {
 
       // Any other error — fail secure: deny consent, show what SQLite has for own visits
       // consent-layer-spec.md: "Never fail open" (QA H-2, security audit HIGH)
-      // H-2: scope cache read to this doctor's rows only
-      const cached = patientServerId
-        ? await getCachedVisits(db, patientServerId, user.id)
-        : { myVisits: [], otherVisits: [], lastSyncAt: null };
+      // H-2 + M-5: scope cache read to this doctor; patientLocalId handles offline-only patients
+      const cached = await getCachedVisits(db, patientServerId, patientLocalId, user.id);
 
       setFetchError(
         err instanceof ApiError

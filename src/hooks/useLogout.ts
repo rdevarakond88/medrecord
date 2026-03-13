@@ -21,11 +21,16 @@
  */
 
 import { useCallback } from 'react';
+import { Alert } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/useAuthStore';
 import { clearDoctorPatients } from '../db/patients';
-import { clearDoctorVisits, clearDoctorDraftVisits } from '../db/visits';
+import {
+  clearDoctorVisits,
+  clearDoctorDraftVisits,
+  countPendingDraftVisits,
+} from '../db/visits';
 import { clearDoctorScans, clearDoctorScanRecords } from '../db/scans';
 import { clearDoctorSyncQueue } from '../sync/syncQueue';
 
@@ -38,6 +43,38 @@ export function useLogout(): () => Promise<void> {
   return useCallback(async () => {
     // Step 1: capture doctor ID before any state is cleared
     const doctorId = user?.id ?? '';
+
+    // M-6: warn if unsynced draft visits would be permanently deleted.
+    // clearDoctorDraftVisits() below deletes ALL drafts including pending ones —
+    // irreversible data loss on a shared clinic device where the sync worker
+    // has not yet uploaded the visit. Require explicit confirmation.
+    if (doctorId) {
+      const pendingCount = await countPendingDraftVisits(db, doctorId);
+      if (pendingCount > 0) {
+        const confirmed = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            'Unsynced visits',
+            `${pendingCount} visit${pendingCount > 1 ? 's have' : ' has'} not been ` +
+            `uploaded to the server yet. ` +
+            `${pendingCount > 1 ? 'They' : 'It'} will be lost if you log out now.`,
+            [
+              {
+                text: 'Stay logged in',
+                style: 'cancel',
+                onPress: () => resolve(false),
+              },
+              {
+                text: 'Log out',
+                style: 'destructive',
+                onPress: () => resolve(true),
+              },
+            ],
+          );
+        });
+        // Doctor chose to stay — abort logout silently, no state change
+        if (!confirmed) return;
+      }
+    }
 
     // Step 2: wipe this doctor's SQLite caches (patients + visits + sync queue)
     if (doctorId) {

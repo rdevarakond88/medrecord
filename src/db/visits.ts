@@ -44,10 +44,19 @@ export interface CachedVisitsResult {
  * Returns visits ordered newest-first within each list.
  * The caller (D3 screen) applies consent-based display gating — otherVisits are
  * grayed when the locally-cached consentGranted flag is false.
+ *
+ * M-5 fix: the visits_draft leg now includes an OR branch for offline-only patients
+ * whose patient_server_id is NULL (they have not yet synced to the server).
+ * Previously these patients returned zero draft rows in D3 after a D6 save.
+ *
+ * @param patientServerId  Server-assigned patient UUID, or null for offline-only patients.
+ * @param patientLocalId   Device-local patient UUID — always available; used as fallback.
+ * @param doctorId         Current doctor — scopes all reads to prevent cross-doctor leakage.
  */
 export async function getCachedVisits(
   db: SQLite.SQLiteDatabase,
-  patientServerId: string,
+  patientServerId: string | null,
+  patientLocalId: string,
   doctorId: string,
 ): Promise<CachedVisitsResult> {
   const rows = await db.getAllAsync<
@@ -82,9 +91,13 @@ export async function getCachedVisits(
        created_at                      AS synced_at,
        'draft'                         AS sync_status
      FROM visits_draft
-     WHERE patient_server_id = ? AND doctor_id = ?
+     WHERE doctor_id = ?
+       AND (
+         patient_server_id = ?
+         OR (patient_server_id IS NULL AND patient_id = ?)
+       )
      ORDER BY visit_date DESC`,
-    [patientServerId, doctorId, patientServerId, doctorId],
+    [patientServerId, doctorId, doctorId, patientServerId, patientLocalId],
   );
 
   // SQLite stores booleans as integers — normalise to JS
@@ -242,6 +255,26 @@ export async function markVisitSynced(
      WHERE local_id = ?`,
     [serverId, now, localId],
   );
+}
+
+/**
+ * Count locally-created draft visits that have not yet synced to the server.
+ * Called by useLogout before proceeding, so the doctor can be warned before
+ * unsynced visits are permanently deleted from the device (M-6 pre-merge fix).
+ *
+ * Only counts sync_status = 'pending' rows — 'synced' and 'failed' rows are
+ * either already on the server or have exceeded max_attempts and are dead-lettered.
+ */
+export async function countPendingDraftVisits(
+  db: SQLite.SQLiteDatabase,
+  doctorId: string,
+): Promise<number> {
+  const result = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM visits_draft
+     WHERE doctor_id = ? AND sync_status = 'pending'`,
+    [doctorId],
+  );
+  return result?.count ?? 0;
 }
 
 /**

@@ -1,12 +1,16 @@
 /**
  * Base API client for MedRecord.
  * Spec: docs/api-contracts.md — General Conventions
+ * Spec: docs/security-spec.md — Transport Security (H-2: certificate pinning)
  *
- * Wraps fetch with:
+ * Wraps pinnedFetch (react-native-ssl-pinning) with:
+ *   - TLS certificate pinning — prevents MITM on shared clinic WiFi
  *   - Bearer JWT in Authorization header
  *   - JSON Content-Type
  *   - RFC 7807-style error normalisation into ApiError
  */
+
+import { pinnedFetch } from './pinnedFetch';
 
 const BASE_URL = 'https://api.medrecord.in/v1';
 
@@ -27,19 +31,23 @@ export async function apiFetch<T>(
   authToken: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${authToken}`,
-      ...options.headers,
-    },
+  // H-2: use pinnedFetch instead of bare fetch — certificate pinning enforced
+  const mergedHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization:  `Bearer ${authToken}`,
+    ...(options.headers as Record<string, string> | undefined),
+  };
+
+  const response = await pinnedFetch(`${BASE_URL}${path}`, {
+    method:  options.method as string | undefined,
+    headers: mergedHeaders,
+    body:    options.body as string | undefined,
   });
 
   const body = await response.json();
 
   if (!response.ok) {
-    const err = body.error ?? {};
+    const err = (body as any)?.error ?? {};
     throw new ApiError(
       err.code ?? 'SERVER_ERROR',
       err.message ?? 'An unexpected error occurred',
