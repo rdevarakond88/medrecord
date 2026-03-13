@@ -79,8 +79,9 @@ interface SyncBatchResponse {
 }
 
 interface RefreshResponse {
-  access_token: string;
-  expires_in:   number;
+  access_token:  string;
+  refresh_token?: string;  // SW-H-2: server rotates refresh token — store it back
+  expires_in:    number;
 }
 
 interface AuditEventRow {
@@ -121,6 +122,13 @@ async function tryRefreshToken(): Promise<string | null> {
     const { user } = useAuthStore.getState();
     if (user) {
       useAuthStore.getState().setAuth(newToken, user);
+    }
+
+    // SW-H-2: Write the new refresh token back to SecureStore if the server
+    // rotated it. Without this the next refresh attempt reads an invalidated
+    // token and gets 401, silently stalling all future sync runs.
+    if (body.refresh_token) {
+      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, body.refresh_token);
     }
 
     return newToken;
@@ -203,13 +211,15 @@ async function applyResult(
 async function flushAuditEvents(
   db: SQLite.SQLiteDatabase,
   token: string,
+  doctorId: string,  // SW-H-3: scope to the authenticated doctor only
 ): Promise<void> {
   const rows = await db.getAllAsync<AuditEventRow>(
     `SELECT id, event_type, doctor_id, patient_id, metadata, created_at
      FROM audit_events
-     WHERE synced_at IS NULL
+     WHERE synced_at IS NULL AND doctor_id = ?
      ORDER BY created_at ASC
      LIMIT 100`,
+    [doctorId],
   );
 
   if (rows.length === 0) return;
@@ -253,10 +263,15 @@ async function flushAuditEvents(
  * Safe to call concurrently — the module-level isSyncing guard ensures only
  * one run executes at a time. Extra calls return immediately.
  *
- * @param db  SQLiteDatabase from useSQLiteContext() — passed by the hook so
- *            this function can be called outside a React component.
+ * @param db        SQLiteDatabase from useSQLiteContext() — passed by the hook so
+ *                  this function can be called outside a React component.
+ * @param doctorId  Authenticated doctor's ID — scopes all SQL reads to this
+ *                  doctor only (SW-H-1, SW-H-3).
  */
-export async function runSyncWorker(db: SQLite.SQLiteDatabase): Promise<void> {
+export async function runSyncWorker(
+  db: SQLite.SQLiteDatabase,
+  doctorId: string,
+): Promise<void> {
   // ── Token guard ────────────────────────────────────────────────────────
   const { token } = useAuthStore.getState();
   if (!token) return;
@@ -274,27 +289,31 @@ export async function runSyncWorker(db: SQLite.SQLiteDatabase): Promise<void> {
     // stuck as 'in_progress'. Reset them so this run can pick them up.
     if (!hasResetInProgress) {
       hasResetInProgress = true;
+      // SW-H-1: scope the in_progress reset to this doctor only — avoids
+      // touching crash-interrupted entries that belong to another doctor.
       await db.runAsync(
-        `UPDATE sync_queue SET status = 'pending' WHERE status = 'in_progress'`,
+        `UPDATE sync_queue SET status = 'pending'
+         WHERE status = 'in_progress' AND doctor_id = ?`,
+        [doctorId],
       );
     }
 
     // ── Batch drain loop ─────────────────────────────────────────────────
-    let batchSucceeded = false;
-
     while (true) {
       // Fetch the next batch of pending entries in strict queued_at order.
       // Re-read token in case it was refreshed during a previous batch.
       currentToken = useAuthStore.getState().token ?? currentToken;
 
+      // SW-H-1: scope drain reads to the authenticated doctor — defense-in-depth
+      // against stale entries from a previous session surviving logout.
       const rows = await db.getAllAsync<SyncQueueRow>(
         `SELECT id, entity_type, entity_local_id, doctor_id, operation,
                 payload, queued_at, attempts, max_attempts
          FROM sync_queue
-         WHERE status = 'pending'
+         WHERE status = 'pending' AND doctor_id = ?
          ORDER BY queued_at ASC
          LIMIT ?`,
-        [BATCH_SIZE],
+        [doctorId, BATCH_SIZE],
       );
 
       if (rows.length === 0) break;
@@ -432,13 +451,13 @@ export async function runSyncWorker(db: SQLite.SQLiteDatabase): Promise<void> {
         );
       }
 
-      batchSucceeded = true;
     }  // end while (drain loop)
 
     // ── Audit events flush (after all batches) ─────────────────────────
-    if (batchSucceeded) {
-      await flushAuditEvents(db, currentToken);
-    }
+    // SW-M-1: always flush — flushAuditEvents returns immediately if there
+    // is nothing to flush. The old batchSucceeded gate silently skipped
+    // read-only sessions (D3 consent_accessed events) for days at a time.
+    await flushAuditEvents(db, currentToken, doctorId);
 
     // ── Update sync store ──────────────────────────────────────────────
     useSyncStore.getState().setLastSyncAt(new Date().toISOString());

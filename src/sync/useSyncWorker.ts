@@ -19,6 +19,7 @@ import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { runSyncWorker } from './syncWorker';
+import { useAuthStore } from '../store/useAuthStore';
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;  // 5 minutes
 
@@ -33,6 +34,10 @@ export function useSyncWorker(): void {
   const dbRef = useRef(db);
   dbRef.current = db;
 
+  // SW-H-1/H-3: read doctor_id once on mount; stored in a ref so callbacks
+  // always see the value that was current when the worker mounted.
+  const doctorIdRef = useRef(useAuthStore.getState().user?.id ?? '');
+
   // Track previous online state to detect the offline → online transition.
   const wasOnlineRef = useRef(false);
 
@@ -42,7 +47,7 @@ export function useSyncWorker(): void {
       const nowOnline = isOnline(state);
       if (nowOnline && !wasOnlineRef.current) {
         // Transitioned from offline to online — drain the queue immediately.
-        runSyncWorker(dbRef.current);
+        runSyncWorker(dbRef.current, doctorIdRef.current);
       }
       wasOnlineRef.current = nowOnline;
     });
@@ -53,7 +58,7 @@ export function useSyncWorker(): void {
       // Check current connectivity before triggering.
       NetInfo.fetch().then((state) => {
         if (isOnline(state)) {
-          runSyncWorker(dbRef.current);
+          runSyncWorker(dbRef.current, doctorIdRef.current);
         }
       });
     }
@@ -63,7 +68,7 @@ export function useSyncWorker(): void {
     const intervalId = setInterval(() => {
       NetInfo.fetch().then((state) => {
         if (isOnline(state)) {
-          runSyncWorker(dbRef.current);
+          runSyncWorker(dbRef.current, doctorIdRef.current);
         }
       });
     }, SYNC_INTERVAL_MS);
@@ -73,7 +78,7 @@ export function useSyncWorker(): void {
     NetInfo.fetch().then((state) => {
       if (isOnline(state)) {
         wasOnlineRef.current = true;
-        runSyncWorker(dbRef.current);
+        runSyncWorker(dbRef.current, doctorIdRef.current);
       }
     });
 

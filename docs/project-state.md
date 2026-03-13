@@ -2,16 +2,16 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** Sync Worker — Security audit complete (2026-03-13). BLOCKED: 3 HIGH findings. Builder must fix before device testing.
+**Phase:** Sync Worker — Security fixes applied (2026-03-13). SW-H-1, SW-H-2, SW-H-3, SW-M-1 closed. Ready for device testing.
 **Last Updated:** 2026-03-13
-**Last Session:** Security — Sync worker audited (commit `6ecf8e1`). Report: `reviews/sync-worker-security-audit.md`. 3 HIGH findings: H-1 (sync_queue not scoped to doctor_id), H-2 (refresh token rotation not completed on client), H-3 (audit_events flush not scoped to doctor_id). 2 MEDIUM, 2 LOW. No CRITICALs. Certificate pinning, dead-letter protection, 401 retry logic, SyncWorkerMount placement all verified correct.
+**Last Session:** Builder — Sync worker security fixes (commit after 35662b4). Closed SW-H-1 (doctor_id scope on sync_queue drain), SW-H-2 (refresh token rotation write-back to SecureStore), SW-H-3 (doctor_id scope on audit_events flush), SW-M-1 (unconditional audit flush). Files changed: src/sync/syncWorker.ts, src/sync/useSyncWorker.ts.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
 |---|---|---|
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
 | 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
-| 2 | **Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1** | Builder agent. See Known Technical Debt — Sync Worker section. |
+| 2 | ~~Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1~~ | **CLOSED 2026-03-13** |
 | 3 | D1 (Login / OTP) | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
@@ -306,15 +306,15 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **SW-H-1:** `sync_queue` drain loop reads ALL pending entries — not filtered by `doctor_id`. If `clearDoctorSyncQueue()` fails silently on logout, Doctor A's entries are sent under Doctor B's JWT. | Sync Worker | Security audit H-1 | Pass authenticated `doctor_id` into `runSyncWorker()`. Add `AND doctor_id = ?` to the drain SELECT and to the startup in_progress reset UPDATE. |
-| **SW-H-2:** `tryRefreshToken` does not store the new refresh token returned by the server. When the server rotates the token (spec requirement), the new token is silently dropped. Next refresh attempt uses the now-invalidated old token and silently aborts all future syncs. | Sync Worker | Security audit H-2 | Add `refresh_token?: string` to `RefreshResponse` interface. After updating auth store, call `SecureStore.setItemAsync(REFRESH_TOKEN_KEY, body.refresh_token)` if present. |
-| **SW-H-3:** `flushAuditEvents` reads ALL unsynced audit events — not filtered by `doctor_id`. Audit events from Doctor A's session could be transmitted under Doctor B's JWT, misattributing access records. | Sync Worker | Security audit H-3 | Add `AND doctor_id = ?` to the `flushAuditEvents` SELECT. Thread the same `doctor_id` parameter from H-1 fix. |
+| ~~**SW-H-1:** `sync_queue` drain loop reads ALL pending entries — not filtered by `doctor_id`. If `clearDoctorSyncQueue()` fails silently on logout, Doctor A's entries are sent under Doctor B's JWT.~~ | Sync Worker | Security audit H-1 | **CLOSED 2026-03-13** — `doctor_id` passed into `runSyncWorker()`; `AND doctor_id = ?` added to drain SELECT and startup in_progress reset UPDATE. |
+| ~~**SW-H-2:** `tryRefreshToken` does not store the new refresh token returned by the server. When the server rotates the token (spec requirement), the new token is silently dropped. Next refresh attempt uses the now-invalidated old token and silently aborts all future syncs.~~ | Sync Worker | Security audit H-2 | **CLOSED 2026-03-13** — `refresh_token?: string` added to `RefreshResponse` interface; `SecureStore.setItemAsync(REFRESH_TOKEN_KEY, body.refresh_token)` called after auth store update when token present. |
+| ~~**SW-H-3:** `flushAuditEvents` reads ALL unsynced audit events — not filtered by `doctor_id`. Audit events from Doctor A's session could be transmitted under Doctor B's JWT, misattributing access records.~~ | Sync Worker | Security audit H-3 | **CLOSED 2026-03-13** — `AND doctor_id = ?` added to `flushAuditEvents` SELECT; `doctor_id` threaded from same H-1 fix. |
 
 ### MEDIUM — Sync worker security audit
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **SW-M-1:** Audit events never flush when `sync_queue` is empty. `batchSucceeded` gate prevents the flush in read-only sessions (e.g., doctor only views records, no new visits). DPDP §8 requires server-side audit trail for access events. | Sync Worker | Security audit M-1 | Remove the `if (batchSucceeded)` gate. `flushAuditEvents` returns immediately if nothing to flush. |
+| ~~**SW-M-1:** Audit events never flush when `sync_queue` is empty. `batchSucceeded` gate prevents the flush in read-only sessions (e.g., doctor only views records, no new visits). DPDP §8 requires server-side audit trail for access events.~~ | Sync Worker | Security audit M-1 | **CLOSED 2026-03-13** — `if (batchSucceeded)` gate removed; `flushAuditEvents` called unconditionally and returns immediately if nothing to flush. |
 | **SW-M-2:** `hasResetInProgress` module-level flag is never reset on doctor change. If Doctor B logs in within the same app process lifetime, the in_progress startup cleanup does not run for their first sync session. | Sync Worker | Security audit M-2 | Reset `hasResetInProgress` in the `useLogout` sequence, or tie it to a session counter in `useAuthStore`. |
 
 ### LOW — Sync worker security audit
