@@ -2,15 +2,15 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** Doctor Visit Flow (D2, D3, D6, D7) — COMPLETE. Pre-merge security blockers closed (2026-03-13). D2/D6/D7 ready to merge to main. Sync worker is next priority.
+**Phase:** Sync Worker — PM pre-flight complete (2026-03-13). Builder session is next.
 **Last Updated:** 2026-03-13
-**Last Session:** Builder Agent — pre-merge security blockers fixed (2026-03-13). All 6 items closed: D2 H-2 (cert pinning), D2 H-3 (offline audit log), D6 M-1 (consent re-read), D6 M-4 (atomic transaction), D6 M-5 (getCachedVisits UNION fix), D6 M-6 (logout warning). See Known Technical Debt for closed items.
+**Last Session:** PM Agent — Sync worker pre-flight review complete. Builder spec written to `reviews/sync-worker-pm-preflow.md`.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
 |---|---|---|
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
-| 2 | Sync worker | Non-negotiable before any pilot or live data |
+| 2 | **Sync worker — PM pre-flight DONE. Builder next.** | Non-negotiable before any pilot or live data. Spec: `reviews/sync-worker-pm-preflow.md` |
 | 3 | D1 (Login / OTP) | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
@@ -70,7 +70,7 @@ _Carry these into every build/mockup session for these screens._
 | ~~**D7-QA-H1:** `sanitizeOcrText` regex `/\d{12}/g` strips non-Aadhaar 12-digit strings~~ | D7 | D7 QA test plan HIGH-1 | **CLOSED 2026-03-05** — replaced with `/\b\d{4}\s?\d{4}\s?\d{4}\b/g`. Word boundaries prevent partial matches; covers both spaced and unspaced Aadhaar; 13-digit bank refs not matched. |
 | ~~**D7-QA-H2:** `ocr_status: 'pending'` in enqueueOperation payload for a no-op stub~~ | D7 | D7 QA test plan HIGH-2 | **CLOSED 2026-03-05** — changed to `'deferred'` with comment. `scans` table also defaults to `'deferred'`. Change to `'pending'` when OCR worker is wired. |
 | ~~**D7-QA-H3:** No max retry count in `sync_queue` — queue runaway risk~~ | D7 | D7 QA test plan HIGH-3 | **CLOSED 2026-03-05** — `max_attempts INTEGER NOT NULL DEFAULT 5` added to CREATE TABLE + ALTER TABLE migration. Sync worker must check `attempts >= max_attempts` → `status = 'failed'`. |
-| **D7-QA-H4:** JWT refresh not handled for scan sync entries — if access token expires during sync worker batch processing, scan upload fails silently | D7 | D7 QA test plan HIGH-4 | API client must intercept 401 + silent refresh before sync worker ships. Inherited from D6. Deferred to sync worker session. |
+| **D7-QA-H4:** JWT refresh not handled for scan sync entries — if access token expires during sync worker batch processing, scan upload fails silently | D7 | D7 QA test plan HIGH-4 | **Scoped to sync worker session.** Sync worker must: on 401 from POST /sync, read refresh token from expo-secure-store (`REFRESH_TOKEN_KEY`), call POST /auth/refresh, update auth store, retry once. If refresh fails, abort run and leave entries as `pending`. Do NOT navigate from the worker. |
 
 ---
 
@@ -208,7 +208,7 @@ _Carry these into every build/mockup session for these screens._
 | Pull-to-refresh not implemented — reconnecting while D3 is open requires navigate-away-and-back for fresh server data | D3 | Live build | `useFocusEffect` handles focus re-fetches. Add `RefreshControl` on FlatList for in-screen refresh before D4. |
 | ~~D3 visit list does not show locally-created visits from visits_draft — new visit from D6 appears in D3 only after server sync~~ | D3/D6 | D6 live build | **CLOSED 0c4d204** — `getCachedVisits` now UNIONs `visits_draft`; `sync_status: 'synced' \| 'draft'` added to `LocalVisit`; cloud icon shown in VisitCard for draft rows. |
 | ~~**D6 security audit not yet run — run before device testing begins.**~~ | D6 | D6 live build | **CLOSED 2026-03-02** — All CRITICAL and HIGH findings fixed (commits `04f3e99`, `831f0dc`, `f888874`, `fb9b766`). 6 MEDIUM + 2 LOW open — tracked in D6 security audit sections below. |
-| `createVisit()` server response not used to update visits_draft.server_id + sync_status | D6 | D6 live build | TODO comment in `handleSave()`. Sync worker will update when built. |
+| **CRITICAL — Sync worker session:** `createVisit()` server response not used to update `visits_draft.server_id` + `sync_status`, and `sync_queue` entry not marked `status='success'` after a successful direct API call. Without this fix, the sync worker will re-POST visits that D6 already uploaded, creating server duplicates. Must be fixed in the same Builder session as the sync worker. | D6 | D6 live build / PM sync review | Fix in `handleSave()`: after `createVisit()` succeeds, call `markVisitSynced(db, localVisitId, response.visitId)` and `UPDATE sync_queue SET status='success' WHERE entity_local_id=?`. |
 | `@react-native-community/datetimepicker` not in package.json (bundled with Expo SDK 54, not explicit) | D6 | D6 live build | If TypeScript errors: run `npx expo install @react-native-community/datetimepicker`. |
 | ~~`KeyboardAvoidingView` not implemented in D6 — two consequences found during device testing: (1) Save Visit button hidden behind keyboard when note field is active; (2) note text field scrolls out of view while typing — doctor cannot see what they are typing.~~ | D6 | Device testing | **CLOSED 2026-03-03** — `KeyboardAvoidingView` wrapping full screen content with `behavior='padding'` on iOS and `behavior='height'` on Android. |
 
