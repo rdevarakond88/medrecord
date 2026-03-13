@@ -31,6 +31,7 @@ import PatientSearchScreen from './src/screens/doctor/PatientSearchScreen';
 import PatientDetailScreen from './src/screens/doctor/PatientDetailScreen';
 import NewVisitScreen from './src/screens/doctor/NewVisitScreen';
 import DocumentScannerScreen from './src/screens/doctor/DocumentScannerScreen';
+import { useSyncWorker } from './src/sync/useSyncWorker';
 
 // ─── Login stub ────────────────────────────────────────────────────────────
 // D1 (Login screen) is not built yet. This stub:
@@ -143,6 +144,15 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// ─── Sync worker mount ─────────────────────────────────────────────────────
+// Renders null — mounts the sync worker hook inside the SQLiteProvider +
+// QueryClientProvider tree so useSQLiteContext() resolves.
+// Must be inside SQLiteProvider but does NOT need to be inside NavigationContainer.
+function SyncWorkerMount() {
+  useSyncWorker();
+  return null;
+}
+
 // ─── React Query client ────────────────────────────────────────────────────
 
 const queryClient = new QueryClient({
@@ -160,6 +170,7 @@ function App() {
   return (
     <SQLiteProvider databaseName="medrecord.db" onInit={initializeDatabase}>
       <QueryClientProvider client={queryClient}>
+        <SyncWorkerMount />
         <NavigationContainer>
           <Stack.Navigator
             initialRouteName="PatientSearch"

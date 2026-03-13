@@ -2,15 +2,16 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** Sync Worker — PM pre-flight complete (2026-03-13). Builder session is next.
+**Phase:** Sync Worker — Builder complete (2026-03-13). Security audit next.
 **Last Updated:** 2026-03-13
-**Last Session:** PM Agent — Sync worker pre-flight review complete. Builder spec written to `reviews/sync-worker-pm-preflow.md`.
+**Last Session:** Builder — Sync worker built. Files: `src/sync/syncWorker.ts`, `src/sync/useSyncWorker.ts`, `src/store/useSyncStore.ts`, `src/auth/constants.ts`. App.tsx updated with SyncWorkerMount. CRITICAL duplicate-upload bug confirmed already closed (was fixed in commit `c36f43e`).
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
 |---|---|---|
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
-| 2 | **Sync worker — PM pre-flight DONE. Builder next.** | Non-negotiable before any pilot or live data. Spec: `reviews/sync-worker-pm-preflow.md` |
+| 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE.~~ | **CLOSED 2026-03-13** — Security audit is next step |
+| 2 | **Sync worker — Security audit** | Run Security agent before device testing |
 | 3 | D1 (Login / OTP) | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
@@ -78,6 +79,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | File | Session | Notes |
 |---|---|---|---|
+| Sync Worker | `src/sync/syncWorker.ts`, `src/sync/useSyncWorker.ts`, `src/store/useSyncStore.ts`, `src/auth/constants.ts` | 2026-03-13 | Builder complete. Drain loop: batches 20 entries, strict queued_at ASC order, record entries deferred (S3 v2), JWT 401 refresh + retry once, per-result id_mapping + entity updates, audit event flush. Three triggers: AppState active, NetInfo restored, 5-min interval. App.tsx mounted via SyncWorkerMount. Security audit next. |
 | D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit v1 (BLOCKED), persona critique (3.2/5), QA test plan (`reviews/D2-qa-test-plan.md`). C-1/C-2/C-3 fixed (2026-02-20). Security re-audit v2 passed. All HIGH debt items closed (2026-02-22). **Real device verified (2026-02-22) on iPhone via Expo Go:** search bar focus/unfocus, cursor after digit, FAB position, digit entry — all confirmed. Checklist: `reviews/D2-VALIDATION-CHECKLIST.md`. **On `dev`. Do not merge to `main` until H-2 + H-3 resolved.** |
 | D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) / `src/screens/doctor/PatientDetailScreen.tsx` (live) | 2026-02-23 / 2026-02-24 | Static mockup with four variants approved. Live screen wired: `getPatientVisits()` two-list API (`myVisits` + `otherDoctorVisits`), loading skeleton on mount, server consent gate (D3-H-2), offline SQLite fallback (`getCachedVisits()`), synchronous auth guard (D3-H-3), `useFocusEffect` for dynamic consent transition on D9 return, AppState foreground re-verify, offline guard on Request Access, DPDP audit event to `audit_events` table, FlatList with `maxToRenderPerBatch={10}` + client-side pagination, `recordCount=0 → 'Draft'`, `numberOfLines={1}` on patient name, no consent badge on empty state, last-verified timestamp in offline banner, per-variant consent gate box, "View Full Visit" disabled stub until D4. Supporting modules: `src/api/visits.ts`, `src/db/visits.ts`, `getPatientByLocalId()` in db/patients. Schema: visits + audit_events tables. All D3 HIGH pre-merge debt closed. |
 
@@ -208,7 +210,7 @@ _Carry these into every build/mockup session for these screens._
 | Pull-to-refresh not implemented — reconnecting while D3 is open requires navigate-away-and-back for fresh server data | D3 | Live build | `useFocusEffect` handles focus re-fetches. Add `RefreshControl` on FlatList for in-screen refresh before D4. |
 | ~~D3 visit list does not show locally-created visits from visits_draft — new visit from D6 appears in D3 only after server sync~~ | D3/D6 | D6 live build | **CLOSED 0c4d204** — `getCachedVisits` now UNIONs `visits_draft`; `sync_status: 'synced' \| 'draft'` added to `LocalVisit`; cloud icon shown in VisitCard for draft rows. |
 | ~~**D6 security audit not yet run — run before device testing begins.**~~ | D6 | D6 live build | **CLOSED 2026-03-02** — All CRITICAL and HIGH findings fixed (commits `04f3e99`, `831f0dc`, `f888874`, `fb9b766`). 6 MEDIUM + 2 LOW open — tracked in D6 security audit sections below. |
-| **CRITICAL — Sync worker session:** `createVisit()` server response not used to update `visits_draft.server_id` + `sync_status`, and `sync_queue` entry not marked `status='success'` after a successful direct API call. Without this fix, the sync worker will re-POST visits that D6 already uploaded, creating server duplicates. Must be fixed in the same Builder session as the sync worker. | D6 | D6 live build / PM sync review | Fix in `handleSave()`: after `createVisit()` succeeds, call `markVisitSynced(db, localVisitId, response.visitId)` and `UPDATE sync_queue SET status='success' WHERE entity_local_id=?`. |
+| ~~**CRITICAL — Sync worker session:** `createVisit()` server response not used to update `visits_draft.server_id` + `sync_status`, and `sync_queue` entry not marked `status='success'` after a successful direct API call. Without this fix, the sync worker will re-POST visits that D6 already uploaded, creating server duplicates.~~ | D6 | D6 live build / PM sync review | **CLOSED 2026-03-13** — `markVisitSynced()` + `UPDATE sync_queue SET status='success'` were already present in NewVisitScreen.tsx handleSave() lines 347-354, applied in commit `c36f43e`. Confirmed during sync worker Builder session. |
 | `@react-native-community/datetimepicker` not in package.json (bundled with Expo SDK 54, not explicit) | D6 | D6 live build | If TypeScript errors: run `npx expo install @react-native-community/datetimepicker`. |
 | ~~`KeyboardAvoidingView` not implemented in D6 — two consequences found during device testing: (1) Save Visit button hidden behind keyboard when note field is active; (2) note text field scrolls out of view while typing — doctor cannot see what they are typing.~~ | D6 | Device testing | **CLOSED 2026-03-03** — `KeyboardAvoidingView` wrapping full screen content with `behavior='padding'` on iOS and `behavior='height'` on Android. |
 
