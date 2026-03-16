@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Persona Critic R2 PASSED (2026-03-16). Score 4.0/5. No MUST FIX items. Proceeding to Security audit.
+**Phase:** D1 (Login / OTP) — Security audit complete (2026-03-16). BLOCKED: 3 HIGH findings (H-1 actionable now; H-2/H-3 flagged for auth.ts). No CRITICAL findings. Fix H-1 in mockup, then proceed to QA.
 **Last Updated:** 2026-03-16
-**Last Session:** Persona Critic R2 — D1 re-evaluation. Score raised from 3.8/5 to 4.0/5. Shantabai raised from 3/5 to 4/5. All 3 MUST FIX + 2 SHOULD FIX items from R1 confirmed closed. Verdict: Pass — proceed to Security audit.
+**Last Session:** Security audit — D1 static mockup. 3 HIGH + 3 MEDIUM + 2 LOW findings. No CRITICAL. H-1 (demo block not `__DEV__` gated) actionable now. H-2/H-3 (refresh token storage + session restoration) flagged as mandatory auth.ts requirements. Report: `reviews/D1-security-audit.md`.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -91,7 +91,7 @@ _Carry these into every build/mockup session for these screens._
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
-| D1 — Login / OTP | **Static mockup built. Persona Critic R2: 4.0/5 — PASSED (2026-03-16). Proceeding to Security audit.** File: `src/screens/doctor/LoginScreen.tsx`. Critiques: `reviews/D1-persona-critique.md` (R1, 3.8/5), `reviews/D1-persona-critique-r2.md` (R2, 4.0/5). | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module — see TODO in file header). Demo switcher must be removed before launch. SF-3 (individual digit boxes) deferred to future polish. |
+| D1 — Login / OTP | **Static mockup built. Persona Critic R2: 4.0/5 — PASSED (2026-03-16). Security audit complete (2026-03-16) — BLOCKED: 3 HIGH findings. Fix H-1 (demo `__DEV__` guard) in mockup; H-2/H-3 committed to auth.ts brief. Then proceed to QA.** File: `src/screens/doctor/LoginScreen.tsx`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit.md`. | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module). SF-3 (individual digit boxes) deferred to future polish. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
@@ -345,6 +345,29 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|---|
 | **D1-M-1:** Android SMS OTP autofill not implemented — doctors manually transcribe OTP under consultation time pressure. | D1 | PM review §2 (Required, not optional) | No Expo managed-workflow module exists as of 2026-03. Options: (a) eject to bare workflow + `react-native-otp-verify`; (b) wait for an `expo-modules-core` community module; (c) ship without it and accept the gap. iOS autofill works via `textContentType="oneTimeCode"` (no code needed). Decision needed before D1 goes live. |
 | **D1-M-2:** Demo state switcher block must be removed before production launch. | D1 | Builder decision | Located at bottom of `LoginScreen.tsx`. Clearly marked `REMOVE BEFORE PRODUCTION LAUNCH`. |
+
+### HIGH — D1 security audit (fix H-1 now; H-2/H-3 for auth.ts session)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D1-SA-H-1:** Demo block not guarded by `__DEV__` — exposes mock bypass codes in all builds. | D1 | Security audit H-1 | Wrap demo block JSX in `{__DEV__ && (...)}`. Actionable now in `LoginScreen.tsx` lines 440–468. |
+| **D1-SA-H-2:** Refresh token never written to `expo-secure-store` in login flow — `setAuth()` called but SecureStore write absent. | D1 → auth.ts | Security audit H-2 | In `auth.ts`: after OTP verify, call `SecureStore.setItemAsync(REFRESH_TOKEN_KEY, response.refresh_token)` before `setAuth()`. `REFRESH_TOKEN_KEY` already defined in `src/auth/constants.ts`. |
+| **D1-SA-H-3:** No session restoration on cold-start — no logic to read refresh token and silently re-authenticate on app launch. | D1 → auth.ts | Security audit H-3 | In `App.tsx` or splash: read `REFRESH_TOKEN_KEY` from SecureStore → `POST /auth/refresh` via `pinnedFetch` → `setAuth()` → navigate. On failure: clear SecureStore, navigate to Login. |
+
+### MEDIUM — D1 security audit
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D1-SA-M-1:** Phone number not validated for valid Indian mobile prefix (6–9). `handleSendOtp` only checks length. | D1 | Security audit M-1 | Add `parseInt(phone[0]) < 6` guard in `handleSendOtp` and input filter in `onChangeText`. Mirrors D2 H-3 fix. |
+| **D1-SA-M-2:** No `useRef` double-submit guard on Verify OTP — phase-change is the only protection; concurrent auto-submit + manual tap can burn an OTP attempt. | D1 | Security audit M-2 | Add `isVerifyingRef = useRef(false)` guard in `handleVerifyOtp`. Matches D6 `isSavingRef` pattern. |
+| **D1-SA-M-3:** WhatsApp fallback button has no client-side rate limiting during active countdown — can be tapped while SMS countdown is running. | D1 | Security audit M-3 | Apply `canResend` gate to WhatsApp button, or add a separate countdown state for WhatsApp sends. |
+
+### LOW — D1 security audit
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D1-SA-L-1:** Mock JWT `'mock-jwt-eyJhbGciOiJIUzI1NiJ9.mockpayload'` superficially resembles a real token (base64 header decodes to `{"alg":"HS256"}`). | D1 | Security audit L-1 | Replace with obviously fake placeholder: `'mock-token-not-real'`. |
+| **D1-SA-L-2:** Resend OTP and WhatsApp buttons lack explicit `disabled` prop during loading phase — implicit only via conditional render. | D1 | Security audit L-2 | Add `disabled={phase === 'loading'}` explicitly to both buttons for clarity. |
 
 ---
 
