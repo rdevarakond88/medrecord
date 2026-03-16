@@ -28,6 +28,10 @@
  *   UE-2 TOO_MANY_ATTEMPTS error handled in handleVerifyOtp ✅
  *   UE-3 NetInfo check before send-OTP — immediate offline error ✅
  *
+ * QA pre-v1 bug fixes (2026-03-16):
+ *   QA-M-1 Network error during verifyOtp now shows distinct no_connection error ✅
+ *   QA-M-2 isSendingRef double-submit guard added to handleSendOtp ✅
+ *
  * TODO (Android SMS autofill): Android SMS Retriever API auto-populates OTP.
  *      No Expo managed-workflow module exists as of 2026-03.
  *      iOS OTP autofill handled natively via textContentType="oneTimeCode".
@@ -64,7 +68,7 @@ import type { RootStackParamList } from '../../../App';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Phase    = 'phone_entry' | 'loading' | 'otp_entry';
-type OtpError = null | 'wrong_otp' | 'otp_expired' | 'too_many_attempts';
+type OtpError = null | 'wrong_otp' | 'otp_expired' | 'too_many_attempts' | 'no_connection';
 type SendError = null | 'send_failed' | 'rate_limited' | 'no_connection';
 
 interface LoginScreenProps {
@@ -130,8 +134,10 @@ export default function LoginScreen({
   const phoneInputRef  = useRef<TextInput>(null);
   const otpInputRef    = useRef<TextInput>(null);
   const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null);
-  // M-2: synchronous double-submit guard (useRef, not useState — avoids async race)
+  // M-2 (security): synchronous double-submit guard on verify (useRef, not useState — avoids async race)
   const isVerifyingRef = useRef(false);
+  // QA-M-2: synchronous double-submit guard on send — mirrors isVerifyingRef pattern
+  const isSendingRef   = useRef(false);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -169,10 +175,15 @@ export default function LoginScreen({
     const firstDigit = parseInt(phone[0], 10);
     if (phone.length !== 10 || firstDigit < 6) return;
 
+    // QA-M-2: synchronous tap guard — prevents rapid double-taps on Send/Resend/WhatsApp
+    if (isSendingRef.current) return;
+    isSendingRef.current = true;
+
     // UE-3: Check connectivity before triggering a loading state — shows the
     // "no internet" error immediately without a spinner on airplane-mode devices.
     const netState = await NetInfo.fetch();
     if (!netState.isConnected) {
+      isSendingRef.current = false;
       setSendError('no_connection');
       return;
     }
@@ -185,11 +196,13 @@ export default function LoginScreen({
       setOtpToken(otp_token);   // store for use in handleVerifyOtp
       setOtp('');
       setOtpSentBanner(true);
+      isSendingRef.current = false;
       setPhase('otp_entry');
       startResendCountdown();
       // Banner stays visible until the user types their first OTP digit (MF-2)
       setTimeout(() => otpInputRef.current?.focus(), 300);
     } catch (err: unknown) {
+      isSendingRef.current = false;
       setPhase('phone_entry');
       // F-5: distinct message when the server's per-mobile rate limit fires
       if (err instanceof ApiError && err.status === 429) {
@@ -250,7 +263,11 @@ export default function LoginScreen({
       // F-9: log login failure — fire-and-forget
       void logAuthAuditEvent(db, 'login_failure', '*', { reason: code ?? 'network_error' });
 
-      if (code === 'TOO_MANY_ATTEMPTS') {
+      if (code === null) {
+        // QA-M-1: err was not an ApiError — no response received (network failure).
+        // Show a connectivity error instead of the misleading "Incorrect OTP" message.
+        setOtpError('no_connection');
+      } else if (code === 'TOO_MANY_ATTEMPTS') {
         // F-4 / UE-2: 3-attempt limit reached — OTP is invalidated on the server.
         // Clear the field and enable resend immediately so the user can get a new OTP.
         setOtpError('too_many_attempts');
@@ -397,6 +414,15 @@ export default function LoginScreen({
               <Text style={styles.inputLabel}>
                 Enter OTP sent to {formattedPhone}
               </Text>
+
+              {/* Error: network error during verify — QA-M-1 */}
+              {otpError === 'no_connection' && (
+                <View style={styles.errorBox} accessibilityLiveRegion="assertive">
+                  <Text style={styles.errorText}>
+                    No internet connection. Please check and retry.
+                  </Text>
+                </View>
+              )}
 
               {/* Error: wrong OTP */}
               {otpError === 'wrong_otp' && (
