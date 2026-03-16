@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Security fixes applied (2026-03-16). H-1/M-1/M-2/M-3 closed. H-2/H-3 remain flagged for auth.ts. Cleared for QA agent.
+**Phase:** D1 (Login / OTP) — QA PASSED (2026-03-16). No CRITICAL or HIGH bugs. 2 medium UX issues (MB-1 banner not cleared on "Change number"; MB-2 design question for PM). 4 edge cases deferred to auth.ts session. Cleared for device testing of mockup.
 **Last Updated:** 2026-03-16
-**Last Session:** Builder — applied D1 security fixes: H-1 (`__DEV__` guard on demo block), M-1 (phone start-digit validation + inline error), M-2 (`isVerifyingRef` double-submit guard on Verify OTP), M-3 (`canResend` gate on WhatsApp button). Report: `reviews/D1-security-audit.md`.
+**Last Session:** QA — D1 Login/OTP screen. No blockers. MB-1 (banner not cleared on Change number — 15-min fix), 4 deferred edge cases (TOO_MANY_ATTEMPTS handling, connectivity pre-check, countdown drift on backgrounding, implicit load guard on Send OTP). Report: `reviews/D1-qa-test-plan.md`.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -12,7 +12,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
 | 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
 | 2 | ~~Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1~~ | **CLOSED 2026-03-13** |
-| 3 | D1 (Login / OTP) — **Persona Critic R2 PASSED (2026-03-16). Score 4.0/5. Proceed to Security audit.** | Required for real auth before pilot |
+| 3 | D1 (Login / OTP) — **QA PASSED (2026-03-16). Cleared for device testing. Next: auth.ts Builder session.** | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
 | 6 | D9 (Consent Request) | Unlocks multi-doctor use cases |
