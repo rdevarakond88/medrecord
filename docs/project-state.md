@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — QA M-1 + M-2 fixed (2026-03-16). 1 MEDIUM bug remaining (M-3, lower priority, ask before touching). Ready for device testing.
+**Phase:** D1 (Login / OTP) — All QA pre-v1 bugs closed (M-1, M-2, M-3). Ready for device testing.
 **Last Updated:** 2026-03-16
-**Last Session:** Builder Agent — Fixed D1 QA pre-v1 bugs M-1 (network error in verifyOtp showing wrong-OTP message) and M-2 (no double-submit guard on handleSendOtp). Security targeted re-check: CLEAR. M-3 (resend failure drops otp_entry phase) deferred — user to confirm before fixing.
+**Last Session:** Builder Agent — Fixed D1 QA-M-3: resend failure during otp_entry no longer reverts to phone_entry. Added isResend param to handleSendOtp; failure on resend/WhatsApp paths stays in otp_entry and shows inline resendError. Security targeted re-check: CLEAR.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |

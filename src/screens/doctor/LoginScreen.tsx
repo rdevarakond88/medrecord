@@ -31,6 +31,7 @@
  * QA pre-v1 bug fixes (2026-03-16):
  *   QA-M-1 Network error during verifyOtp now shows distinct no_connection error ✅
  *   QA-M-2 isSendingRef double-submit guard added to handleSendOtp ✅
+ *   QA-M-3 Resend failure no longer reverts to phone_entry; inline resendError shown ✅
  *
  * TODO (Android SMS autofill): Android SMS Retriever API auto-populates OTP.
  *      No Expo managed-workflow module exists as of 2026-03.
@@ -130,6 +131,9 @@ export default function LoginScreen({
   const [resendSeconds,  setResendSeconds]  = useState(RESEND_SECONDS);
   const [canResend,      setCanResend]      = useState(false);
   const [phoneError,     setPhoneError]     = useState<string | null>(null);
+  // QA-M-3: inline error shown inside the otp_entry card when a resend/WhatsApp
+  // attempt fails. Separate from sendError (which is shown in phone_entry only).
+  const [resendError,    setResendError]    = useState<SendError>(null);
 
   const phoneInputRef  = useRef<TextInput>(null);
   const otpInputRef    = useRef<TextInput>(null);
@@ -170,7 +174,10 @@ export default function LoginScreen({
 
   // ── Send OTP ─────────────────────────────────────────────────────────────
 
-  async function handleSendOtp(channel: OtpChannel = 'sms') {
+  // QA-M-3: isResend=true means the existing otpToken is still valid. On failure,
+  // we must NOT revert to phone_entry — the user would lose the OTP entry card
+  // even though their token hasn't expired. Instead, show an inline error and stay.
+  async function handleSendOtp(channel: OtpChannel = 'sms', isResend = false) {
     // M-1: reject numbers that don't start with a valid Indian mobile prefix (6–9)
     const firstDigit = parseInt(phone[0], 10);
     if (phone.length !== 10 || firstDigit < 6) return;
@@ -184,18 +191,27 @@ export default function LoginScreen({
     const netState = await NetInfo.fetch();
     if (!netState.isConnected) {
       isSendingRef.current = false;
-      setSendError('no_connection');
+      if (isResend) {
+        setResendError('no_connection');
+      } else {
+        setSendError('no_connection');
+      }
       return;
     }
 
     setPhase('loading');
     setOtpError(null);
-    setSendError(null);
+    if (isResend) {
+      setResendError(null);
+    } else {
+      setSendError(null);
+    }
     try {
       const { otp_token } = await sendOtpApi(phone, channel);
       setOtpToken(otp_token);   // store for use in handleVerifyOtp
       setOtp('');
       setOtpSentBanner(true);
+      setResendError(null);     // clear any prior resend error on success
       isSendingRef.current = false;
       setPhase('otp_entry');
       startResendCountdown();
@@ -203,12 +219,17 @@ export default function LoginScreen({
       setTimeout(() => otpInputRef.current?.focus(), 300);
     } catch (err: unknown) {
       isSendingRef.current = false;
-      setPhase('phone_entry');
       // F-5: distinct message when the server's per-mobile rate limit fires
-      if (err instanceof ApiError && err.status === 429) {
-        setSendError('rate_limited');
+      const errorType: SendError = (err instanceof ApiError && err.status === 429)
+        ? 'rate_limited'
+        : 'send_failed';
+      if (isResend) {
+        // QA-M-3: stay in otp_entry — existing otpToken is still valid
+        setPhase('otp_entry');
+        setResendError(errorType);
       } else {
-        setSendError('send_failed');
+        setPhase('phone_entry');
+        setSendError(errorType);
       }
     }
   }
@@ -380,7 +401,7 @@ export default function LoginScreen({
                   accessibilityLabel="Mobile number"
                   autoFocus
                   returnKeyType="done"
-                  onSubmitEditing={() => handleSendOtp('sms')}
+                  onSubmitEditing={() => handleSendOtp('sms', false)}
                   // TODO (Android SMS autofill): phone number hint not available
                   // in Expo managed workflow. See file header for options.
                 />
@@ -398,7 +419,7 @@ export default function LoginScreen({
                   styles.primaryBtn,
                   phone.length < 10 && styles.primaryBtnDisabled,
                 ]}
-                onPress={() => handleSendOtp('sms')}
+                onPress={() => handleSendOtp('sms', false)}
                 disabled={phone.length < 10}
                 accessibilityLabel="Send OTP"
                 accessibilityRole="button"
@@ -451,6 +472,16 @@ export default function LoginScreen({
                 </View>
               )}
 
+              {/* QA-M-3: resend/WhatsApp failure — shown inline so the user stays
+                  in otp_entry and can still enter their existing valid OTP. */}
+              {resendError !== null && (
+                <View style={styles.errorBox} accessibilityLiveRegion="assertive">
+                  <Text style={styles.errorText}>
+                    {SEND_ERROR_MESSAGES[resendError]}
+                  </Text>
+                </View>
+              )}
+
               {/* 6-digit OTP input */}
               <TextInput
                 ref={otpInputRef}
@@ -497,7 +528,7 @@ export default function LoginScreen({
               <View style={styles.resendBlock}>
                 {canResend ? (
                   <TouchableOpacity
-                    onPress={() => handleSendOtp('sms')}
+                    onPress={() => handleSendOtp('sms', true)}
                     accessibilityLabel="Resend OTP via SMS"
                     accessibilityRole="button"
                   >
@@ -515,7 +546,7 @@ export default function LoginScreen({
                     M-3: disabled during active countdown (same canResend gate as
                     Resend OTP) to prevent draining the server's 5/hr rate limit. */}
                 <TouchableOpacity
-                  onPress={() => handleSendOtp('whatsapp')}
+                  onPress={() => handleSendOtp('whatsapp', true)}
                   disabled={!canResend}
                   accessibilityLabel="Didn't receive SMS? Try WhatsApp"
                   accessibilityRole="button"
@@ -533,6 +564,7 @@ export default function LoginScreen({
                   if (timerRef.current) clearInterval(timerRef.current);
                   setOtp('');
                   setOtpError(null);
+                  setResendError(null);
                   setOtpSentBanner(false);  // MB-1: clear banner when user changes number
                   setPhase('phone_entry');
                 }}
