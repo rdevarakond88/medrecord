@@ -51,6 +51,7 @@ import type { RootStackParamList } from '../../../App';
 
 type Phase    = 'phone_entry' | 'loading' | 'otp_entry';
 type OtpError = null | 'wrong_otp' | 'otp_expired';
+type SendError = null | 'send_failed';
 type OtpChannel = 'sms' | 'whatsapp';
 
 interface LoginScreenProps {
@@ -117,6 +118,7 @@ export default function LoginScreen({
 
   const [phase,          setPhase]          = useState<Phase>('phone_entry');
   const [otpError,       setOtpError]       = useState<OtpError>(null);
+  const [sendError,      setSendError]      = useState<SendError>(null);
   const [phone,          setPhone]          = useState('');
   const [otp,            setOtp]            = useState('');
   const [otpSentBanner,  setOtpSentBanner]  = useState(false);
@@ -162,16 +164,19 @@ export default function LoginScreen({
     if (phone.length !== 10) return;
     setPhase('loading');
     setOtpError(null);
+    setSendError(null);
     try {
       await mockSendOtp(phone, channel);
       setOtp('');
       setOtpSentBanner(true);
       setPhase('otp_entry');
       startResendCountdown();
-      setTimeout(() => setOtpSentBanner(false), 4000);
+      // Banner stays visible until the user types their first OTP digit (MF-2)
       setTimeout(() => otpInputRef.current?.focus(), 300);
     } catch {
+      // MF-1: surface the failure instead of silently resetting
       setPhase('phone_entry');
+      setSendError('send_failed');
     }
   }
 
@@ -190,6 +195,10 @@ export default function LoginScreen({
       const code = (err as { code?: string })?.code;
       if (code === 'OTP_EXPIRED') {
         setOtpError('otp_expired');
+        // MF-3: bypass remaining countdown — user is told to request a new OTP
+        // and must be able to act immediately
+        setCanResend(true);
+        if (timerRef.current) clearInterval(timerRef.current);
       } else {
         setOtpError('wrong_otp');
       }
@@ -251,6 +260,20 @@ export default function LoginScreen({
             <View style={styles.card}>
               <Text style={styles.inputLabel}>Mobile Number</Text>
 
+              {/* SF-1: guidance for first-time and elderly users */}
+              <Text style={styles.inputHint}>
+                We'll send a 6-digit code to this number.
+              </Text>
+
+              {/* MF-1: OTP send failure error */}
+              {sendError === 'send_failed' && (
+                <View style={styles.errorBox} accessibilityLiveRegion="assertive">
+                  <Text style={styles.errorText}>
+                    Couldn't send OTP. Please check your connection and try again.
+                  </Text>
+                </View>
+              )}
+
               <View style={styles.phoneRow}>
                 <View style={styles.countryCodeBox}>
                   <Text style={styles.countryCodeText}>+91</Text>
@@ -259,9 +282,10 @@ export default function LoginScreen({
                   ref={phoneInputRef}
                   style={styles.phoneInput}
                   value={phone}
-                  onChangeText={(t) =>
-                    setPhone(t.replace(/\D/g, '').slice(0, 10))
-                  }
+                  onChangeText={(t) => {
+                    setPhone(t.replace(/\D/g, '').slice(0, 10));
+                    if (sendError !== null) setSendError(null);
+                  }}
                   keyboardType="number-pad"
                   maxLength={10}
                   placeholder="98765 43210"
@@ -326,6 +350,8 @@ export default function LoginScreen({
                 onChangeText={(t) => {
                   const digits = t.replace(/\D/g, '').slice(0, 6);
                   setOtp(digits);
+                  // MF-2: dismiss the "OTP sent" banner on first keystroke
+                  if (otpSentBanner) setOtpSentBanner(false);
                   // Clear error state as soon as the user starts re-typing
                   if (otpError !== null) setOtpError(null);
                 }}
@@ -510,10 +536,16 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: 16,   // SF-2: raised from 14 for elderly readability
     fontWeight: '500',
     color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  inputHint: {
+    fontSize: 14,
+    color: Colors.textDisabled,
+    marginBottom: Spacing.md,
+    lineHeight: 20,
   },
 
   // ── Phone input ─────────────────────────────────────────────────────────
@@ -597,9 +629,9 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: Colors.error,
-    fontSize: 13,
+    fontSize: 14,   // SF-2: raised from 13 for elderly readability
     fontWeight: '500',
-    lineHeight: 18,
+    lineHeight: 20,
   },
 
   // ── Resend + WhatsApp ───────────────────────────────────────────────────

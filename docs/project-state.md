@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Persona Critic complete (2026-03-16). 3.8/5 — Revise and re-evaluate. 3 MUST FIX items before Builder revision.
+**Phase:** D1 (Login / OTP) — Builder revision complete (2026-03-16). All 3 MUST FIX + 2 SHOULD FIX items from persona critique applied. Awaiting Persona Critic re-evaluation pass.
 **Last Updated:** 2026-03-16
-**Last Session:** Persona Critic — D1 Login / OTP. Weighted average 3.8/5 (above 3.5 threshold). Verdict: Revise and re-evaluate. 3 MUST FIX: silent OTP-send failure, auto-dismiss banner (4s, unanchored), expired-OTP countdown dead-end. 2 SHOULD FIX: no OTP guidance text, text sizes too small for P1 elderly reuse. Critique: `reviews/D1-persona-critique.md`.
+**Last Session:** Builder — D1 persona critique fixes. Applied MF-1 (OTP-send error message), MF-2 (banner dismiss on first keystroke), MF-3 (setCanResend immediately on otp_expired), SF-1 (guidance hint below phone input), SF-2 (inputLabel 16px, errorText 14px). File: `src/screens/doctor/LoginScreen.tsx`.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -12,7 +12,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
 | 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
 | 2 | ~~Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1~~ | **CLOSED 2026-03-13** |
-| 3 | D1 (Login / OTP) — **Persona Critic DONE (2026-03-16). 3 MUST FIX items. Awaiting Builder revision.** | Required for real auth before pilot |
+| 3 | D1 (Login / OTP) — **Builder revision DONE (2026-03-16). All MUST FIX + SHOULD FIX items applied. Awaiting Persona Critic re-evaluation.** | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
 | 6 | D9 (Consent Request) | Unlocks multi-doctor use cases |
@@ -91,7 +91,7 @@ _Carry these into every build/mockup session for these screens._
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
-| D1 — Login / OTP | **Static mockup built. Persona Critic complete (2026-03-16). Score: 3.8/5 — Revise and re-evaluate.** File: `src/screens/doctor/LoginScreen.tsx`. 3 MUST FIX + 2 SHOULD FIX items — see `reviews/D1-persona-critique.md` and MEDIUM debt table. Awaiting Builder revision. | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module — see TODO in file header). Demo switcher must be removed before launch. |
+| D1 — Login / OTP | **Static mockup built. Persona Critic: 3.8/5 — Revise and re-evaluate (2026-03-16). Builder revision complete (2026-03-16) — all 3 MUST FIX + 2 SHOULD FIX applied. Awaiting Persona Critic re-evaluation.** File: `src/screens/doctor/LoginScreen.tsx`. Critique: `reviews/D1-persona-critique.md`. | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module — see TODO in file header). Demo switcher must be removed before launch. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
@@ -324,20 +324,20 @@ _Carry these into every build/mockup session for these screens._
 | **SW-L-1:** `ACCESS_TOKEN_KEY` exported in `constants.ts` but unused — creates ambiguity about whether access tokens should be stored in SecureStore vs in-memory only. | Sync Worker | Security audit L-1 | Remove or add a comment clarifying its intended use by D1 for cold-start token recovery. |
 | **SW-L-2:** Mid-sync logout does not abort the in-flight run. The `?? currentToken` fallback on token re-read means `clearAuth()` during a sync run does not stop the current batch. | Sync Worker | Security audit L-2 | Remove the `?? currentToken` fallback; treat null token mid-run as an abort signal. |
 
-### MUST FIX — D1 persona critique (fix before Builder revision is approved)
+### MUST FIX — D1 persona critique (all closed 2026-03-16)
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D1-PC-MF-1:** Silent OTP-send failure — `catch` block in `handleSendOtp()` resets to `phone_entry` with no error message. Any network error leaves the user with zero explanation. | D1 | Persona critique MF-1 — Dr. Sinha, Sunita, Shantabai | Add an error state for OTP-send failure; display a message such as "Couldn't send OTP. Please try again." |
-| **D1-PC-MF-2:** Auto-dismiss OTP-sent banner after 4s — no spec anchor. Banner is the user's only confirmation of which number the OTP was sent to; Shantabai cannot process a disappearing banner in 4 seconds. | D1 | Persona critique MF-2 — Shantabai; flagged by Builder as unanchored | Remove `setTimeout(() => setOtpSentBanner(false), 4000)`. Dismiss banner on first OTP keystroke instead. |
-| **D1-PC-MF-3:** Expired-OTP countdown dead-end — on `otp_expired` error, Resend is still locked behind countdown timer. User told to request a new OTP but cannot act. | D1 | Persona critique MF-3 — Dr. Sinha, Sunita | When `otpError === 'otp_expired'`, call `setCanResend(true)` immediately to bypass remaining countdown. |
+| ~~**D1-PC-MF-1:** Silent OTP-send failure — `catch` block in `handleSendOtp()` resets to `phone_entry` with no error message.~~ | D1 | Persona critique MF-1 | **CLOSED 2026-03-16** — `sendError` state added; "Couldn't send OTP" message shown in catch. |
+| ~~**D1-PC-MF-2:** Auto-dismiss OTP-sent banner after 4s — no spec anchor.~~ | D1 | Persona critique MF-2 | **CLOSED 2026-03-16** — `setTimeout` removed; banner dismissed on first OTP keystroke. |
+| ~~**D1-PC-MF-3:** Expired-OTP countdown dead-end — Resend locked behind countdown on `otp_expired`.~~ | D1 | Persona critique MF-3 | **CLOSED 2026-03-16** — `setCanResend(true)` called immediately on `otp_expired`. |
 
-### SHOULD FIX — D1 persona critique (fix in same Builder revision)
+### SHOULD FIX — D1 persona critique (all closed 2026-03-16)
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D1-PC-SF-1:** No explanatory context before OTP step — phone_entry shows no hint that "a 6-digit code will be sent to this number." First-time users and elderly patients don't know what OTP means. | D1 | Persona critique SF-1 — Shantabai, Dr. Sinha | Add one guidance line below the phone input: "We'll send a 6-digit code to this number." |
-| **D1-PC-SF-2:** Text sizes too small for P1 (elderly patient) reuse — `inputLabel` 14px and `errorText` 13px fall below comfortable readability for Shantabai. Login cannot rely on a post-login large-text toggle. | D1 | Persona critique SF-2 — Shantabai | Increase `inputLabel` to ≥16px and `errorText` to ≥14px. |
+| ~~**D1-PC-SF-1:** No explanatory context before OTP step.~~ | D1 | Persona critique SF-1 | **CLOSED 2026-03-16** — Guidance line "We'll send a 6-digit code to this number." added below phone input. |
+| ~~**D1-PC-SF-2:** Text sizes too small for P1 (elderly patient) reuse — `inputLabel` 14px and `errorText` 13px.~~ | D1 | Persona critique SF-2 | **CLOSED 2026-03-16** — `inputLabel` raised to 16px, `errorText` raised to 14px. |
 
 ### MEDIUM — D1 Login mockup (fix before launch)
 
