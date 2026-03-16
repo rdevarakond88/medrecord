@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Security HIGH finding fixed (2026-03-16). Clear for QA agent + device testing. 1 MEDIUM open (cold-start audit log gap — decision required before v1 launch).
+**Phase:** D1 (Login / OTP) — QA complete (2026-03-16). 3 MEDIUM bugs documented (M-1/M-2/M-3 in `reviews/D1-qa-test-plan-v2.md`). Ready for device testing.
 **Last Updated:** 2026-03-16
-**Last Session:** Builder — D1 security fix. `App.tsx` catch clause updated to preserve credentials on network errors; only wipes on 401/403. `ApiError` imported. `ACCESS_TOKEN_KEY` removed from `src/auth/constants.ts` and replaced with a warning comment. All HIGHs from v2 security audit closed.
+**Last Session:** QA Agent — D1 live-screen QA. D1-SA2-M-1 accepted gap (cold-start audit log — Option B: rely on server-side `POST /auth/refresh` audit trail). 3 MEDIUM bugs found (network-error misleading message on verify, double-submit on handleSendOtp, resend failure drops phase). No CRITICAL or HIGH bugs. Test plan saved to `reviews/D1-qa-test-plan-v2.md`.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -12,7 +12,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
 | 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
 | 2 | ~~Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1~~ | **CLOSED 2026-03-13** |
-| 3 | D1 (Login / OTP) — **Security HIGH fixed. Next: QA agent then device testing.** | Required for real auth before pilot |
+| 3 | D1 (Login / OTP) — **QA complete. Next: device testing.** | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
 | 6 | D9 (Consent Request) | Unlocks multi-doctor use cases |
@@ -91,7 +91,7 @@ _Carry these into every build/mockup session for these screens._
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
-| D1 — Login / OTP | **Static mockup built. Persona Critic R2: 4.0/5 — PASSED (2026-03-16). Security audit complete (2026-03-16). Security fixes applied (2026-03-16): H-1/M-1/M-2/M-3 closed. H-2/H-3 flagged for auth.ts. Cleared for QA agent.** File: `src/screens/doctor/LoginScreen.tsx`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit.md`. | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module). SF-3 (individual digit boxes) deferred to future polish. |
+| D1 — Login / OTP | **Static mockup built. Persona Critic R2: 4.0/5 — PASSED (2026-03-16). Security audit v1+v2 complete — all HIGHs closed. QA complete (2026-03-16): 3 MEDIUM bugs (see `reviews/D1-qa-test-plan-v2.md`). Ready for device testing.** File: `src/screens/doctor/LoginScreen.tsx`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module). SF-3 (individual digit boxes) deferred to future polish. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
@@ -362,12 +362,15 @@ _Carry these into every build/mockup session for these screens._
 | ~~**D1-SA-M-1:** Phone number not validated for valid Indian mobile prefix (6–9). `handleSendOtp` only checks length.~~ | D1 | Security audit v1 M-1 | **CLOSED 2026-03-16** — `parseInt(phone[0]) < 6` guard added; input layer rejects 0–5 with inline error. |
 | ~~**D1-SA-M-2:** No `useRef` double-submit guard on Verify OTP.~~ | D1 | Security audit v1 M-2 | **CLOSED 2026-03-16** — `isVerifyingRef = useRef(false)` added; matches D6 `isSavingRef` pattern. |
 | ~~**D1-SA-M-3:** WhatsApp fallback button has no client-side rate limiting during active countdown.~~ | D1 | Security audit v1 M-3 | **CLOSED 2026-03-16** — `disabled={!canResend}` added; same gate as Resend OTP. |
-| **D1-SA2-M-1:** Cold-start session restoration (successful and failed) is not logged to `audit_events`. `App.tsx` runs before `SQLiteProvider` so DB is inaccessible at that stage. F-9 partially unsatisfied. | App.tsx | Security audit v2 M-1 | Defer audit log write via a Zustand flag read on `PatientSearchScreen` / `LoginScreen` mount, OR accept the gap for v1 and rely on server-side `POST /auth/refresh` audit trail. Decision required before v1 launch. |
+| ~~**D1-SA2-M-1:** Cold-start session restoration (successful and failed) is not logged to `audit_events`. `App.tsx` runs before `SQLiteProvider` so DB is inaccessible at that stage. F-9 partially unsatisfied.~~ | App.tsx | Security audit v2 M-1 | **ACCEPTED GAP 2026-03-16 — Option B:** Rely on server-side `POST /auth/refresh` audit trail for cold-start events. No code change needed. Local cold-start audit gap is documented technical debt, to be addressed post-v1 if audit requirements demand local coverage. |
 
 ### LOW — D1 security audit
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
+| **D1-QA-M-1:** Network error during `verifyOtp` shows "Incorrect OTP" — misleading; doctor may exhaust TOO_MANY_ATTEMPTS retrying a valid OTP. | D1 | QA v2 M-1 | Add `null`-code branch in `handleVerifyOtp` catch block to show "No internet connection" instead of wrong-OTP message. `LoginScreen.tsx:248–268`. |
+| **D1-QA-M-2:** `handleSendOtp` has no synchronous double-submit guard — rapid double-tap can launch two concurrent `POST /auth/send-otp` calls; `otpToken` state becomes whichever call resolves last. | D1 | QA v2 M-2 | Add `isSendingRef = useRef(false)` matching `isVerifyingRef` pattern. `LoginScreen.tsx:167–201`. |
+| **D1-QA-M-3:** Resend failure during `otp_entry` phase reverts UI to `phone_entry` — doctor loses OTP entry card even though the existing `otpToken` is still valid. | D1 | QA v2 M-3 | Track call origin; stay in `otp_entry` on resend failure and surface inline resend error. `LoginScreen.tsx:192–194`. |
 | **D1-SA-L-1:** Mock JWT `'mock-jwt-eyJhbGciOiJIUzI1NiJ9.mockpayload'` superficially resembles a real token (base64 header decodes to `{"alg":"HS256"}`). | D1 | Security audit L-1 | Replace with obviously fake placeholder: `'mock-token-not-real'`. |
 | **D1-SA-L-2:** Resend OTP and WhatsApp buttons lack explicit `disabled` prop during loading phase — implicit only via conditional render. | D1 | Security audit L-2 | Add `disabled={phase === 'loading'}` explicitly to both buttons for clarity. |
 
