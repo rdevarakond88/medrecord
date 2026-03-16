@@ -18,6 +18,19 @@ If you cannot identify which agent and which step applies, stop and ask the user
 
 ---
 
+## Session Status Line
+
+Immediately after the opening declaration, read `docs/project-state.md` and output
+a single status line before taking any other action:
+
+> **Session start:** [Agent Name] — [Step N: step name] — [Screen ID + name]
+> Example: Session start: Builder Agent — Step 5 (wire data) — D5 New Patient Form
+
+This line is mandatory. It replaces the need for the user to ask what comes next.
+If `project-state.md` does not clearly indicate the next step, ask the user before proceeding.
+
+---
+
 ## The Five Agents
 
 Each agent has a defined role. Never perform a task that belongs to an agent without invoking it.
@@ -60,6 +73,9 @@ Do not combine multiple agent steps into one session.
 - Push to `origin dev`
 - If push is skipped for any reason, state explicitly: "Not pushed — reason: [reason]"
 - Never silently omit the push
+- After pushing, print the following signal before stopping:
+  > SESSION COMPLETE — Next: [Agent Name] — [Step N: step name] — [Screen ID + name]
+  > Type 'exit' then 'claude' to start the next step.
 
 ---
 
