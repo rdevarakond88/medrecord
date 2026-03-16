@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — QA PASSED (2026-03-16). No CRITICAL or HIGH bugs. 2 medium UX issues (MB-1 banner not cleared on "Change number"; MB-2 design question for PM). 4 edge cases deferred to auth.ts session. Cleared for device testing of mockup.
+**Phase:** D1 (Login / OTP) — auth.ts wired (2026-03-16). Real API calls, SecureStore token writes, session restoration, and all security/QA items from audit + test plan implemented. Cleared for Security re-audit then device testing.
 **Last Updated:** 2026-03-16
-**Last Session:** QA — D1 Login/OTP screen. No blockers. MB-1 (banner not cleared on Change number — 15-min fix), 4 deferred edge cases (TOO_MANY_ATTEMPTS handling, connectivity pre-check, countdown drift on backgrounding, implicit load guard on Send OTP). Report: `reviews/D1-qa-test-plan.md`.
+**Last Session:** Builder — D1 auth.ts wiring. `src/api/auth.ts` created. `LoginScreen.tsx` wired to real API (sendOtp, verifyOtp). F-1 through F-10 implemented. MB-1, UE-2, UE-3 fixed. Session restoration added to App.tsx (H-3). USER_PROFILE_KEY added to auth/constants.ts. AuthUser exported from useAuthStore. expo-secure-store installed.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -12,7 +12,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
 | 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
 | 2 | ~~Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1~~ | **CLOSED 2026-03-13** |
-| 3 | D1 (Login / OTP) — **QA PASSED (2026-03-16). Cleared for device testing. Next: auth.ts Builder session.** | Required for real auth before pilot |
+| 3 | D1 (Login / OTP) — **auth.ts wired (2026-03-16). Next: Security re-audit then device testing.** | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
 | 6 | D9 (Consent Request) | Unlocks multi-doctor use cases |

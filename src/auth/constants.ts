@@ -12,3 +12,10 @@ export const REFRESH_TOKEN_KEY = 'medrecord_refresh_token';
 
 /** Key used to store the JWT access token in expo-secure-store (optional cache). */
 export const ACCESS_TOKEN_KEY = 'medrecord_access_token';
+
+/**
+ * Key used to store the serialised AuthUser profile in expo-secure-store.
+ * Written at login alongside the refresh token; read on cold-start session
+ * restoration so App.tsx can call setAuth() without a separate /me endpoint.
+ */
+export const USER_PROFILE_KEY = 'medrecord_user_profile';

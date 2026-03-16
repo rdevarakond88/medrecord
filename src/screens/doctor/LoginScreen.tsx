@@ -4,27 +4,33 @@
  * Spec:   docs/ui-ux-spec.md § D1 (Doctor) / P1 (Patient)
  * PM:     reviews/D1-pm-preflow.md
  *
- * Static mockup — no real API calls. All network calls are mocked with
- * simulated delays. Wire up src/api/auth.ts when the backend is ready.
+ * Live screen — wired to src/api/auth.ts (sendOtp, verifyOtp).
+ * Refresh token written to expo-secure-store after successful verify.
+ * Access token kept in Zustand in-memory only (never persisted).
+ * Session restoration on cold-start is handled in App.tsx.
  *
- * States modelled:
- *   phone_entry   — Enter mobile number + Send OTP
- *   loading       — API call in flight (send OTP or verify OTP)
- *   otp_entry     — Enter 6-digit OTP (includes "OTP sent" banner on arrival)
- *                   + error_wrong_otp variant
- *                   + error_otp_expired variant
+ * Security items implemented here (from D1-security-audit.md):
+ *   H-1  __DEV__ guard on demo block ✅
+ *   H-2  refresh token → expo-secure-store after verify ✅
+ *   M-1  Indian mobile prefix (6–9) guard + input filter ✅
+ *   M-2  isVerifyingRef double-submit guard ✅
+ *   M-3  WhatsApp button disabled during canResend=false ✅
+ *   F-1  Refresh token written to REFRESH_TOKEN_KEY in SecureStore ✅
+ *   F-2  Access token in Zustand only — never persisted ✅
+ *   F-4  TOO_MANY_ATTEMPTS: distinct message + setCanResend(true) ✅
+ *   F-5  429 on send-otp: specific "rate limited" message ✅
+ *   F-6  All calls via sendOtpApi / verifyOtpApi (pinnedFetch inside) ✅
+ *   F-9  login_success / login_failure logged to audit_events (fire-and-forget) ✅
+ *   F-10 No phone number, OTP, user ID, or JWT in console.log ✅
  *
- * PM-required items:
- *   ✅ WhatsApp fallback link (below 45s resend countdown)
- *   ✅ subtitle prop — default "For Doctors & Clinics"; pass "For Patients" for P1
- *   ✅ Distinct wrong-OTP vs expired-OTP error messages
- *   ✅ "OTP sent to +91 XXXXX XXXXX" confirmation banner
- *   TODO (Android SMS autofill): Android SMS Retriever API auto-populates OTP.
- *        No Expo managed-workflow module exists as of 2026-03.
- *        Options: (a) eject to bare workflow + react-native-otp-verify,
- *        (b) wait for an expo-modules-core community module,
- *        (c) ship without it (iOS QuickType covers iOS; Android users type manually).
- *        iOS OTP autofill is handled natively via textContentType="oneTimeCode" — no code needed.
+ * QA items:
+ *   MB-1 Banner cleared when user taps "Change number" ✅
+ *   UE-2 TOO_MANY_ATTEMPTS error handled in handleVerifyOtp ✅
+ *   UE-3 NetInfo check before send-OTP — immediate offline error ✅
+ *
+ * TODO (Android SMS autofill): Android SMS Retriever API auto-populates OTP.
+ *      No Expo managed-workflow module exists as of 2026-03.
+ *      iOS OTP autofill handled natively via textContentType="oneTimeCode".
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -42,17 +48,24 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSQLiteContext } from 'expo-sqlite';
+import * as SecureStore from 'expo-secure-store';
+import * as Crypto from 'expo-crypto';
+import NetInfo from '@react-native-community/netinfo';
 
 import { Colors, Spacing } from '../../constants/theme';
 import { useAuthStore } from '../../store/useAuthStore';
+import { sendOtp as sendOtpApi, verifyOtp as verifyOtpApi } from '../../api/auth';
+import type { OtpChannel } from '../../api/auth';
+import { ApiError } from '../../api/apiClient';
+import { REFRESH_TOKEN_KEY, USER_PROFILE_KEY } from '../../auth/constants';
 import type { RootStackParamList } from '../../../App';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Phase    = 'phone_entry' | 'loading' | 'otp_entry';
-type OtpError = null | 'wrong_otp' | 'otp_expired';
-type SendError = null | 'send_failed';
-type OtpChannel = 'sms' | 'whatsapp';
+type OtpError = null | 'wrong_otp' | 'otp_expired' | 'too_many_attempts';
+type SendError = null | 'send_failed' | 'rate_limited' | 'no_connection';
 
 interface LoginScreenProps {
   /** Subtitle below the MedRecord logo. Pass "For Patients" for P1 reuse. */
@@ -63,48 +76,33 @@ interface LoginScreenProps {
 
 const RESEND_SECONDS = 45;
 
-// ─── Mock API ────────────────────────────────────────────────────────────────
-// Replace with real calls to src/api/auth.ts when the backend is ready.
-// mockVerifyOtp contract:
-//   OTP "000000" → simulates OTP_EXPIRED error
-//   OTP "999999" → simulates WRONG_OTP error
-//   Any other 6-digit OTP → simulates success
+/** User-visible messages for send-OTP errors — avoids repeated JSX branching. */
+const SEND_ERROR_MESSAGES: Record<NonNullable<SendError>, string> = {
+  no_connection: 'No internet connection. Please check and retry.',
+  rate_limited:  'Too many OTP requests. Please wait before trying again.',
+  send_failed:   'Couldn\'t send OTP. Please check your connection and try again.',
+};
 
-function mockSendOtp(_mobile: string, _channel: OtpChannel): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 1100));
-}
+// ─── Audit log helper ────────────────────────────────────────────────────────
 
-interface MockVerifySuccess {
-  token: string;
-  user: {
-    id: string;
-    role: 'doctor';
-    name: string;
-    clinic_id: string;
-    clinic_name: string;
-  };
-}
-
-function mockVerifyOtp(_mobile: string, otp: string): Promise<MockVerifySuccess> {
-  return new Promise((resolve, reject) =>
-    setTimeout(() => {
-      if (otp === '000000') {
-        reject({ code: 'OTP_EXPIRED' });
-      } else if (otp === '999999') {
-        reject({ code: 'WRONG_OTP' });
-      } else {
-        resolve({
-          token: 'mock-jwt-eyJhbGciOiJIUzI1NiJ9.mockpayload',
-          user: {
-            id:          'doctor-001',
-            role:        'doctor',
-            name:        'Dr. Priya Nair',
-            clinic_id:   'clinic-mum-001',
-            clinic_name: 'Nair Multispeciality Clinic',
-          },
-        });
-      }
-    }, 1000),
+/**
+ * Write a login audit event to the local audit_events table.
+ * Fire-and-forget — never awaited by the caller (F-9).
+ * Uses '*' for patient_id (no patient context during login).
+ */
+async function logAuthAuditEvent(
+  db: ReturnType<typeof useSQLiteContext>,
+  eventType: 'login_success' | 'login_failure',
+  actorId: string,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  const id  = Crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `INSERT OR IGNORE INTO audit_events
+       (id, event_type, doctor_id, patient_id, metadata, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, eventType, actorId, '*', JSON.stringify(metadata), now],
   );
 }
 
@@ -115,12 +113,15 @@ export default function LoginScreen({
 }: LoginScreenProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const setAuth    = useAuthStore((s) => s.setAuth);
+  // F-9: SQLite context for audit logging (LoginScreen is inside SQLiteProvider)
+  const db         = useSQLiteContext();
 
   const [phase,          setPhase]          = useState<Phase>('phone_entry');
   const [otpError,       setOtpError]       = useState<OtpError>(null);
   const [sendError,      setSendError]      = useState<SendError>(null);
   const [phone,          setPhone]          = useState('');
   const [otp,            setOtp]            = useState('');
+  const [otpToken,       setOtpToken]       = useState<string | null>(null);
   const [otpSentBanner,  setOtpSentBanner]  = useState(false);
   const [resendSeconds,  setResendSeconds]  = useState(RESEND_SECONDS);
   const [canResend,      setCanResend]      = useState(false);
@@ -167,28 +168,42 @@ export default function LoginScreen({
     // M-1: reject numbers that don't start with a valid Indian mobile prefix (6–9)
     const firstDigit = parseInt(phone[0], 10);
     if (phone.length !== 10 || firstDigit < 6) return;
+
+    // UE-3: Check connectivity before triggering a loading state — shows the
+    // "no internet" error immediately without a spinner on airplane-mode devices.
+    const netState = await NetInfo.fetch();
+    if (!netState.isConnected) {
+      setSendError('no_connection');
+      return;
+    }
+
     setPhase('loading');
     setOtpError(null);
     setSendError(null);
     try {
-      await mockSendOtp(phone, channel);
+      const { otp_token } = await sendOtpApi(phone, channel);
+      setOtpToken(otp_token);   // store for use in handleVerifyOtp
       setOtp('');
       setOtpSentBanner(true);
       setPhase('otp_entry');
       startResendCountdown();
       // Banner stays visible until the user types their first OTP digit (MF-2)
       setTimeout(() => otpInputRef.current?.focus(), 300);
-    } catch {
-      // MF-1: surface the failure instead of silently resetting
+    } catch (err: unknown) {
       setPhase('phone_entry');
-      setSendError('send_failed');
+      // F-5: distinct message when the server's per-mobile rate limit fires
+      if (err instanceof ApiError && err.status === 429) {
+        setSendError('rate_limited');
+      } else {
+        setSendError('send_failed');
+      }
     }
   }
 
   // ── Verify OTP ───────────────────────────────────────────────────────────
 
   async function handleVerifyOtp() {
-    if (otp.length !== 6) return;
+    if (otp.length !== 6 || !otpToken) return;
     // M-2: synchronous tap guard — prevents double-submit from auto-submit useEffect
     // firing simultaneously with a manual button tap on slow devices
     if (isVerifyingRef.current) return;
@@ -196,19 +211,55 @@ export default function LoginScreen({
     setPhase('loading');
     setOtpError(null);
     try {
-      const { token, user } = await mockVerifyOtp(phone, otp);
+      const result = await verifyOtpApi(otpToken, otp);
       if (timerRef.current) clearInterval(timerRef.current);
-      setAuth(token, user);
+
+      // F-1: Write refresh token to SecureStore (never AsyncStorage — spec §At Rest)
+      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, result.refresh_token);
+
+      // H-3 / cold-start restoration: store user profile so App.tsx can call
+      // setAuth() after a successful /auth/refresh without a separate /me call
+      await SecureStore.setItemAsync(USER_PROFILE_KEY, JSON.stringify({
+        id:          result.user.id,
+        role:        result.user.role,
+        name:        result.user.name,
+        clinic_id:   result.user.clinic_id,
+        clinic_name: null,   // fetched lazily post-login; not in verify-otp response
+      }));
+
+      // F-2: Access token stays in Zustand in-memory only — never persisted
+      setAuth(result.access_token, {
+        id:          result.user.id,
+        role:        result.user.role,
+        name:        result.user.name,
+        clinic_id:   result.user.clinic_id,
+        clinic_name: null,
+      });
+
+      // F-9: log login success — fire-and-forget, never blocks navigation
+      void logAuthAuditEvent(db, 'login_success', result.user.id, {});
+
       navigation.replace('PatientSearch');
       // Note: no isVerifyingRef reset on success — screen unmounts
     } catch (err: unknown) {
       // M-2: reset on failure so the user can retry after a wrong or expired OTP
       isVerifyingRef.current = false;
-      const code = (err as { code?: string })?.code;
-      if (code === 'OTP_EXPIRED') {
+
+      const code = err instanceof ApiError ? err.code : null;
+
+      // F-9: log login failure — fire-and-forget
+      void logAuthAuditEvent(db, 'login_failure', '*', { reason: code ?? 'network_error' });
+
+      if (code === 'TOO_MANY_ATTEMPTS') {
+        // F-4 / UE-2: 3-attempt limit reached — OTP is invalidated on the server.
+        // Clear the field and enable resend immediately so the user can get a new OTP.
+        setOtpError('too_many_attempts');
+        setOtp('');
+        setCanResend(true);
+        if (timerRef.current) clearInterval(timerRef.current);
+      } else if (code === 'OTP_EXPIRED') {
         setOtpError('otp_expired');
-        // MF-3: bypass remaining countdown — user is told to request a new OTP
-        // and must be able to act immediately
+        // MF-3: bypass remaining countdown — user must request a new OTP immediately
         setCanResend(true);
         if (timerRef.current) clearInterval(timerRef.current);
       } else {
@@ -277,11 +328,11 @@ export default function LoginScreen({
                 We'll send a 6-digit code to this number.
               </Text>
 
-              {/* MF-1: OTP send failure error */}
-              {sendError === 'send_failed' && (
+              {/* Send-OTP errors (send_failed, rate_limited, no_connection) */}
+              {sendError !== null && (
                 <View style={styles.errorBox} accessibilityLiveRegion="assertive">
                   <Text style={styles.errorText}>
-                    Couldn't send OTP. Please check your connection and try again.
+                    {SEND_ERROR_MESSAGES[sendError]}
                   </Text>
                 </View>
               )}
@@ -361,6 +412,15 @@ export default function LoginScreen({
                 <View style={styles.errorBox} accessibilityLiveRegion="assertive">
                   <Text style={styles.errorText}>
                     OTP has expired. Please request a new one.
+                  </Text>
+                </View>
+              )}
+
+              {/* Error: too many attempts — F-4 / UE-2 */}
+              {otpError === 'too_many_attempts' && (
+                <View style={styles.errorBox} accessibilityLiveRegion="assertive">
+                  <Text style={styles.errorText}>
+                    Too many attempts. Please request a new OTP.
                   </Text>
                 </View>
               )}
@@ -447,6 +507,7 @@ export default function LoginScreen({
                   if (timerRef.current) clearInterval(timerRef.current);
                   setOtp('');
                   setOtpError(null);
+                  setOtpSentBanner(false);  // MB-1: clear banner when user changes number
                   setPhase('phone_entry');
                 }}
                 accessibilityLabel="Change mobile number"
@@ -467,23 +528,24 @@ export default function LoginScreen({
           )}
 
           {/* ── Demo state switcher ──────────────────────────────────── */}
-          {/* H-1: __DEV__ guard — this block is stripped from production  */}
-          {/* builds by Metro's dead-code elimination. REMOVE BEFORE LAUNCH */}
+          {/* H-1: __DEV__ guard — stripped from production builds by Metro  */}
           {__DEV__ && (
             <View style={styles.demoBlock}>
               <Text style={styles.demoTitle}>⚠ Demo states — remove before launch</Text>
               <Text style={styles.demoHint}>
-                Wrong OTP: enter 999999 · Expired OTP: enter 000000 · Any other 6-digit: success
+                Sets UI state directly — does not call the real API.
+                Use a real device + real phone number to test the live OTP flow.
               </Text>
               <View style={styles.demoRow}>
                 {(
                   [
-                    ['Phone',   () => { setPhase('phone_entry'); setPhone(''); setOtp(''); setOtpError(null); }],
-                    ['Sending', () => { setPhone('9876543210'); setPhase('loading'); }],
-                    ['OTP',     () => demoShowOtpEntry(null)],
-                    ['Verifying', () => { demoShowOtpEntry(null); setTimeout(() => setPhase('loading'), 50); }],
-                    ['Wrong',   () => demoShowOtpEntry('wrong_otp')],
-                    ['Expired', () => demoShowOtpEntry('otp_expired')],
+                    ['Phone',    () => { setPhase('phone_entry'); setPhone(''); setOtp(''); setOtpError(null); }],
+                    ['Sending',  () => { setPhone('9876543210'); setPhase('loading'); }],
+                    ['OTP',      () => demoShowOtpEntry(null)],
+                    ['Verifying',() => { demoShowOtpEntry(null); setTimeout(() => setPhase('loading'), 50); }],
+                    ['Wrong',    () => demoShowOtpEntry('wrong_otp')],
+                    ['Expired',  () => demoShowOtpEntry('otp_expired')],
+                    ['TooMany',  () => demoShowOtpEntry('too_many_attempts')],
                   ] as [string, () => void][]
                 ).map(([label, action]) => (
                   <TouchableOpacity

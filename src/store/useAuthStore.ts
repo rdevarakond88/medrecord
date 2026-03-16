@@ -9,7 +9,7 @@
 
 import { create } from 'zustand';
 
-interface AuthUser {
+export interface AuthUser {
   id:          string;
   role:        'doctor' | 'patient';
   name:        string;

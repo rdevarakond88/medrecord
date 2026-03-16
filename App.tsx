@@ -15,15 +15,16 @@
  *   NewPatientForm → D5 stub (not yet built)
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { registerRootComponent } from 'expo';
 import { SQLiteProvider } from 'expo-sqlite';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import * as SecureStore from 'expo-secure-store';
 import { initializeDatabase } from './src/db/schema';
 import LoginScreen from './src/screens/doctor/LoginScreen';
 import PatientSearchScreen from './src/screens/doctor/PatientSearchScreen';
@@ -31,6 +32,10 @@ import PatientDetailScreen from './src/screens/doctor/PatientDetailScreen';
 import NewVisitScreen from './src/screens/doctor/NewVisitScreen';
 import DocumentScannerScreen from './src/screens/doctor/DocumentScannerScreen';
 import { useSyncWorker } from './src/sync/useSyncWorker';
+import { refreshAccessToken } from './src/api/auth';
+import { REFRESH_TOKEN_KEY, USER_PROFILE_KEY } from './src/auth/constants';
+import { useAuthStore } from './src/store/useAuthStore';
+import type { AuthUser } from './src/store/useAuthStore';
 
 
 // ─── NewPatientForm stub ───────────────────────────────────────────────────
@@ -106,13 +111,70 @@ const queryClient = new QueryClient({
 // ─── Root component ────────────────────────────────────────────────────────
 
 function App() {
+  // F-3 / H-3: session restoration on cold start.
+  // null = still checking SecureStore; 'Login' or 'PatientSearch' = ready.
+  const [initialRoute, setInitialRoute] =
+    useState<keyof RootStackParamList | null>(null);
+
+  useEffect(() => {
+    async function restoreSession(): Promise<void> {
+      try {
+        const storedRefresh = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+        if (!storedRefresh) {
+          setInitialRoute('Login');
+          return;
+        }
+
+        // Attempt token refresh — throws on expired/revoked token
+        const { access_token, refresh_token: rotatedToken } =
+          await refreshAccessToken(storedRefresh);
+
+        const storedUserJson = await SecureStore.getItemAsync(USER_PROFILE_KEY);
+        if (!storedUserJson) {
+          // No cached user profile — cannot restore session without a /me endpoint
+          await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+          setInitialRoute('Login');
+          return;
+        }
+
+        const user = JSON.parse(storedUserJson) as AuthUser;
+
+        // Rotate refresh token if the server issued a new one (SW-H-2 pattern)
+        if (rotatedToken) {
+          await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, rotatedToken);
+        }
+
+        // F-2: access token stays in Zustand only — never written back to SecureStore
+        useAuthStore.getState().setAuth(access_token, user);
+        setInitialRoute('PatientSearch');
+      } catch {
+        // Refresh failed (expired, revoked, or network error with no cached session).
+        // Clear stale credentials and send the doctor through the OTP flow.
+        await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+        await SecureStore.deleteItemAsync(USER_PROFILE_KEY);
+        setInitialRoute('Login');
+      }
+    }
+    void restoreSession();
+  }, []);
+
+  // Show a minimal splash while we check SecureStore — prevents a flash of
+  // the Login screen on every cold start for already-authenticated doctors.
+  if (initialRoute === null) {
+    return (
+      <View style={splashStyles.container}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
+
   return (
     <SQLiteProvider databaseName="medrecord.db" onInit={initializeDatabase}>
       <QueryClientProvider client={queryClient}>
         <SyncWorkerMount />
         <NavigationContainer>
           <Stack.Navigator
-            initialRouteName="Login"
+            initialRouteName={initialRoute}
             screenOptions={{ headerShown: false }}
           >
             <Stack.Screen name="Login"             component={LoginScreen} />
@@ -127,5 +189,14 @@ function App() {
     </SQLiteProvider>
   );
 }
+
+const splashStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
 
 registerRootComponent(App);
