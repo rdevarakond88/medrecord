@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — PM pre-flight complete (2026-03-13). Ready for Builder.
-**Last Updated:** 2026-03-13
-**Last Session:** PM — D1 pre-flight review. PROCEED with 4 required changes: WhatsApp fallback link in UI, Android SMS OTP autofill, prop-ised subtitle for P1 reuse, distinct "OTP sent" and error-state messages. Review saved to `reviews/D1-pm-preflow.md`.
+**Phase:** D1 (Login / OTP) — static mockup built (2026-03-16). Ready for Persona Critic.
+**Last Updated:** 2026-03-16
+**Last Session:** Builder — D1 static mockup. All 6 states built (phone entry, loading, OTP sent banner, OTP entry, wrong-OTP error, expired-OTP error). WhatsApp fallback link, subtitle prop, distinct error messages all implemented. Android SMS autofill tracked as TODO (no Expo managed-workflow module available 2026-03). Demo state switcher included — remove before launch.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -12,7 +12,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
 | 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
 | 2 | ~~Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1~~ | **CLOSED 2026-03-13** |
-| 3 | D1 (Login / OTP) — **PM pre-flight DONE** | Required for real auth before pilot |
+| 3 | D1 (Login / OTP) — **Static mockup DONE (2026-03-16). Awaiting Persona Critic.** | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
 | 6 | D9 (Consent Request) | Unlocks multi-doctor use cases |
@@ -91,7 +91,7 @@ _Carry these into every build/mockup session for these screens._
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
-| D1 — Login / OTP | **PM pre-flight DONE (2026-03-13). Ready for Builder.** Stub only (seeds fake token). | Tier 3. PM required changes: WhatsApp fallback link, Android SMS autofill, subtitle prop, distinct OTP-sent/error states. See `reviews/D1-pm-preflow.md`. |
+| D1 — Login / OTP | **Static mockup built (2026-03-16). Ready for Persona Critic.** File: `src/screens/doctor/LoginScreen.tsx`. All 6 states implemented. App.tsx initial route set to Login. | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module — see TODO in file header). Demo switcher must be removed before launch. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
@@ -323,6 +323,13 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|---|
 | **SW-L-1:** `ACCESS_TOKEN_KEY` exported in `constants.ts` but unused — creates ambiguity about whether access tokens should be stored in SecureStore vs in-memory only. | Sync Worker | Security audit L-1 | Remove or add a comment clarifying its intended use by D1 for cold-start token recovery. |
 | **SW-L-2:** Mid-sync logout does not abort the in-flight run. The `?? currentToken` fallback on token re-read means `clearAuth()` during a sync run does not stop the current batch. | Sync Worker | Security audit L-2 | Remove the `?? currentToken` fallback; treat null token mid-run as an abort signal. |
+
+### MEDIUM — D1 Login mockup (fix before launch)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D1-M-1:** Android SMS OTP autofill not implemented — doctors manually transcribe OTP under consultation time pressure. | D1 | PM review §2 (Required, not optional) | No Expo managed-workflow module exists as of 2026-03. Options: (a) eject to bare workflow + `react-native-otp-verify`; (b) wait for an `expo-modules-core` community module; (c) ship without it and accept the gap. iOS autofill works via `textContentType="oneTimeCode"` (no code needed). Decision needed before D1 goes live. |
+| **D1-M-2:** Demo state switcher block must be removed before production launch. | D1 | Builder decision | Located at bottom of `LoginScreen.tsx`. Clearly marked `REMOVE BEFORE PRODUCTION LAUNCH`. |
 
 ---
 
