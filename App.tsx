@@ -33,6 +33,7 @@ import NewVisitScreen from './src/screens/doctor/NewVisitScreen';
 import DocumentScannerScreen from './src/screens/doctor/DocumentScannerScreen';
 import { useSyncWorker } from './src/sync/useSyncWorker';
 import { refreshAccessToken } from './src/api/auth';
+import { ApiError } from './src/api/apiClient';
 import { REFRESH_TOKEN_KEY, USER_PROFILE_KEY } from './src/auth/constants';
 import { useAuthStore } from './src/store/useAuthStore';
 import type { AuthUser } from './src/store/useAuthStore';
@@ -147,11 +148,18 @@ function App() {
         // F-2: access token stays in Zustand only — never written back to SecureStore
         useAuthStore.getState().setAuth(access_token, user);
         setInitialRoute('PatientSearch');
-      } catch {
-        // Refresh failed (expired, revoked, or network error with no cached session).
-        // Clear stale credentials and send the doctor through the OTP flow.
-        await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
-        await SecureStore.deleteItemAsync(USER_PROFILE_KEY);
+      } catch (err) {
+        // Only wipe credentials on an explicit auth rejection (401/403 — token
+        // expired or revoked server-side). Network errors (no connectivity, timeout,
+        // DNS failure) leave credentials intact so the doctor can restore their
+        // session when back online. Indian clinic WiFi is unreliable; losing a
+        // 30-day session on a brief connectivity drop is unacceptable (D1-SA2-H-1).
+        const isAuthError =
+          err instanceof ApiError && (err.status === 401 || err.status === 403);
+        if (isAuthError) {
+          await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+          await SecureStore.deleteItemAsync(USER_PROFILE_KEY);
+        }
         setInitialRoute('Login');
       }
     }

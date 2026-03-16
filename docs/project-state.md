@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Security re-audit complete (2026-03-16). BLOCKED: 1 HIGH finding. Fix H-1 (restoreSession blanket catch) then clear for QA + device testing.
+**Phase:** D1 (Login / OTP) — Security HIGH finding fixed (2026-03-16). Clear for QA agent + device testing. 1 MEDIUM open (cold-start audit log gap — decision required before v1 launch).
 **Last Updated:** 2026-03-16
-**Last Session:** Security — D1 auth.ts wiring re-audit. H-2 and H-3 from v1 audit confirmed closed. New HIGH finding: restoreSession() in App.tsx deletes refresh token on network errors, not just auth errors. New MEDIUM: cold-start session events not logged to audit_events. Full report: `reviews/D1-security-audit-v2.md`.
+**Last Session:** Builder — D1 security fix. `App.tsx` catch clause updated to preserve credentials on network errors; only wipes on 401/403. `ApiError` imported. `ACCESS_TOKEN_KEY` removed from `src/auth/constants.ts` and replaced with a warning comment. All HIGHs from v2 security audit closed.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -12,7 +12,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
 | 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
 | 2 | ~~Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1~~ | **CLOSED 2026-03-13** |
-| 3 | D1 (Login / OTP) — **BLOCKED: 1 HIGH security finding. Fix H-1 (App.tsx catch clause), then QA + device testing.** | Required for real auth before pilot |
+| 3 | D1 (Login / OTP) — **Security HIGH fixed. Next: QA agent then device testing.** | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
 | 6 | D9 (Consent Request) | Unlocks multi-doctor use cases |
@@ -321,7 +321,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **SW-L-1 / D1-SA2-L-1:** `ACCESS_TOKEN_KEY` exported in `constants.ts` but unused — D1 wiring confirmed access token stays in Zustand only (F-2 ✅). Key creates ambiguity for future developers. | `src/auth/constants.ts` | Security audit v2 L-1 | Remove the constant or replace with a comment: "Access token NOT persisted — in-memory Zustand only per security-spec.md §Authentication." |
+| ~~**SW-L-1 / D1-SA2-L-1:** `ACCESS_TOKEN_KEY` exported in `constants.ts` but unused — ambiguity about access token persistence.~~ | `src/auth/constants.ts` | Security audit v2 L-1 | **CLOSED 2026-03-16** — constant removed; replaced with a comment block explicitly stating access token is in-memory Zustand only and must not be stored. |
 | **SW-L-2:** Mid-sync logout does not abort the in-flight run. The `?? currentToken` fallback on token re-read means `clearAuth()` during a sync run does not stop the current batch. | Sync Worker | Security audit L-2 | Remove the `?? currentToken` fallback; treat null token mid-run as an abort signal. |
 
 ### MUST FIX — D1 persona critique (all closed 2026-03-16)
@@ -353,7 +353,7 @@ _Carry these into every build/mockup session for these screens._
 | ~~**D1-SA-H-1:** Demo block not guarded by `__DEV__` — exposes mock bypass codes in all builds.~~ | D1 | Security audit v1 H-1 | **CLOSED 2026-03-16** — demo block JSX wrapped in `{__DEV__ && (...)}`. |
 | ~~**D1-SA-H-2:** Refresh token never written to `expo-secure-store` in login flow.~~ | D1 | Security audit v1 H-2 | **CLOSED 2026-03-16** — `SecureStore.setItemAsync(REFRESH_TOKEN_KEY, result.refresh_token)` in `LoginScreen.tsx:218` before `setAuth()`. |
 | ~~**D1-SA-H-3:** No session restoration on cold-start.~~ | D1 | Security audit v1 H-3 | **CLOSED 2026-03-16** — `restoreSession()` implemented in `App.tsx:120–158`. |
-| **D1-SA2-H-1:** `restoreSession()` in `App.tsx` blanket-catches all errors — deletes refresh token on network errors, not only on auth failures (401/403). Doctor offline on cold-start loses their 30-day session. | App.tsx:150–156 | Security audit v2 H-1 | In the catch clause: only call `deleteItemAsync` when `err instanceof ApiError && (err.status === 401 \|\| err.status === 403)`. On network errors, keep credentials and navigate to Login. `ApiError` must be explicitly imported from `src/api/apiClient`. |
+| ~~**D1-SA2-H-1:** `restoreSession()` in `App.tsx` blanket-catches all errors — deletes refresh token on network errors, not only on auth failures (401/403).~~ | App.tsx | Security audit v2 H-1 | **CLOSED 2026-03-16** — catch clause now checks `err instanceof ApiError && (err.status === 401 \|\| err.status === 403)` before clearing credentials. Network errors preserve the refresh token. `ApiError` imported explicitly. |
 
 ### MEDIUM — D1 security audit
 

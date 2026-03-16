@@ -10,8 +10,16 @@
 /** Key used to store the JWT refresh token in expo-secure-store. */
 export const REFRESH_TOKEN_KEY = 'medrecord_refresh_token';
 
-/** Key used to store the JWT access token in expo-secure-store (optional cache). */
-export const ACCESS_TOKEN_KEY = 'medrecord_access_token';
+/**
+ * NOT used for storage.
+ * The JWT access token lives in Zustand in-memory only and is NEVER persisted
+ * to SecureStore or AsyncStorage (security-spec.md §Authentication, F-2).
+ * This constant is intentionally absent — do not add one here.
+ *
+ * If you need to read the current token, use:
+ *   useAuthStore.getState().token   (inside React components / hooks)
+ *   useAuthStore.getState().token   (outside React, e.g. API helpers)
+ */
 
 /**
  * Key used to store the serialised AuthUser profile in expo-secure-store.
