@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Security audit complete (2026-03-16). BLOCKED: 3 HIGH findings (H-1 actionable now; H-2/H-3 flagged for auth.ts). No CRITICAL findings. Fix H-1 in mockup, then proceed to QA.
+**Phase:** D1 (Login / OTP) — Security fixes applied (2026-03-16). H-1/M-1/M-2/M-3 closed. H-2/H-3 remain flagged for auth.ts. Cleared for QA agent.
 **Last Updated:** 2026-03-16
-**Last Session:** Security audit — D1 static mockup. 3 HIGH + 3 MEDIUM + 2 LOW findings. No CRITICAL. H-1 (demo block not `__DEV__` gated) actionable now. H-2/H-3 (refresh token storage + session restoration) flagged as mandatory auth.ts requirements. Report: `reviews/D1-security-audit.md`.
+**Last Session:** Builder — applied D1 security fixes: H-1 (`__DEV__` guard on demo block), M-1 (phone start-digit validation + inline error), M-2 (`isVerifyingRef` double-submit guard on Verify OTP), M-3 (`canResend` gate on WhatsApp button). Report: `reviews/D1-security-audit.md`.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -91,7 +91,7 @@ _Carry these into every build/mockup session for these screens._
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
-| D1 — Login / OTP | **Static mockup built. Persona Critic R2: 4.0/5 — PASSED (2026-03-16). Security audit complete (2026-03-16) — BLOCKED: 3 HIGH findings. Fix H-1 (demo `__DEV__` guard) in mockup; H-2/H-3 committed to auth.ts brief. Then proceed to QA.** File: `src/screens/doctor/LoginScreen.tsx`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit.md`. | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module). SF-3 (individual digit boxes) deferred to future polish. |
+| D1 — Login / OTP | **Static mockup built. Persona Critic R2: 4.0/5 — PASSED (2026-03-16). Security audit complete (2026-03-16). Security fixes applied (2026-03-16): H-1/M-1/M-2/M-3 closed. H-2/H-3 flagged for auth.ts. Cleared for QA agent.** File: `src/screens/doctor/LoginScreen.tsx`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit.md`. | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module). SF-3 (individual digit boxes) deferred to future polish. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
@@ -350,7 +350,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D1-SA-H-1:** Demo block not guarded by `__DEV__` — exposes mock bypass codes in all builds. | D1 | Security audit H-1 | Wrap demo block JSX in `{__DEV__ && (...)}`. Actionable now in `LoginScreen.tsx` lines 440–468. |
+| ~~**D1-SA-H-1:** Demo block not guarded by `__DEV__` — exposes mock bypass codes in all builds.~~ | D1 | Security audit H-1 | **CLOSED 2026-03-16** — demo block JSX wrapped in `{__DEV__ && (...)}`. Metro dead-code elimination strips it from production builds. |
 | **D1-SA-H-2:** Refresh token never written to `expo-secure-store` in login flow — `setAuth()` called but SecureStore write absent. | D1 → auth.ts | Security audit H-2 | In `auth.ts`: after OTP verify, call `SecureStore.setItemAsync(REFRESH_TOKEN_KEY, response.refresh_token)` before `setAuth()`. `REFRESH_TOKEN_KEY` already defined in `src/auth/constants.ts`. |
 | **D1-SA-H-3:** No session restoration on cold-start — no logic to read refresh token and silently re-authenticate on app launch. | D1 → auth.ts | Security audit H-3 | In `App.tsx` or splash: read `REFRESH_TOKEN_KEY` from SecureStore → `POST /auth/refresh` via `pinnedFetch` → `setAuth()` → navigate. On failure: clear SecureStore, navigate to Login. |
 
@@ -358,9 +358,9 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D1-SA-M-1:** Phone number not validated for valid Indian mobile prefix (6–9). `handleSendOtp` only checks length. | D1 | Security audit M-1 | Add `parseInt(phone[0]) < 6` guard in `handleSendOtp` and input filter in `onChangeText`. Mirrors D2 H-3 fix. |
-| **D1-SA-M-2:** No `useRef` double-submit guard on Verify OTP — phase-change is the only protection; concurrent auto-submit + manual tap can burn an OTP attempt. | D1 | Security audit M-2 | Add `isVerifyingRef = useRef(false)` guard in `handleVerifyOtp`. Matches D6 `isSavingRef` pattern. |
-| **D1-SA-M-3:** WhatsApp fallback button has no client-side rate limiting during active countdown — can be tapped while SMS countdown is running. | D1 | Security audit M-3 | Apply `canResend` gate to WhatsApp button, or add a separate countdown state for WhatsApp sends. |
+| ~~**D1-SA-M-1:** Phone number not validated for valid Indian mobile prefix (6–9). `handleSendOtp` only checks length.~~ | D1 | Security audit M-1 | **CLOSED 2026-03-16** — `parseInt(phone[0]) < 6` guard added to `handleSendOtp`; input layer rejects first digit 0–5 and sets `phoneError` state with "Mobile numbers start with 6–9". Mirrors D2 H-3 fix. |
+| ~~**D1-SA-M-2:** No `useRef` double-submit guard on Verify OTP — phase-change is the only protection; concurrent auto-submit + manual tap can burn an OTP attempt.~~ | D1 | Security audit M-2 | **CLOSED 2026-03-16** — `isVerifyingRef = useRef(false)` added; guard at top of `handleVerifyOtp`; reset in catch block (allows retry); not reset on success (screen unmounts). Matches D6 `isSavingRef` pattern. |
+| ~~**D1-SA-M-3:** WhatsApp fallback button has no client-side rate limiting during active countdown — can be tapped while SMS countdown is running.~~ | D1 | Security audit M-3 | **CLOSED 2026-03-16** — `disabled={!canResend}` added to WhatsApp button; `whatsappBtnDisabled` style applies `opacity: 0.4` when disabled. Same `canResend` gate as Resend OTP button. |
 
 ### LOW — D1 security audit
 

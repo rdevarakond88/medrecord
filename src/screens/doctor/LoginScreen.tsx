@@ -124,10 +124,13 @@ export default function LoginScreen({
   const [otpSentBanner,  setOtpSentBanner]  = useState(false);
   const [resendSeconds,  setResendSeconds]  = useState(RESEND_SECONDS);
   const [canResend,      setCanResend]      = useState(false);
+  const [phoneError,     setPhoneError]     = useState<string | null>(null);
 
-  const phoneInputRef = useRef<TextInput>(null);
-  const otpInputRef   = useRef<TextInput>(null);
-  const timerRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const phoneInputRef  = useRef<TextInput>(null);
+  const otpInputRef    = useRef<TextInput>(null);
+  const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null);
+  // M-2: synchronous double-submit guard (useRef, not useState — avoids async race)
+  const isVerifyingRef = useRef(false);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -161,7 +164,9 @@ export default function LoginScreen({
   // ── Send OTP ─────────────────────────────────────────────────────────────
 
   async function handleSendOtp(channel: OtpChannel = 'sms') {
-    if (phone.length !== 10) return;
+    // M-1: reject numbers that don't start with a valid Indian mobile prefix (6–9)
+    const firstDigit = parseInt(phone[0], 10);
+    if (phone.length !== 10 || firstDigit < 6) return;
     setPhase('loading');
     setOtpError(null);
     setSendError(null);
@@ -184,6 +189,10 @@ export default function LoginScreen({
 
   async function handleVerifyOtp() {
     if (otp.length !== 6) return;
+    // M-2: synchronous tap guard — prevents double-submit from auto-submit useEffect
+    // firing simultaneously with a manual button tap on slow devices
+    if (isVerifyingRef.current) return;
+    isVerifyingRef.current = true;
     setPhase('loading');
     setOtpError(null);
     try {
@@ -191,7 +200,10 @@ export default function LoginScreen({
       if (timerRef.current) clearInterval(timerRef.current);
       setAuth(token, user);
       navigation.replace('PatientSearch');
+      // Note: no isVerifyingRef reset on success — screen unmounts
     } catch (err: unknown) {
+      // M-2: reset on failure so the user can retry after a wrong or expired OTP
+      isVerifyingRef.current = false;
       const code = (err as { code?: string })?.code;
       if (code === 'OTP_EXPIRED') {
         setOtpError('otp_expired');
@@ -283,7 +295,14 @@ export default function LoginScreen({
                   style={styles.phoneInput}
                   value={phone}
                   onChangeText={(t) => {
-                    setPhone(t.replace(/\D/g, '').slice(0, 10));
+                    const digits = t.replace(/\D/g, '').slice(0, 10);
+                    // M-1: reject first digit 0–5 at input layer (same pattern as D2)
+                    if (digits.length === 1 && parseInt(digits[0], 10) < 6) {
+                      setPhoneError('Mobile numbers start with 6–9');
+                      return;
+                    }
+                    setPhoneError(null);
+                    setPhone(digits);
                     if (sendError !== null) setSendError(null);
                   }}
                   keyboardType="number-pad"
@@ -298,6 +317,13 @@ export default function LoginScreen({
                   // in Expo managed workflow. See file header for options.
                 />
               </View>
+
+              {/* M-1: inline error when first digit is not a valid Indian mobile prefix */}
+              {phoneError !== null && (
+                <Text style={styles.phoneErrorText} accessibilityLiveRegion="polite">
+                  {phoneError}
+                </Text>
+              )}
 
               <TouchableOpacity
                 style={[
@@ -399,12 +425,15 @@ export default function LoginScreen({
 
                 {/* WhatsApp fallback — required per PM review (D1-pm-preflow.md)
                     Triggers POST /auth/send-otp?channel=whatsapp on the backend.
-                    Shown below resend countdown as a secondary action. */}
+                    Shown below resend countdown as a secondary action.
+                    M-3: disabled during active countdown (same canResend gate as
+                    Resend OTP) to prevent draining the server's 5/hr rate limit. */}
                 <TouchableOpacity
                   onPress={() => handleSendOtp('whatsapp')}
+                  disabled={!canResend}
                   accessibilityLabel="Didn't receive SMS? Try WhatsApp"
                   accessibilityRole="button"
-                  style={styles.whatsappBtn}
+                  style={[styles.whatsappBtn, !canResend && styles.whatsappBtnDisabled]}
                 >
                   <Text style={styles.whatsappLink}>
                     Didn't receive SMS? Try WhatsApp
@@ -438,34 +467,37 @@ export default function LoginScreen({
           )}
 
           {/* ── Demo state switcher ──────────────────────────────────── */}
-          {/* REMOVE THIS BLOCK BEFORE PRODUCTION LAUNCH                 */}
-          <View style={styles.demoBlock}>
-            <Text style={styles.demoTitle}>⚠ Demo states — remove before launch</Text>
-            <Text style={styles.demoHint}>
-              Wrong OTP: enter 999999 · Expired OTP: enter 000000 · Any other 6-digit: success
-            </Text>
-            <View style={styles.demoRow}>
-              {(
-                [
-                  ['Phone',   () => { setPhase('phone_entry'); setPhone(''); setOtp(''); setOtpError(null); }],
-                  ['Sending', () => { setPhone('9876543210'); setPhase('loading'); }],
-                  ['OTP',     () => demoShowOtpEntry(null)],
-                  ['Verifying', () => { demoShowOtpEntry(null); setTimeout(() => setPhase('loading'), 50); }],
-                  ['Wrong',   () => demoShowOtpEntry('wrong_otp')],
-                  ['Expired', () => demoShowOtpEntry('otp_expired')],
-                ] as [string, () => void][]
-              ).map(([label, action]) => (
-                <TouchableOpacity
-                  key={label}
-                  style={styles.demoBtn}
-                  onPress={action}
-                  accessibilityLabel={`Demo state: ${label}`}
-                >
-                  <Text style={styles.demoBtnText}>{label}</Text>
-                </TouchableOpacity>
-              ))}
+          {/* H-1: __DEV__ guard — this block is stripped from production  */}
+          {/* builds by Metro's dead-code elimination. REMOVE BEFORE LAUNCH */}
+          {__DEV__ && (
+            <View style={styles.demoBlock}>
+              <Text style={styles.demoTitle}>⚠ Demo states — remove before launch</Text>
+              <Text style={styles.demoHint}>
+                Wrong OTP: enter 999999 · Expired OTP: enter 000000 · Any other 6-digit: success
+              </Text>
+              <View style={styles.demoRow}>
+                {(
+                  [
+                    ['Phone',   () => { setPhase('phone_entry'); setPhone(''); setOtp(''); setOtpError(null); }],
+                    ['Sending', () => { setPhone('9876543210'); setPhase('loading'); }],
+                    ['OTP',     () => demoShowOtpEntry(null)],
+                    ['Verifying', () => { demoShowOtpEntry(null); setTimeout(() => setPhase('loading'), 50); }],
+                    ['Wrong',   () => demoShowOtpEntry('wrong_otp')],
+                    ['Expired', () => demoShowOtpEntry('otp_expired')],
+                  ] as [string, () => void][]
+                ).map(([label, action]) => (
+                  <TouchableOpacity
+                    key={label}
+                    style={styles.demoBtn}
+                    onPress={action}
+                    accessibilityLabel={`Demo state: ${label}`}
+                  >
+                    <Text style={styles.demoBtnText}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-          </View>
+          )}
 
         </ScrollView>
       </KeyboardAvoidingView>
@@ -634,6 +666,15 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
+  // ── Phone error (M-1) ───────────────────────────────────────────────────
+  phoneErrorText: {
+    fontSize: 12,
+    color: Colors.error,
+    marginTop: -Spacing.md,
+    marginBottom: Spacing.sm,
+    marginLeft: 4,
+  },
+
   // ── Resend + WhatsApp ───────────────────────────────────────────────────
   resendBlock: {
     alignItems: 'center',
@@ -651,6 +692,10 @@ const styles = StyleSheet.create({
   },
   whatsappBtn: {
     paddingVertical: Spacing.xs,
+  },
+  // M-3: reduced opacity when disabled during active countdown
+  whatsappBtnDisabled: {
+    opacity: 0.4,
   },
   whatsappLink: {
     fontSize: 13,
