@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — auth.ts wired (2026-03-16). Real API calls, SecureStore token writes, session restoration, and all security/QA items from audit + test plan implemented. Cleared for Security re-audit then device testing.
+**Phase:** D1 (Login / OTP) — Security re-audit complete (2026-03-16). BLOCKED: 1 HIGH finding. Fix H-1 (restoreSession blanket catch) then clear for QA + device testing.
 **Last Updated:** 2026-03-16
-**Last Session:** Builder — D1 auth.ts wiring. `src/api/auth.ts` created. `LoginScreen.tsx` wired to real API (sendOtp, verifyOtp). F-1 through F-10 implemented. MB-1, UE-2, UE-3 fixed. Session restoration added to App.tsx (H-3). USER_PROFILE_KEY added to auth/constants.ts. AuthUser exported from useAuthStore. expo-secure-store installed.
+**Last Session:** Security — D1 auth.ts wiring re-audit. H-2 and H-3 from v1 audit confirmed closed. New HIGH finding: restoreSession() in App.tsx deletes refresh token on network errors, not just auth errors. New MEDIUM: cold-start session events not logged to audit_events. Full report: `reviews/D1-security-audit-v2.md`.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -12,7 +12,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
 | 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
 | 2 | ~~Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1~~ | **CLOSED 2026-03-13** |
-| 3 | D1 (Login / OTP) — **auth.ts wired (2026-03-16). Next: Security re-audit then device testing.** | Required for real auth before pilot |
+| 3 | D1 (Login / OTP) — **BLOCKED: 1 HIGH security finding. Fix H-1 (App.tsx catch clause), then QA + device testing.** | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
 | 6 | D9 (Consent Request) | Unlocks multi-doctor use cases |
@@ -321,7 +321,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **SW-L-1:** `ACCESS_TOKEN_KEY` exported in `constants.ts` but unused — creates ambiguity about whether access tokens should be stored in SecureStore vs in-memory only. | Sync Worker | Security audit L-1 | Remove or add a comment clarifying its intended use by D1 for cold-start token recovery. |
+| **SW-L-1 / D1-SA2-L-1:** `ACCESS_TOKEN_KEY` exported in `constants.ts` but unused — D1 wiring confirmed access token stays in Zustand only (F-2 ✅). Key creates ambiguity for future developers. | `src/auth/constants.ts` | Security audit v2 L-1 | Remove the constant or replace with a comment: "Access token NOT persisted — in-memory Zustand only per security-spec.md §Authentication." |
 | **SW-L-2:** Mid-sync logout does not abort the in-flight run. The `?? currentToken` fallback on token re-read means `clearAuth()` during a sync run does not stop the current batch. | Sync Worker | Security audit L-2 | Remove the `?? currentToken` fallback; treat null token mid-run as an abort signal. |
 
 ### MUST FIX — D1 persona critique (all closed 2026-03-16)
@@ -346,21 +346,23 @@ _Carry these into every build/mockup session for these screens._
 | **D1-M-1:** Android SMS OTP autofill not implemented — doctors manually transcribe OTP under consultation time pressure. | D1 | PM review §2 (Required, not optional) | No Expo managed-workflow module exists as of 2026-03. Options: (a) eject to bare workflow + `react-native-otp-verify`; (b) wait for an `expo-modules-core` community module; (c) ship without it and accept the gap. iOS autofill works via `textContentType="oneTimeCode"` (no code needed). Decision needed before D1 goes live. |
 | **D1-M-2:** Demo state switcher block must be removed before production launch. | D1 | Builder decision | Located at bottom of `LoginScreen.tsx`. Clearly marked `REMOVE BEFORE PRODUCTION LAUNCH`. |
 
-### HIGH — D1 security audit (fix H-1 now; H-2/H-3 for auth.ts session)
+### HIGH — D1 security audit v2 (fix before device testing)
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| ~~**D1-SA-H-1:** Demo block not guarded by `__DEV__` — exposes mock bypass codes in all builds.~~ | D1 | Security audit H-1 | **CLOSED 2026-03-16** — demo block JSX wrapped in `{__DEV__ && (...)}`. Metro dead-code elimination strips it from production builds. |
-| **D1-SA-H-2:** Refresh token never written to `expo-secure-store` in login flow — `setAuth()` called but SecureStore write absent. | D1 → auth.ts | Security audit H-2 | In `auth.ts`: after OTP verify, call `SecureStore.setItemAsync(REFRESH_TOKEN_KEY, response.refresh_token)` before `setAuth()`. `REFRESH_TOKEN_KEY` already defined in `src/auth/constants.ts`. |
-| **D1-SA-H-3:** No session restoration on cold-start — no logic to read refresh token and silently re-authenticate on app launch. | D1 → auth.ts | Security audit H-3 | In `App.tsx` or splash: read `REFRESH_TOKEN_KEY` from SecureStore → `POST /auth/refresh` via `pinnedFetch` → `setAuth()` → navigate. On failure: clear SecureStore, navigate to Login. |
+| ~~**D1-SA-H-1:** Demo block not guarded by `__DEV__` — exposes mock bypass codes in all builds.~~ | D1 | Security audit v1 H-1 | **CLOSED 2026-03-16** — demo block JSX wrapped in `{__DEV__ && (...)}`. |
+| ~~**D1-SA-H-2:** Refresh token never written to `expo-secure-store` in login flow.~~ | D1 | Security audit v1 H-2 | **CLOSED 2026-03-16** — `SecureStore.setItemAsync(REFRESH_TOKEN_KEY, result.refresh_token)` in `LoginScreen.tsx:218` before `setAuth()`. |
+| ~~**D1-SA-H-3:** No session restoration on cold-start.~~ | D1 | Security audit v1 H-3 | **CLOSED 2026-03-16** — `restoreSession()` implemented in `App.tsx:120–158`. |
+| **D1-SA2-H-1:** `restoreSession()` in `App.tsx` blanket-catches all errors — deletes refresh token on network errors, not only on auth failures (401/403). Doctor offline on cold-start loses their 30-day session. | App.tsx:150–156 | Security audit v2 H-1 | In the catch clause: only call `deleteItemAsync` when `err instanceof ApiError && (err.status === 401 \|\| err.status === 403)`. On network errors, keep credentials and navigate to Login. `ApiError` must be explicitly imported from `src/api/apiClient`. |
 
 ### MEDIUM — D1 security audit
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| ~~**D1-SA-M-1:** Phone number not validated for valid Indian mobile prefix (6–9). `handleSendOtp` only checks length.~~ | D1 | Security audit M-1 | **CLOSED 2026-03-16** — `parseInt(phone[0]) < 6` guard added to `handleSendOtp`; input layer rejects first digit 0–5 and sets `phoneError` state with "Mobile numbers start with 6–9". Mirrors D2 H-3 fix. |
-| ~~**D1-SA-M-2:** No `useRef` double-submit guard on Verify OTP — phase-change is the only protection; concurrent auto-submit + manual tap can burn an OTP attempt.~~ | D1 | Security audit M-2 | **CLOSED 2026-03-16** — `isVerifyingRef = useRef(false)` added; guard at top of `handleVerifyOtp`; reset in catch block (allows retry); not reset on success (screen unmounts). Matches D6 `isSavingRef` pattern. |
-| ~~**D1-SA-M-3:** WhatsApp fallback button has no client-side rate limiting during active countdown — can be tapped while SMS countdown is running.~~ | D1 | Security audit M-3 | **CLOSED 2026-03-16** — `disabled={!canResend}` added to WhatsApp button; `whatsappBtnDisabled` style applies `opacity: 0.4` when disabled. Same `canResend` gate as Resend OTP button. |
+| ~~**D1-SA-M-1:** Phone number not validated for valid Indian mobile prefix (6–9). `handleSendOtp` only checks length.~~ | D1 | Security audit v1 M-1 | **CLOSED 2026-03-16** — `parseInt(phone[0]) < 6` guard added; input layer rejects 0–5 with inline error. |
+| ~~**D1-SA-M-2:** No `useRef` double-submit guard on Verify OTP.~~ | D1 | Security audit v1 M-2 | **CLOSED 2026-03-16** — `isVerifyingRef = useRef(false)` added; matches D6 `isSavingRef` pattern. |
+| ~~**D1-SA-M-3:** WhatsApp fallback button has no client-side rate limiting during active countdown.~~ | D1 | Security audit v1 M-3 | **CLOSED 2026-03-16** — `disabled={!canResend}` added; same gate as Resend OTP. |
+| **D1-SA2-M-1:** Cold-start session restoration (successful and failed) is not logged to `audit_events`. `App.tsx` runs before `SQLiteProvider` so DB is inaccessible at that stage. F-9 partially unsatisfied. | App.tsx | Security audit v2 M-1 | Defer audit log write via a Zustand flag read on `PatientSearchScreen` / `LoginScreen` mount, OR accept the gap for v1 and rely on server-side `POST /auth/refresh` audit trail. Decision required before v1 launch. |
 
 ### LOW — D1 security audit
 
