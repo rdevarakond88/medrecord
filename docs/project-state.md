@@ -2,9 +2,9 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Builder revision complete (2026-03-16). All 3 MUST FIX + 2 SHOULD FIX items from persona critique applied. Awaiting Persona Critic re-evaluation pass.
+**Phase:** D1 (Login / OTP) — Persona Critic R2 PASSED (2026-03-16). Score 4.0/5. No MUST FIX items. Proceeding to Security audit.
 **Last Updated:** 2026-03-16
-**Last Session:** Builder — D1 persona critique fixes. Applied MF-1 (OTP-send error message), MF-2 (banner dismiss on first keystroke), MF-3 (setCanResend immediately on otp_expired), SF-1 (guidance hint below phone input), SF-2 (inputLabel 16px, errorText 14px). File: `src/screens/doctor/LoginScreen.tsx`.
+**Last Session:** Persona Critic R2 — D1 re-evaluation. Score raised from 3.8/5 to 4.0/5. Shantabai raised from 3/5 to 4/5. All 3 MUST FIX + 2 SHOULD FIX items from R1 confirmed closed. Verdict: Pass — proceed to Security audit.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -12,7 +12,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
 | 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
 | 2 | ~~Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1~~ | **CLOSED 2026-03-13** |
-| 3 | D1 (Login / OTP) — **Builder revision DONE (2026-03-16). All MUST FIX + SHOULD FIX items applied. Awaiting Persona Critic re-evaluation.** | Required for real auth before pilot |
+| 3 | D1 (Login / OTP) — **Persona Critic R2 PASSED (2026-03-16). Score 4.0/5. Proceed to Security audit.** | Required for real auth before pilot |
 | 4 | D5 (New Patient Form) | New patients break the flow without it |
 | 5 | D4 (Visit Detail) | Unlocks D3 history list value |
 | 6 | D9 (Consent Request) | Unlocks multi-doctor use cases |
@@ -91,7 +91,7 @@ _Carry these into every build/mockup session for these screens._
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
-| D1 — Login / OTP | **Static mockup built. Persona Critic: 3.8/5 — Revise and re-evaluate (2026-03-16). Builder revision complete (2026-03-16) — all 3 MUST FIX + 2 SHOULD FIX applied. Awaiting Persona Critic re-evaluation.** File: `src/screens/doctor/LoginScreen.tsx`. Critique: `reviews/D1-persona-critique.md`. | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module — see TODO in file header). Demo switcher must be removed before launch. |
+| D1 — Login / OTP | **Static mockup built. Persona Critic R2: 4.0/5 — PASSED (2026-03-16). Proceeding to Security audit.** File: `src/screens/doctor/LoginScreen.tsx`. Critiques: `reviews/D1-persona-critique.md` (R1, 3.8/5), `reviews/D1-persona-critique-r2.md` (R2, 4.0/5). | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module — see TODO in file header). Demo switcher must be removed before launch. SF-3 (individual digit boxes) deferred to future polish. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
