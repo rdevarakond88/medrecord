@@ -21,7 +21,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — [D6] Fix missing local_id in createVisit request: added localId to CreateVisitRequest interface and sent as local_id in POST /visits body (src/api/visits.ts); passed visitLocalId through in handleSave() call (NewVisitScreen.tsx). Removed gap notice from api-contracts.md — frontend now matches contract.
+**Last Session:** Security Agent — [D6] Security re-check CLEAR — local_id addition (commit 5466351). `local_id` uses CSPRNG UUID (expo-crypto), contains no PII, is not predictable, introduces no new attack surface, and carries no cross-doctor sync queue leakage risk. Audit saved to `reviews/D6-security-audit-v2.md`.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
