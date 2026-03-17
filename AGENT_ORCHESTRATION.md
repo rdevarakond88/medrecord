@@ -242,12 +242,39 @@ Read docs/project-state.md.
 
 ---
 
-### Then Repeat Steps 2–10 for D3, D6, D7
+### Then Repeat Steps 2–10 for D3, D6, D7, then run Step 11 before device testing any screen.
 
 > **Note:** D5 (New Patient Form) is a supporting screen, not part of the core flow.
 > Build it after D2, D3, D6, D7 are complete (see Tier 3 in screen-inventory.md).
 
-Once all four screens are done, run the PM agent again (Moment 2):
+---
+
+### STEP 11 — Backend Build & Deploy
+
+**Who:** You, in a fresh Claude Code session
+**When:** After ALL frontend screens for the flow are complete (Steps 2–10 done for every screen in the flow)
+**Why:** The backend must exist before any screen can be device-tested against real data
+
+**Prompt to paste:**
+```
+Read agents/agent-backend.md, docs/api-contracts.md, docs/project-state.md, docs/security-spec.md, docs/data-models.md.
+
+Build and deploy the backend for the [flow name] flow.
+Follow agents/agent-backend.md exactly.
+Update docs/project-state.md Backend Status section when deployment is confirmed.
+```
+
+**Output you expect:**
+- All endpoints from api-contracts.md implemented and live
+- /health endpoint returns 200
+- Test credentials documented in project-state.md
+- Backend Status in project-state.md updated to DEPLOYED
+
+**Then:** Exit session. Start a new one for Step 8 (Device Testing) for each screen.
+
+---
+
+Once all four screens are done and the backend is deployed, run the PM agent again (Moment 2):
 ```
 Read agents/agent-pm.md, docs/project-state.md.
 
@@ -273,6 +300,7 @@ format specified in your agent file.
 | 8 | Device Tester (infra pre-flight + testing) | Every screen | Yes |
 | 9 | Builder (device-testing bug fixes) | Every screen if FAILs exist | Yes |
 | 10 | Commit + Push | Every screen | No (continue from 8 or 9) |
+| 11 | Backend Build Agent | Once per flow, after all screens complete | Yes |
 | — | PM Agent (Moment 2) | Once per flow | Yes |
 | — | PM Agent (Moment 3) | Once before launch | Yes |
 
