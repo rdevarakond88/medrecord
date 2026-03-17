@@ -55,7 +55,7 @@ Send OTP to mobile number for login.
 // Request
 { "otp_token": "tok_abc123", "otp": "482910" }
 
-// Response 200
+// Response 200 — existing doctor
 {
   "access_token": "eyJ...",
   "refresh_token": "eyJ...",
@@ -67,6 +67,12 @@ Send OTP to mobile number for login.
     "clinic_id": "uuid"
   }
 }
+
+// Response 200 — mobile not yet registered as a doctor
+{ "status": "new_user" }
+// NOTE: Doctor registration flow is not yet implemented in v1.
+// The D1 Login screen checks for status === "new_user" and shows an
+// appropriate message. Full registration UI is a future screen.
 ```
 
 ### POST /auth/refresh

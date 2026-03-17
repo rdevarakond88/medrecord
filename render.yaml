@@ -1,0 +1,24 @@
+databases:
+  - name: medrecord-db
+    databaseName: medrecord
+    plan: free
+
+services:
+  - type: web
+    name: medrecord-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma migrate deploy && node dist/src/index.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TEST_OTP_BYPASS
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: medrecord-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
