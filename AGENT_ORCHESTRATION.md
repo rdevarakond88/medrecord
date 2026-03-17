@@ -112,6 +112,33 @@ The mockup for D2 is approved. Wire it up with:
 
 ---
 
+### STEP 5b — Contract Sync Check (mandatory, same session as Step 5)
+
+**Who:** Builder Agent (continue in the same session as Step 5)
+**Why:** Prevent drift between what screens send/expect and what `api-contracts.md` documents.
+Every wired screen has introduced undocumented fields in the past — this step closes that gap before the backend developer reads the contracts.
+
+**Checklist (run after wiring the screen):**
+```
+For every API call the screen makes:
+1. Does the request body match what api-contracts.md documents for that endpoint?
+   → Any field the screen sends that is NOT in the contract must be added.
+2. Does the response shape match what the screen/TypeScript types expect?
+   → Any field the screen reads that is NOT in the contract must be added.
+3. Are there security constraints implied by the implementation (e.g. "server must
+   validate X before trusting Y") that are not documented in the contract?
+   → Document them with a NOTE or SECURITY comment in the contract.
+4. Are there backend gaps the frontend works around (e.g. a TODO in the API code)?
+   → Document them clearly with a NOTE so the backend developer knows what to build.
+```
+
+**This step is NOT optional.** Undocumented contracts produce broken backend builds.
+If there are no gaps (everything matches), state that explicitly before ending the session.
+
+**Then:** Continue to Step 6 in the same or new session.
+
+---
+
 ### STEP 6 — Security Agent
 
 **Who:** You, in a fresh Claude Code session
@@ -240,6 +267,7 @@ format specified in your agent file.
 | 3 | Persona Critic | Every screen | Yes |
 | 4 | Builder (fixes) | Every screen | Yes |
 | 5 | Builder (wire data) | Every screen | Yes |
+| 5b | Builder (contract sync check) | Every screen — mandatory after Step 5 | No (same session as Step 5) |
 | 6 | Security Agent | Every screen | Yes |
 | 7 | QA Agent | Every screen | Yes |
 | 8 | Device Tester (infra pre-flight + testing) | Every screen | Yes |
