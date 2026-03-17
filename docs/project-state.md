@@ -2,8 +2,25 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — All QA pre-v1 bugs closed (M-1, M-2, M-3). Ready for device testing.
-**Last Updated:** 2026-03-16
+**Phase:** D1 (Login / OTP) — All QA pre-v1 bugs closed (M-1, M-2, M-3). Device testing BLOCKED — backend not deployed.
+**Last Updated:** 2026-03-17
+
+---
+
+## Backend Status
+| Field | Value |
+|---|---|
+| API base URL | `https://api.medrecord.in/v1` |
+| Deployment status | **NOT DEPLOYED** — domain does not resolve (confirmed 2026-03-17) |
+| Test environment | None |
+| Test credentials | None |
+| Test mobile number / OTP bypass | None |
+| Blocker for | D1 device testing (all network-dependent tests — 10 of 13 runnable tests) |
+| Next action | Build and deploy backend before any screen can be fully device-tested |
+
+_Update this section whenever backend status changes. Every device testing session must check this first._
+
+---
 **Last Session:** Builder Agent — Fixed D1 QA-M-3: resend failure during otp_entry no longer reverts to phone_entry. Added isResend param to handleSendOtp; failure on resend/WhatsApp paths stays in otp_entry and shows inline resendError. Security targeted re-check: CLEAR.
 
 ### Recommended Next Build Order

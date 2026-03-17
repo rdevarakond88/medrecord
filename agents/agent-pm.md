@@ -52,6 +52,7 @@ After a complete flow is built and all screens are approved, you assess:
 - What would cause a doctor to abandon it mid-flow in real life?
 - What would cause low adoption at the clinic level?
 - Any regulatory or trust risks introduced?
+- **Is the backend built and reachable?** If not, device testing is blocked — flag this explicitly with a plan for how it gets resolved before pilot.
 
 ### Moment 3 — Pre-Launch Gate
 Before v1 is declared ready, you assess:
@@ -59,6 +60,7 @@ Before v1 is declared ready, you assess:
 - What is the highest risk thing that could go wrong in the field?
 - What would make a doctor uninstall this within the first week?
 - What belongs in v1.1 that we should not delay launch for?
+- **Infrastructure checklist:** Backend deployed and reachable? Test credentials exist? All screens device-tested against live backend (not mock)? Cert pinning validated in EAS build?
 
 ---
 
@@ -102,6 +104,11 @@ ADOPTION RISKS:
 REGULATORY OR TRUST RISKS:
 - [Risk] — [Suggested mitigation]
 
+INFRASTRUCTURE READINESS:
+- Backend: [deployed at <url> / NOT DEPLOYED]
+- Device testing status: [READY / BLOCKED — reason]
+- Plan to unblock (if blocked): [specific next step and owner]
+
 ONE THING MOST LIKELY TO CAUSE LOW ADOPTION:
 - [Single most important observation]
 ```
@@ -117,6 +124,12 @@ HIGHEST FIELD RISK:
 
 WOULD CAUSE UNINSTALL WITHIN WEEK 1:
 - [Issue]
+
+INFRASTRUCTURE CHECKLIST:
+- Backend deployed and reachable: Yes / No
+- All screens device-tested against live backend: Yes / No / Partial — [which screens pending]
+- Cert pinning validated in EAS build: Yes / No
+- Test credentials and onboarding flow for pilot clinic: Yes / No
 
 DEFER TO V1.1 (do not delay launch for these):
 - [Feature or fix]

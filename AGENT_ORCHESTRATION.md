@@ -148,17 +148,66 @@ Produce a full test plan and edge case analysis for D2: Patient Search.
 
 ---
 
-### STEP 8 — Commit and Push
+### STEP 8 — Infrastructure Pre-flight + Device Testing
 
-**Who:** You, in a fresh Claude Code session (or continue from Step 7)
+**Who:** You, in a fresh Claude Code session
+**Why:** To validate the screen works on a real device against a real backend — the only true measure of correctness
+
+#### Part A — Infrastructure Pre-flight (run before any test that makes a network call)
+```
+1. Check Backend Status in docs/project-state.md
+2. Run: curl -s -o /dev/null -w "%{http_code}" --max-time 5 <backend-url>/health
+3. Confirm test credentials exist (test doctor account)
+4. Confirm test mobile number or OTP bypass method is documented
+```
+If any check fails → declare "Device testing BLOCKED — reason: [reason]" and stop.
+Do not proceed to Part B until all checks pass.
+
+#### Part B — Device Testing Session
+```
+Read reviews/{ScreenID}-qa-test-plan.md.
+Read CLAUDE.md Device Testing Rules.
+
+Guide me through each PENDING test case from the test plan one at a time.
+For each test:
+- Tell me exactly what to do on the device
+- Tell me what to observe
+- Record my result as PASS / FAIL / SKIP in reviews/{ScreenID}-device-test-session.md
+- If FAIL: log the bug with what I observed vs. what was expected. Do NOT fix it now.
+
+After all tests: summarise results and list any bugs found.
+```
+**Output you expect:** Completed `reviews/{ScreenID}-device-test-session.md` with all results recorded
+**Bug fixes:** Start a new Builder Agent session after testing is complete — do not fix mid-session
+**Then:** Exit session. Start a new one for Step 9 (bug fixes) if needed, or Step 10 (commit).
+
+---
+
+### STEP 9 — Builder Agent (device-testing bug fixes)
+
+**Who:** You, in a fresh Claude Code session
+**Why:** Fix any FAIL results from device testing before committing
+**Prompt to paste:**
+```
+Read docs/project-state.md, agents/agent-builder.md.
+Read reviews/{ScreenID}-device-test-session.md — fix all FAIL items.
+Do not change anything not listed as a FAIL.
+```
+**Then:** Re-run affected tests on device to confirm fixes. Re-run Security Agent if any fix touches storage, auth, or PII.
+
+---
+
+### STEP 10 — Commit and Push
+
+**Who:** You, in a fresh Claude Code session (or continue from Step 9)
 **Prompt to paste:**
 ```
 Read docs/project-state.md.
 
-1. Update project-state.md — mark D2 as complete, note any 
+1. Update project-state.md — mark D2 as complete, note any
    decisions made or open questions
 2. Commit all changes to dev branch:
-   "[D2] Patient search screen — mockup approved, data wired, 
+   "[D2] Patient search screen — mockup approved, data wired,
    security and QA reviewed"
 3. Push to GitHub
 4. Confirm commit hash
@@ -166,7 +215,7 @@ Read docs/project-state.md.
 
 ---
 
-### Then Repeat Steps 2–8 for D3, D6, D7
+### Then Repeat Steps 2–10 for D3, D6, D7
 
 > **Note:** D5 (New Patient Form) is a supporting screen, not part of the core flow.
 > Build it after D2, D3, D6, D7 are complete (see Tier 3 in screen-inventory.md).
@@ -193,7 +242,9 @@ format specified in your agent file.
 | 5 | Builder (wire data) | Every screen | Yes |
 | 6 | Security Agent | Every screen | Yes |
 | 7 | QA Agent | Every screen | Yes |
-| 8 | Commit + Push | Every screen | No (continue from 7) |
+| 8 | Device Tester (infra pre-flight + testing) | Every screen | Yes |
+| 9 | Builder (device-testing bug fixes) | Every screen if FAILs exist | Yes |
+| 10 | Commit + Push | Every screen | No (continue from 8 or 9) |
 | — | PM Agent (Moment 2) | Once per flow | Yes |
 | — | PM Agent (Moment 3) | Once before launch | Yes |
 

@@ -30,7 +30,16 @@
  * ────────────────────────────────────────────────────────────────────────────
  */
 
-import { fetch as sslFetch } from 'react-native-ssl-pinning';
+// react-native-ssl-pinning is a native module — not available in Expo Go.
+// Fall back to standard fetch so device testing works in Expo Go.
+// Cert pinning must be validated in an EAS custom dev client before production (UE-6).
+let sslFetch: typeof fetch | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  sslFetch = require('react-native-ssl-pinning').fetch;
+} catch {
+  // Expo Go — native module not bundled; pinnedFetch will use standard fetch below
+}
 
 // Certificate filenames (without .cer extension) bundled in native assets.
 // Leaf cert: rotates with every TLS cert renewal (~90 days on Let's Encrypt, ~1 year otherwise).
@@ -59,7 +68,21 @@ export async function pinnedFetch(
   url: string,
   init: PinnedRequestInit = {},
 ): Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }> {
-  const response = await sslFetch(url, {
+  // Expo Go fallback — native module unavailable, use standard fetch (no cert pinning)
+  if (!sslFetch) {
+    const res = await fetch(url, {
+      method:  init.method ?? 'GET',
+      headers: init.headers ?? {},
+      body:    init.body,
+    });
+    return {
+      ok:     res.ok,
+      status: res.status,
+      json:   () => res.json(),
+    };
+  }
+
+  const response = await (sslFetch as any)(url, {
     method:          init.method ?? 'GET',
     headers:         init.headers ?? {},
     body:            init.body,

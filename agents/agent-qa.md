@@ -94,6 +94,17 @@ For every feature that touches data:
 ```
 QA REVIEW — [Feature/Screen Name]
 
+TESTING PREREQUISITES:
+- Backend URL: [live at <url> / local mock at <url> / NOT DEPLOYED]
+- Backend status: [reachable — confirmed via curl / UNREACHABLE — device testing blocked]
+- Test credentials: [how to obtain a test doctor account]
+- Test mobile number: [Indian number available / OTP bypass method / NOT AVAILABLE]
+- Cert pinning: [testable in Expo Go / deferred to EAS custom dev client]
+- Status: [READY TO TEST / BLOCKED — reason: ...]
+
+If any prerequisite is unknown at time of QA, mark Status as BLOCKED and state the reason.
+Do not mark a screen as "Ready for device testing" unless Status is READY TO TEST.
+
 CRITICAL BUGS (will cause data loss or crash in production):
 - [Description]
   Steps to reproduce: ...
