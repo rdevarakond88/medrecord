@@ -337,6 +337,7 @@ export default function NewVisitScreen() {
       if (isOnline && patientServerId) {
         try {
           const serverVisit = await createVisit({
+            localId:        visitLocalId,
             patientId:      patientServerId,
             doctorId:       user.id,
             visitDate,

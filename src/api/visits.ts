@@ -33,6 +33,7 @@ export interface ApiVisitsResponse {
 // ─────────────────────────────────────────────────────────────
 
 export interface CreateVisitRequest {
+  localId:        string;  // client-generated UUID — required for server-side idempotency (deduplication on retry)
   patientId:      string;  // server patient ID
   doctorId:       string;
   visitDate:      string;  // YYYY-MM-DD
@@ -67,6 +68,7 @@ export async function createVisit(
   return apiFetch<CreateVisitResponse>('/visits', authToken, {
     method: 'POST',
     body: JSON.stringify({
+      local_id:        req.localId,
       patient_id:      req.patientId,
       // SERVER MUST derive doctor identity from JWT claim,
       // not from this body value. Validate body doctor_id

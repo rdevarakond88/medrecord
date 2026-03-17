@@ -200,10 +200,9 @@ Create a new visit.
 // Request
 {
   "local_id": "uuid",          // required for idempotency — server must deduplicate on this field.
-                                // NOTE: frontend (src/api/visits.ts createVisit) does NOT currently
-                                // send local_id. This is a frontend gap that must be fixed in a future
-                                // Builder session. Backend developer: expect local_id in the body and
-                                // enforce deduplication. Do not accept duplicate local_id values.
+                                // Frontend sends this as CreateVisitRequest.localId (src/api/visits.ts).
+                                // Backend developer: enforce deduplication on this field.
+                                // Do not accept duplicate local_id values.
   "patient_id": "uuid",
   "doctor_id": "uuid",         // the doctor creating this visit.
                                 // SECURITY: Server MUST validate that doctor_id matches the

@@ -21,7 +21,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — Documentation sync: updated docs/api-contracts.md to match actual frontend behavior for D1 (channel field in send-otp, refresh_token rotation in /auth/refresh), D3 (completely rewrote GET /patients/:id/visits to match split my_visits/other_doctor_visits shape with D3-H-1 and D3-H-2 security constraints), D6 (POST /visits request and response corrected; local_id gap flagged; doctor_id IDOR risk documented; note_text and consent_granted added). Added audit_event entity type to POST /sync with DPDP Act 2023 note. Added Step 5b (contract sync check) to AGENT_ORCHESTRATION.md and summary table.
+**Last Session:** Builder Agent — [D6] Fix missing local_id in createVisit request: added localId to CreateVisitRequest interface and sent as local_id in POST /visits body (src/api/visits.ts); passed visitLocalId through in handleSave() call (NewVisitScreen.tsx). Removed gap notice from api-contracts.md — frontend now matches contract.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
