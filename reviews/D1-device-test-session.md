@@ -1,5 +1,5 @@
 # D1 Device Testing Session — Login / OTP
-_Session date: 2026-03-17_
+_Session date: 2026-03-17 (resumed 2026-03-18)_
 _Device: iPhone (Expo Go)_
 _Tester: rdeva_
 _Build: dev branch — all QA pre-v1 bugs closed (M-1, M-2, M-3 fixed 2026-03-16)_
@@ -16,7 +16,7 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 
 | # | Test | Status | Notes |
 |---|---|---|---|
-| 1 | First launch — no credentials, full OTP login flow | ⬜ PENDING | |
+| 1 | First launch — no credentials, full OTP login flow | ❌ BLOCKED | BUG-D1-DT-1: auth.ts BASE_URL points to dead domain — OTP send fails |
 | 2 | Session restoration — returning user cold-start | ⬜ PENDING | |
 | 3 | Manual "Verify OTP" tap + double-submit guard | ⬜ PENDING | |
 | 4 | WhatsApp fallback after 45-second countdown | ⬜ PENDING | |
@@ -80,10 +80,19 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 |---|---|
 | ✅ PASS | 0 |
 | ❌ FAIL | 0 |
-| ⬜ PENDING | 13 |
+| ❌ BLOCKED | 1 |
+| ⬜ PENDING | 12 |
 | ⏭ SKIP | 9 |
 
 **Runnable tests this session: 13** (tests 1–3, 4–8, 10, 12, 14, 17–20)
+
+---
+
+## Bugs Found
+
+| ID | Severity | File | Description |
+|---|---|---|---|
+| BUG-D1-DT-1 | **BLOCKER** | `src/api/auth.ts:20` | `BASE_URL` hardcoded to dead domain `api.medrecord.in` — must be `medrecord-api.onrender.com/v1`. All OTP calls fail. Fix: update to match `apiClient.ts`. |
 
 ---
 
@@ -92,3 +101,9 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 **2026-03-17 — Pre-test fix:** `pinnedFetch.ts` updated to fall back to standard `fetch` when
 `react-native-ssl-pinning` native module is unavailable (Expo Go). Bundling error resolved.
 Cert pinning remains deferred to EAS custom dev client (UE-6 — unchanged).
+
+**2026-03-18 — Device test attempt:** Test 1 blocked immediately by BUG-D1-DT-1. Backend health
+confirmed live (`/v1/health` → 200). `curl` against live backend with correct fields succeeds.
+Root cause: `auth.ts` has its own `BASE_URL = 'https://api.medrecord.in/v1'` which was never
+updated when `apiClient.ts` was fixed on 2026-03-18. All OTP tests blocked until Builder fixes
+`auth.ts:20`. Device testing session suspended — resume after Builder fix.
