@@ -49,6 +49,7 @@ import { Colors } from '../../constants/theme';
 import { formatMobile, initials, formatDateForDisplay } from '../../utils/formatters';
 import { useNetworkStatus } from '../../utils/useNetworkStatus';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useLogout } from '../../hooks/useLogout';
 import { lookupPatient } from '../../api/patients';
 import { ApiError } from '../../api/apiClient';
 import {
@@ -87,6 +88,7 @@ export default function PatientSearchScreen() {
   const { token, user } = useAuthStore();
   const isOnline   = useNetworkStatus();
   const navigation = useNavigation<any>();
+  const logout     = useLogout();
 
   const [query, setQuery]                   = useState('');
   const [recentPatients, setRecentPatients] = useState<LocalPatient[]>([]);
@@ -335,7 +337,7 @@ export default function PatientSearchScreen() {
       </View>
 
       {/* ── Bottom tab bar ── */}
-      <BottomTabBar />
+      <BottomTabBar onProfilePress={logout} />
     </SafeAreaView>
   );
 }
@@ -714,7 +716,7 @@ const TABS: TabDef[] = [
   { label: 'Profile', icon: '⚙️'               },
 ];
 
-function BottomTabBar() {
+function BottomTabBar({ onProfilePress }: { onProfilePress?: () => void }) {
   return (
     <View style={styles.tabBar}>
       {TABS.map((tab) => (
@@ -724,6 +726,7 @@ function BottomTabBar() {
           accessibilityLabel={tab.label}
           accessibilityRole="tab"
           accessibilityState={{ selected: tab.active }}
+          onPress={tab.label === 'Profile' ? onProfilePress : undefined}
         >
           <Text style={[styles.tabIcon, tab.orange && styles.tabIconOrange]}>
             {tab.icon}

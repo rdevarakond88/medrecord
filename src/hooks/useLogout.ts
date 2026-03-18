@@ -24,7 +24,9 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useQueryClient } from '@tanstack/react-query';
+import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../store/useAuthStore';
+import { REFRESH_TOKEN_KEY, USER_PROFILE_KEY } from '../auth/constants';
 import { clearDoctorPatients } from '../db/patients';
 import {
   clearDoctorVisits,
@@ -86,11 +88,18 @@ export function useLogout(): () => Promise<void> {
       await clearDoctorSyncQueue(db, doctorId);       // sync queue cleared on logout
     }
 
-    // Step 3: clear the React Query in-memory cache (prevents session bleed
+    // Step 3: delete persisted credentials from iOS Keychain / Android Keystore.
+    // Without this, expo-secure-store persists across Expo Go reinstalls (iOS
+    // Keychain behaviour), making it impossible to reach the Login screen.
+    // Runs unconditionally so a partial-logout state cannot leave stale keys.
+    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+    await SecureStore.deleteItemAsync(USER_PROFILE_KEY);
+
+    // Step 4: clear the React Query in-memory cache (prevents session bleed
     // where a second doctor within the staleTime window sees cached results)
     queryClient.clear();
 
-    // Step 4: clear Zustand auth state last
+    // Step 5: clear Zustand auth state last
     clearAuth();
   }, [db, queryClient, user, clearAuth]);
 }

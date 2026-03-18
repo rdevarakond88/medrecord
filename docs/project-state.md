@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Device testing partially complete. Tests 1–3 PASS. Blocked by BUG-D1-DT-2 (no logout — iOS Keychain persists across reinstalls). Next: Builder Agent — fix BUG-D1-DT-2, then resume Device Testing Step 8.
+**Phase:** D1 (Login / OTP) — Device testing partially complete. Tests 1–3 PASS. BUG-D1-DT-2 FIXED 2026-03-18 — logout now clears SecureStore + Profile tab wired to logout. Next: Device Tester — resume Step 8 from test 4.
 **Last Updated:** 2026-03-18
 
 ---
@@ -19,12 +19,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Blocker for device testing | ~~`apiClient.ts` dead domain~~ RESOLVED. ~~BUG-D1-DT-1 `auth.ts:20` dead domain~~ **RESOLVED 2026-03-18** |
-| Next action | Device Tester — resume Step 8, start from test 1 |
+| Next action | Device Tester — resume Step 8, start from test 4 (BUG-D1-DT-2 fixed) |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — Step 8. Tests 1 (full OTP login), 2 (session restore cold-start), 3 (double-submit guard) all PASS. New blocker: BUG-D1-DT-2 — no logout mechanism, iOS Keychain persists SecureStore across Expo Go reinstalls, cannot reach Login screen for remaining 12 tests. Next: Builder Agent — add logout / dev session-clear button (Step 9), then resume Device Testing.
+**Last Session:** Builder Agent — Step 9. BUG-D1-DT-2 fixed: `useLogout` now deletes `REFRESH_TOKEN_KEY` and `USER_PROFILE_KEY` from SecureStore (was clearing Zustand only — Keychain persisted). Profile tab in PatientSearchScreen wired to `useLogout`. Next: Device Tester — resume Step 8 from test 4 (WhatsApp fallback).
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
