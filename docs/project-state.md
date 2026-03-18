@@ -2,26 +2,29 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — All QA pre-v1 bugs closed (M-1, M-2, M-3). Device testing BLOCKED — backend not deployed.
-**Last Updated:** 2026-03-17
+**Phase:** D1 (Login / OTP) — All QA pre-v1 bugs closed. Backend DEPLOYED. Next: Builder Agent to update frontend API URL, then Device Testing.
+**Last Updated:** 2026-03-18
 
 ---
 
 ## Backend Status
 | Field | Value |
 |---|---|
-| API base URL | `https://api.medrecord.in/v1` |
-| Deployment status | **NOT DEPLOYED** — domain does not resolve (confirmed 2026-03-17) |
-| Test environment | None |
-| Test credentials | None |
-| Test mobile number / OTP bypass | None |
-| Blocker for | D1 device testing (all network-dependent tests — 10 of 13 runnable tests) |
-| Next action | Build and deploy backend before any screen can be fully device-tested |
+| API base URL (live) | `https://medrecord-api.onrender.com/v1` |
+| API base URL (frontend hardcoded) | `https://api.medrecord.in/v1` — **needs one-line Builder update** |
+| Deployment status | **DEPLOYED** — Render.com free tier, deployed 2026-03-18 |
+| Hosting provider | Render.com — service: `medrecord-api`, DB: `medrecord-db` |
+| Health check | `curl https://medrecord-api.onrender.com/v1/health` → 200 ✅ |
+| Test doctor name | Dr. Test Doctor |
+| Test mobile number | `9999999999` |
+| OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
+| Blocker for device testing | Frontend `apiClient.ts` still points to `api.medrecord.in` — needs Builder Agent fix |
+| Next action | Builder Agent: update `BASE_URL` in `src/api/apiClient.ts` to `https://medrecord-api.onrender.com/v1` |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — [Docs] Added `agents/agent-backend.md` and STEP 11 (Backend Build & Deploy) to `AGENT_ORCHESTRATION.md`. No screen or API code changed. Next: Backend Build Agent — Step 11.
+**Last Session:** Backend Build Agent — Step 11 complete. Backend built and deployed to Render. All endpoints live, test doctor seeded (mobile: 9999999999, OTP bypass: 000000). Next: Builder Agent to update frontend API URL in apiClient.ts, then Device Tester — Step 8 — D1 Login Screen.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
