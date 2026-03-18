@@ -9,7 +9,7 @@ services:
     runtime: node
     rootDir: backend
     buildCommand: npm install --include=dev && npx prisma generate && npm run build
-    startCommand: npx prisma migrate deploy && node dist/src/index.js
+    startCommand: npx prisma db push && node dist/src/index.js
     plan: free
     envVars:
       - key: NODE_ENV
