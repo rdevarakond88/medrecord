@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — BUG-D1-DT-1 fixed (auth.ts BASE_URL corrected). Next: Device Tester — resume Step 8 from test 1.
+**Phase:** D1 (Login / OTP) — Device testing partially complete. Tests 1–3 PASS. Blocked by BUG-D1-DT-2 (no logout — iOS Keychain persists across reinstalls). Next: Builder Agent — fix BUG-D1-DT-2, then resume Device Testing Step 8.
 **Last Updated:** 2026-03-18
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — Step 9 (device-testing bug fix). Fixed BUG-D1-DT-1: `src/api/auth.ts:20` BASE_URL updated from dead `api.medrecord.in` to live `medrecord-api.onrender.com/v1`. All D1 OTP tests now unblocked. Next: Device Tester — resume Step 8 from test 1.
+**Last Session:** Device Tester — Step 8. Tests 1 (full OTP login), 2 (session restore cold-start), 3 (double-submit guard) all PASS. New blocker: BUG-D1-DT-2 — no logout mechanism, iOS Keychain persists SecureStore across Expo Go reinstalls, cannot reach Login screen for remaining 12 tests. Next: Builder Agent — add logout / dev session-clear button (Step 9), then resume Device Testing.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |

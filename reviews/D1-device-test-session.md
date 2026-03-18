@@ -16,30 +16,30 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 
 | # | Test | Status | Notes |
 |---|---|---|---|
-| 1 | First launch — no credentials, full OTP login flow | ❌ BLOCKED | BUG-D1-DT-1: auth.ts BASE_URL points to dead domain — OTP send fails |
-| 2 | Session restoration — returning user cold-start | ⬜ PENDING | |
-| 3 | Manual "Verify OTP" tap + double-submit guard | ⬜ PENDING | |
-| 4 | WhatsApp fallback after 45-second countdown | ⬜ PENDING | |
-| 5 | Change number — state cleanup | ⬜ PENDING | |
+| 1 | First launch — no credentials, full OTP login flow | ✅ PASS | OTP sent, `000000` accepted, navigated to PatientSearch |
+| 2 | Session restoration — returning user cold-start | ✅ PASS | Force-quit + reopen → landed directly on PatientSearch, no re-login |
+| 3 | Manual "Verify OTP" tap + double-submit guard | ✅ PASS | Reinstalled Expo Go → session restored to PatientSearch (Keychain persists); no double-nav or crash |
+| 4 | WhatsApp fallback after 45-second countdown | ❌ BLOCKED | BUG-D1-DT-2: no logout mechanism — cannot reach Login screen |
+| 5 | Change number — state cleanup | ❌ BLOCKED | BUG-D1-DT-2: no logout mechanism — cannot reach Login screen |
 
 ### Offline Scenarios
 
 | # | Test | Status | Notes |
 |---|---|---|---|
-| 6 | No connectivity at phone entry — NetInfo pre-check | ⬜ PENDING | |
-| 7 | Connectivity drops between send and verify — M-1 regression | ⬜ PENDING | Expected: distinct "No internet" message (bug fixed) |
-| 8 | D1-SA2-H-1 regression — network error preserves refresh token | ⬜ PENDING | |
+| 6 | No connectivity at phone entry — NetInfo pre-check | ❌ BLOCKED | BUG-D1-DT-2: cannot reach Login screen |
+| 7 | Connectivity drops between send and verify — M-1 regression | ❌ BLOCKED | BUG-D1-DT-2: cannot reach Login screen |
+| 8 | D1-SA2-H-1 regression — network error preserves refresh token | ❌ BLOCKED | BUG-D1-DT-2: cannot reach Login screen |
 | 9 | Expired/revoked refresh token | ⬜ SKIP | Requires test env with short TTL or server-side revocation |
 
 ### Error Scenarios
 
 | # | Test | Status | Notes |
 |---|---|---|---|
-| 10 | Wrong OTP | ⬜ PENDING | |
+| 10 | Wrong OTP | ❌ BLOCKED | BUG-D1-DT-2: cannot reach Login screen |
 | 11 | OTP expired (server returns OTP_EXPIRED) | ⬜ SKIP | Requires waiting 5+ min or test env with short OTP TTL |
-| 12 | Three wrong attempts → TOO_MANY_ATTEMPTS | ⬜ PENDING | |
+| 12 | Three wrong attempts → TOO_MANY_ATTEMPTS | ❌ BLOCKED | BUG-D1-DT-2: cannot reach Login screen |
 | 13 | Rate-limited send (429) | ⬜ SKIP | Requires 5+ sends; risky on real number |
-| 14 | Invalid mobile prefix (0–5) | ⬜ PENDING | |
+| 14 | Invalid mobile prefix (0–5) | ❌ BLOCKED | BUG-D1-DT-2: cannot reach Login screen |
 
 ### Cold-Start Edge Cases
 
@@ -52,10 +52,10 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 
 | # | Test | Status | Notes |
 |---|---|---|---|
-| 17 | Double-tap "Resend OTP" — M-2 regression | ⬜ PENDING | Expected: second tap is no-op (bug fixed) |
-| 18 | App backgrounded during verify call | ⬜ PENDING | |
-| 19 | App backgrounded during countdown | ⬜ PENDING | |
-| 20 | Screen rotation during OTP entry | ⬜ PENDING | |
+| 17 | Double-tap "Resend OTP" — M-2 regression | ❌ BLOCKED | BUG-D1-DT-2: cannot reach Login screen |
+| 18 | App backgrounded during verify call | ❌ BLOCKED | BUG-D1-DT-2: cannot reach Login screen |
+| 19 | App backgrounded during countdown | ❌ BLOCKED | BUG-D1-DT-2: cannot reach Login screen |
+| 20 | Screen rotation during OTP entry | ❌ BLOCKED | BUG-D1-DT-2: cannot reach Login screen |
 
 ### Audit Events (SQLite)
 
@@ -78,13 +78,14 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 
 | Outcome | Count |
 |---|---|
-| ✅ PASS | 0 |
+| ✅ PASS | 3 |
 | ❌ FAIL | 0 |
-| ❌ BLOCKED | 1 |
-| ⬜ PENDING | 12 |
+| ❌ BLOCKED | 13 |
+| ⬜ PENDING | 0 |
 | ⏭ SKIP | 9 |
 
-**Runnable tests this session: 13** (tests 1–3, 4–8, 10, 12, 14, 17–20)
+**Tests 1, 2, 3 — PASS.** Tests 4–8, 10, 12, 14, 17–20 blocked by BUG-D1-DT-2 (no logout mechanism).
+Tests 4, 5, 6, 7, 8, 10, 12, 14, 17, 18, 19, 20 can be re-run once BUG-D1-DT-2 is fixed.
 
 ---
 
@@ -93,6 +94,7 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 | ID | Severity | File | Description |
 |---|---|---|---|
 | BUG-D1-DT-1 | **BLOCKER** | `src/api/auth.ts:20` | `BASE_URL` hardcoded to dead domain `api.medrecord.in` — must be `medrecord-api.onrender.com/v1`. All OTP calls fail. **FIXED 2026-03-18 — Builder Agent Step 9.** |
+| BUG-D1-DT-2 | **BLOCKER** | `App.tsx` / no logout screen | No logout mechanism exists anywhere in the app. iOS Keychain persists SecureStore data across Expo Go reinstalls — there is no way to clear the session and reach the Login screen. Tests 4–8, 10, 12, 14, 17–20 cannot be run. **Fix needed:** add a logout button (or `__DEV__`-only "Clear session" dev button) that deletes `REFRESH_TOKEN_KEY` and `USER_PROFILE_KEY` from SecureStore and navigates to Login. |
 
 ---
 
