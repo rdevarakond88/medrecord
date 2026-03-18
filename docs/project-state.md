@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — All QA pre-v1 bugs closed. Backend DEPLOYED. Next: Builder Agent to update frontend API URL, then Device Testing.
+**Phase:** D1 (Login / OTP) — All QA pre-v1 bugs closed. Backend DEPLOYED. Frontend API URL updated. Next: Device Tester — Step 8 — D1 Login Screen.
 **Last Updated:** 2026-03-18
 
 ---
@@ -11,20 +11,20 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Field | Value |
 |---|---|
 | API base URL (live) | `https://medrecord-api.onrender.com/v1` |
-| API base URL (frontend hardcoded) | `https://api.medrecord.in/v1` — **needs one-line Builder update** |
+| API base URL (frontend hardcoded) | `https://medrecord-api.onrender.com/v1` ✅ — updated 2026-03-18 |
 | Deployment status | **DEPLOYED** — Render.com free tier, deployed 2026-03-18 |
 | Hosting provider | Render.com — service: `medrecord-api`, DB: `medrecord-db` |
 | Health check | `curl https://medrecord-api.onrender.com/v1/health` → 200 ✅ |
 | Test doctor name | Dr. Test Doctor |
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
-| Blocker for device testing | Frontend `apiClient.ts` still points to `api.medrecord.in` — needs Builder Agent fix |
-| Next action | Builder Agent: update `BASE_URL` in `src/api/apiClient.ts` to `https://medrecord-api.onrender.com/v1` |
+| Blocker for device testing | ~~Frontend `apiClient.ts` still points to `api.medrecord.in`~~ — **RESOLVED 2026-03-18** |
+| Next action | Device Tester — Step 8 — D1 Login Screen |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Backend Build Agent — Step 11 complete. Backend built and deployed to Render. All endpoints live, test doctor seeded (mobile: 9999999999, OTP bypass: 000000). Next: Builder Agent to update frontend API URL in apiClient.ts, then Device Tester — Step 8 — D1 Login Screen.
+**Last Session:** Builder Agent — Pre-Step 8 fix. Updated `BASE_URL` in `src/api/apiClient.ts` to live Render backend. Device testing blocker cleared. Next: Device Tester — Step 8 — D1 Login Screen.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |

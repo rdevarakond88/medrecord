@@ -12,7 +12,7 @@
 
 import { pinnedFetch } from './pinnedFetch';
 
-const BASE_URL = 'https://api.medrecord.in/v1';
+const BASE_URL = 'https://medrecord-api.onrender.com/v1';
 
 export class ApiError extends Error {
   constructor(
