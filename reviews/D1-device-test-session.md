@@ -92,7 +92,7 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 
 | ID | Severity | File | Description |
 |---|---|---|---|
-| BUG-D1-DT-1 | **BLOCKER** | `src/api/auth.ts:20` | `BASE_URL` hardcoded to dead domain `api.medrecord.in` — must be `medrecord-api.onrender.com/v1`. All OTP calls fail. Fix: update to match `apiClient.ts`. |
+| BUG-D1-DT-1 | **BLOCKER** | `src/api/auth.ts:20` | `BASE_URL` hardcoded to dead domain `api.medrecord.in` — must be `medrecord-api.onrender.com/v1`. All OTP calls fail. **FIXED 2026-03-18 — Builder Agent Step 9.** |
 
 ---
 

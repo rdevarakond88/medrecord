@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Device testing BLOCKED by BUG-D1-DT-1 (`auth.ts` BASE_URL dead domain). Next: Builder Agent — fix `src/api/auth.ts:20`, then resume Device Tester Step 8.
+**Phase:** D1 (Login / OTP) — BUG-D1-DT-1 fixed (auth.ts BASE_URL corrected). Next: Device Tester — resume Step 8 from test 1.
 **Last Updated:** 2026-03-18
 
 ---
@@ -18,13 +18,13 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test doctor name | Dr. Test Doctor |
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
-| Blocker for device testing | ~~`apiClient.ts` dead domain~~ RESOLVED. **NEW BLOCKER: `auth.ts:20` BASE_URL = `api.medrecord.in` (dead)** — BUG-D1-DT-1 |
-| Next action | Builder Agent — fix `src/api/auth.ts:20` BASE_URL → then resume Device Tester Step 8 |
+| Blocker for device testing | ~~`apiClient.ts` dead domain~~ RESOLVED. ~~BUG-D1-DT-1 `auth.ts:20` dead domain~~ **RESOLVED 2026-03-18** |
+| Next action | Device Tester — resume Step 8, start from test 1 |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — Step 8 attempt. Test 1 immediately blocked by BUG-D1-DT-1: `src/api/auth.ts:20` has `BASE_URL = 'https://api.medrecord.in/v1'` (dead domain — never updated). All OTP tests blocked. Next: Builder Agent — one-line fix in `auth.ts:20`, then resume Device Tester Step 8.
+**Last Session:** Builder Agent — Step 9 (device-testing bug fix). Fixed BUG-D1-DT-1: `src/api/auth.ts:20` BASE_URL updated from dead `api.medrecord.in` to live `medrecord-api.onrender.com/v1`. All D1 OTP tests now unblocked. Next: Device Tester — resume Step 8 from test 1.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |

@@ -17,7 +17,7 @@
 import { pinnedFetch } from './pinnedFetch';
 import { ApiError } from './apiClient';
 
-const BASE_URL = 'https://api.medrecord.in/v1';
+const BASE_URL = 'https://medrecord-api.onrender.com/v1';
 
 // ─── Channel ─────────────────────────────────────────────────────────────────
 
