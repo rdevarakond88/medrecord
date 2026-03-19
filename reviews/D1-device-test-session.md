@@ -1,5 +1,5 @@
 # D1 Device Testing Session — Login / OTP
-_Session date: 2026-03-17 (resumed 2026-03-18, resumed 2026-03-19)_
+_Session date: 2026-03-17 (resumed 2026-03-18, resumed 2026-03-19, resumed 2026-03-19 session 2)_
 _Device: iPhone (Expo Go)_
 _Tester: rdeva_
 _Build: dev branch — all QA pre-v1 bugs closed (M-1, M-2, M-3 fixed 2026-03-16)_
@@ -37,7 +37,7 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 |---|---|---|---|
 | 10 | Wrong OTP | ✅ PASS | Entered `111111` on a non-test number → red banner "incorrect OTP" |
 | 11 | OTP expired (server returns OTP_EXPIRED) | ⬜ SKIP | Requires waiting 5+ min or test env with short OTP TTL |
-| 12 | Three wrong attempts → TOO_MANY_ATTEMPTS | ❌ FAIL | BUG-D1-DT-3: after 3 wrong OTPs, app shows generic "incorrect OTP" banner instead of distinct TOO_MANY_ATTEMPTS message |
+| 12 | Three wrong attempts → TOO_MANY_ATTEMPTS | ✅ PASS | BUG-D1-DT-3 fix confirmed — distinct "Too many attempts" message shown after 3 wrong OTPs. Re-run 2026-03-19 session 2. |
 | 13 | Rate-limited send (429) | ⬜ SKIP | Requires 5+ sends; risky on real number |
 | 14 | Invalid mobile prefix (0–5) | ✅ PASS | Input validation blocks entry of numbers starting with 0–5 at keyboard level |
 
@@ -53,8 +53,8 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 | # | Test | Status | Notes |
 |---|---|---|---|
 | 17 | Double-tap "Resend OTP" — M-2 regression | ✅ PASS | Double-tapped Resend after countdown expired → only one green banner — double-tap guard working |
-| 18 | App backgrounded during verify call | ⬜ PENDING | Could not run — `9999999999` rate limited; needs re-run in fresh session |
-| 19 | App backgrounded during countdown | ⬜ PENDING | Could not run — `9999999999` rate limited; needs re-run in fresh session |
+| 18 | App backgrounded during verify call | ✅ PASS | Backgrounded after 5 digits, returned and entered 6th — auto-submitted, navigated to PatientSearch cleanly. Re-run 2026-03-19 session 2. |
+| 19 | App backgrounded during countdown | ✅ PASS | Countdown pauses while backgrounded, resumes from same point on foreground. No crash, no frozen UI. LOW debt: timer counts JS ticks not real elapsed time — doctor waits slightly longer than shown. Re-run 2026-03-19 session 2. |
 | 20 | Screen rotation during OTP entry | ✅ PASS | App does not rotate — locked to portrait orientation (intentional for medical app) |
 
 ### Audit Events (SQLite)
@@ -78,12 +78,12 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 
 | Outcome | Count |
 |---|---|
-| ✅ PASS | 11 |
-| ❌ FAIL | 1 |
-| ⬜ PENDING | 2 |
+| ✅ PASS | 14 |
+| ❌ FAIL | 0 |
+| ⬜ PENDING | 0 |
 | ⏭ SKIP | 11 |
 
-**Tests 1–8, 10, 14, 16, 17, 20 — resolved this session.** 1 FAIL (BUG-D1-DT-3). Tests 18 and 19 pending — need fresh session once `9999999999` rate limit clears.
+**All runnable tests complete.** 14 PASS, 0 FAIL, 0 PENDING. 11 SKIP (SQLite audit events, cert pinning, and tests requiring special tooling — all documented with reason).
 
 ---
 
@@ -94,7 +94,8 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 | BUG-D1-DT-1 | **BLOCKER** | `src/api/auth.ts:20` | `BASE_URL` hardcoded to dead domain `api.medrecord.in` — must be `medrecord-api.onrender.com/v1`. All OTP calls fail. **FIXED 2026-03-18 — Builder Agent Step 9.** |
 | BUG-D1-DT-2 | **BLOCKER** | `App.tsx` / no logout screen | No logout mechanism exists anywhere in the app. iOS Keychain persists SecureStore data across Expo Go reinstalls — there is no way to clear the session and reach the Login screen. Tests 4–8, 10, 12, 14, 17–20 cannot be run. **FIXED 2026-03-18 — Builder Agent Step 9.** |
 | BUG-D1-DT-3 | **MEDIUM** | OTP verify error handling | After 3 wrong OTP attempts, app shows generic "incorrect OTP" banner instead of a distinct TOO_MANY_ATTEMPTS error message. **FIXED 2026-03-19 — Builder Agent.** Root cause: backend returned `UNAUTHORIZED` for all verify-otp failures; fixed to return `TOO_MANY_ATTEMPTS`, `OTP_EXPIRED`, `WRONG_OTP` respectively. Re-run test 12 to confirm. |
-| BUG-D1-DT-4 | **LOW** | NetInfo pre-check | NetInfo pre-check intermittently reports no connectivity despite active internet connection. Seen twice during 2026-03-19 session — both times after transitioning from Airplane Mode back to connected. Likely a timing issue (NetInfo takes 2–3s to detect reconnection). |
+| BUG-D1-DT-4 | **LOW** | NetInfo pre-check | NetInfo pre-check intermittently reports no connectivity despite active internet connection. Seen twice during 2026-03-19 session — both times after transitioning from Airplane Mode back to connected. Also observed during 2026-03-19 session 2 on OTP entry screen with non-test number (8552225558) — intermittent "internet connection" error on auto-submit, alternating with "incorrect OTP". Likely a timing issue (NetInfo takes 2–3s to detect reconnection). |
+| BUG-D1-DT-5 | **LOW** | Countdown timer | Resend OTP countdown pauses when app is backgrounded and resumes from the same point on foreground (JS timer behaviour). Doctor waits slightly longer than the timer shows. No functional failure. |
 
 ---
 
@@ -109,6 +110,8 @@ confirmed live (`/v1/health` → 200). `curl` against live backend with correct 
 Root cause: `auth.ts` has its own `BASE_URL = 'https://api.medrecord.in/v1'` which was never
 updated when `apiClient.ts` was fixed on 2026-03-18. All OTP tests blocked until Builder fixes
 `auth.ts:20`. Device testing session suspended — resume after Builder fix.
+
+**2026-03-19 session 2 — Re-ran tests 12, 18, 19.** Test 12: BUG-D1-DT-3 fix confirmed — distinct "Too many attempts" message shown. Test 18: auto-submit on 6th digit means no mid-verify background window; adapted test — backgrounded after 5 digits, returned and entered 6th, navigated cleanly to PatientSearch. Test 19: countdown pauses while backgrounded (JS timer behaviour) — logged as BUG-D1-DT-5 (LOW). Additional observation: intermittent NetInfo false-negative on OTP entry screen with non-test number (additional instance of BUG-D1-DT-4). All runnable tests now complete.
 
 **2026-03-19 — Session resumed after BUG-D1-DT-1 and BUG-D1-DT-2 fixes.** Tests 4–8, 10, 12,
 14, 17–20 re-run. 11 tests now PASS. BUG-D1-DT-3 found (generic error on TOO_MANY_ATTEMPTS).

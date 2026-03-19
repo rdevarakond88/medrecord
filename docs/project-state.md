@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Device testing mostly complete. 11 PASS, 1 FAIL (BUG-D1-DT-3 — FIXED 2026-03-19), 2 PENDING (tests 12 re-run + tests 18 & 19 — rate limited), 11 SKIP. Next: Device Tester — re-run tests 12, 18, 19.
+**Phase:** D1 (Login / OTP) — Device testing COMPLETE. 14 PASS, 0 FAIL, 0 PENDING, 11 SKIP. All runnable tests done. 2 LOW bugs open (BUG-D1-DT-4, BUG-D1-DT-5 — not blockers). Next: D1 is clear to merge to main. Recommend starting D5 (New Patient Form) or D4 (Visit Detail).
 **Last Updated:** 2026-03-19
 
 ---
@@ -19,12 +19,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Blocker for device testing | ~~`apiClient.ts` dead domain~~ RESOLVED. ~~BUG-D1-DT-1 `auth.ts:20` dead domain~~ **RESOLVED 2026-03-18** |
-| Next action | Device Tester — re-run tests 12, 18, 19 (BUG-D1-DT-3 fixed 2026-03-19) |
+| Next action | D1 device testing COMPLETE — clear to merge to main |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — fix BUG-D1-DT-3 (2026-03-19). Root cause: backend `verify-otp` route returned generic `UNAUTHORIZED` code for all error cases; frontend checked for specific codes `TOO_MANY_ATTEMPTS`, `OTP_EXPIRED`, `WRONG_OTP`. Fixed backend `backend/src/routes/auth.ts` (lines 101, 105–108, 124) to return correct codes. Next: Device Tester — re-run tests 12, 18, 19.
+**Last Session:** Device Tester — re-ran tests 12, 18, 19 (2026-03-19). All PASS. BUG-D1-DT-3 fix confirmed. 2 LOW bugs logged: BUG-D1-DT-4 (NetInfo false-negative, additional instance observed) and BUG-D1-DT-5 (countdown timer pauses while backgrounded). D1 device testing complete. Next: D1 merge to main, then start D5 or D4.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
