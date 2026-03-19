@@ -33,6 +33,13 @@
  *   QA-M-2 isSendingRef double-submit guard added to handleSendOtp ✅
  *   QA-M-3 Resend failure no longer reverts to phone_entry; inline resendError shown ✅
  *
+ * Device-test bug fixes (2026-03-19):
+ *   DT-4  NetInfo pre-check now requires both isConnected===false AND
+ *          isInternetReachable===false before blocking; null reachability (Airplane
+ *          Mode transition) lets the API call proceed to surface a real error ✅
+ *   DT-5  Resend countdown uses wall-clock end time (countdownEndRef) instead of
+ *          a decrementing counter; catches up immediately after app foreground ✅
+ *
  * TODO (Android SMS autofill): Android SMS Retriever API auto-populates OTP.
  *      No Expo managed-workflow module exists as of 2026-03.
  *      iOS OTP autofill handled natively via textContentType="oneTimeCode".
@@ -135,13 +142,16 @@ export default function LoginScreen({
   // attempt fails. Separate from sendError (which is shown in phone_entry only).
   const [resendError,    setResendError]    = useState<SendError>(null);
 
-  const phoneInputRef  = useRef<TextInput>(null);
-  const otpInputRef    = useRef<TextInput>(null);
-  const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null);
+  const phoneInputRef      = useRef<TextInput>(null);
+  const otpInputRef        = useRef<TextInput>(null);
+  const timerRef           = useRef<ReturnType<typeof setInterval> | null>(null);
+  // BUG-D1-DT-5: store absolute wall-clock end time so the countdown is correct
+  // even when the JS timer was paused while the app was backgrounded.
+  const countdownEndRef    = useRef<number>(0);
   // M-2 (security): synchronous double-submit guard on verify (useRef, not useState — avoids async race)
-  const isVerifyingRef = useRef(false);
+  const isVerifyingRef     = useRef(false);
   // QA-M-2: synchronous double-submit guard on send — mirrors isVerifyingRef pattern
-  const isSendingRef   = useRef(false);
+  const isSendingRef       = useRef(false);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -154,17 +164,21 @@ export default function LoginScreen({
 
   const startResendCountdown = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    // BUG-D1-DT-5: use wall-clock end time instead of decrementing a counter.
+    // JS setInterval pauses when the app is backgrounded; on foreground the next
+    // tick recomputes from Date.now() so the displayed count catches up instantly.
+    countdownEndRef.current = Date.now() + RESEND_SECONDS * 1000;
     setResendSeconds(RESEND_SECONDS);
     setCanResend(false);
     timerRef.current = setInterval(() => {
-      setResendSeconds((s) => {
-        if (s <= 1) {
-          clearInterval(timerRef.current!);
-          setCanResend(true);
-          return 0;
-        }
-        return s - 1;
-      });
+      const remaining = Math.ceil((countdownEndRef.current - Date.now()) / 1000);
+      if (remaining <= 0) {
+        clearInterval(timerRef.current!);
+        setResendSeconds(0);
+        setCanResend(true);
+      } else {
+        setResendSeconds(remaining);
+      }
     }, 1000);
   }, []);
 
@@ -188,8 +202,12 @@ export default function LoginScreen({
 
     // UE-3: Check connectivity before triggering a loading state — shows the
     // "no internet" error immediately without a spinner on airplane-mode devices.
+    // BUG-D1-DT-4: only block when BOTH isConnected and isInternetReachable are
+    // definitively false. When isInternetReachable is null (e.g. transitioning
+    // back from Airplane Mode, OS hasn't confirmed reachability yet), let the API
+    // call proceed — it will surface a real network error if truly offline.
     const netState = await NetInfo.fetch();
-    if (!netState.isConnected) {
+    if (netState.isConnected === false && netState.isInternetReachable === false) {
       isSendingRef.current = false;
       if (isResend) {
         setResendError('no_connection');

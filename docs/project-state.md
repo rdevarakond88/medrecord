@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Device testing COMPLETE. 14 PASS, 0 FAIL, 0 PENDING, 11 SKIP. All runnable tests done. 2 LOW bugs open (BUG-D1-DT-4, BUG-D1-DT-5 — not blockers). Next: D1 is clear to merge to main. Recommend starting D5 (New Patient Form) or D4 (Visit Detail).
+**Phase:** D1 (Login / OTP) — Device testing complete. Builder bug fixes applied 2026-03-19: BUG-D1-DT-4 and BUG-D1-DT-5 closed. D1 is clear to merge to main. Recommend starting D5 (New Patient Form) or D4 (Visit Detail).
 **Last Updated:** 2026-03-19
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — re-ran tests 12, 18, 19 (2026-03-19). All PASS. BUG-D1-DT-3 fix confirmed. 2 LOW bugs logged: BUG-D1-DT-4 (NetInfo false-negative, additional instance observed) and BUG-D1-DT-5 (countdown timer pauses while backgrounded). D1 device testing complete. Next: D1 merge to main, then start D5 or D4.
+**Last Session:** Builder Agent — fixed BUG-D1-DT-4 (NetInfo false-negative: condition now requires isConnected===false AND isInternetReachable===false before blocking) and BUG-D1-DT-5 (countdown timer: wall-clock end time replaces decrementing counter, catches up instantly after foreground). D1 all bugs closed. Clear to merge to main.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
