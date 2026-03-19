@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D1 (Login / OTP) — Device testing mostly complete. 11 PASS, 1 FAIL (BUG-D1-DT-3), 2 PENDING (tests 18 & 19 — rate limited), 11 SKIP. Next: Builder Agent — fix BUG-D1-DT-3 (TOO_MANY_ATTEMPTS shows generic error). After fix: Device Tester — re-run tests 18 & 19.
+**Phase:** D1 (Login / OTP) — Device testing mostly complete. 11 PASS, 1 FAIL (BUG-D1-DT-3 — FIXED 2026-03-19), 2 PENDING (tests 12 re-run + tests 18 & 19 — rate limited), 11 SKIP. Next: Device Tester — re-run tests 12, 18, 19.
 **Last Updated:** 2026-03-19
 
 ---
@@ -19,12 +19,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Blocker for device testing | ~~`apiClient.ts` dead domain~~ RESOLVED. ~~BUG-D1-DT-1 `auth.ts:20` dead domain~~ **RESOLVED 2026-03-18** |
-| Next action | Builder Agent — fix BUG-D1-DT-3; then Device Tester re-run tests 18 & 19 |
+| Next action | Device Tester — re-run tests 12, 18, 19 (BUG-D1-DT-3 fixed 2026-03-19) |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester Agent — Step 8 (resumed 2026-03-19). Tests 4–8, 10, 12, 14, 16, 17, 20 run. 11 total PASS. BUG-D1-DT-3 found: after 3 wrong OTPs, app shows generic "incorrect OTP" instead of TOO_MANY_ATTEMPTS message. BUG-D1-DT-4 noted: NetInfo intermittently reports no connectivity after Airplane Mode toggle (low severity). Tests 18 & 19 pending — `9999999999` rate limited. Next: Builder Agent — fix BUG-D1-DT-3.
+**Last Session:** Builder Agent — fix BUG-D1-DT-3 (2026-03-19). Root cause: backend `verify-otp` route returned generic `UNAUTHORIZED` code for all error cases; frontend checked for specific codes `TOO_MANY_ATTEMPTS`, `OTP_EXPIRED`, `WRONG_OTP`. Fixed backend `backend/src/routes/auth.ts` (lines 101, 105–108, 124) to return correct codes. Next: Device Tester — re-run tests 12, 18, 19.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |

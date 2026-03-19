@@ -93,7 +93,7 @@ Tests 21–24 require querying SQLite audit_events table — skip for Expo Go de
 |---|---|---|---|
 | BUG-D1-DT-1 | **BLOCKER** | `src/api/auth.ts:20` | `BASE_URL` hardcoded to dead domain `api.medrecord.in` — must be `medrecord-api.onrender.com/v1`. All OTP calls fail. **FIXED 2026-03-18 — Builder Agent Step 9.** |
 | BUG-D1-DT-2 | **BLOCKER** | `App.tsx` / no logout screen | No logout mechanism exists anywhere in the app. iOS Keychain persists SecureStore data across Expo Go reinstalls — there is no way to clear the session and reach the Login screen. Tests 4–8, 10, 12, 14, 17–20 cannot be run. **FIXED 2026-03-18 — Builder Agent Step 9.** |
-| BUG-D1-DT-3 | **MEDIUM** | OTP verify error handling | After 3 wrong OTP attempts, app shows generic "incorrect OTP" banner instead of a distinct TOO_MANY_ATTEMPTS error message. User has no indication they are locked out or need to request a new OTP. Needs Builder fix. |
+| BUG-D1-DT-3 | **MEDIUM** | OTP verify error handling | After 3 wrong OTP attempts, app shows generic "incorrect OTP" banner instead of a distinct TOO_MANY_ATTEMPTS error message. **FIXED 2026-03-19 — Builder Agent.** Root cause: backend returned `UNAUTHORIZED` for all verify-otp failures; fixed to return `TOO_MANY_ATTEMPTS`, `OTP_EXPIRED`, `WRONG_OTP` respectively. Re-run test 12 to confirm. |
 | BUG-D1-DT-4 | **LOW** | NetInfo pre-check | NetInfo pre-check intermittently reports no connectivity despite active internet connection. Seen twice during 2026-03-19 session — both times after transitioning from Airplane Mode back to connected. Likely a timing issue (NetInfo takes 2–3s to detect reconnection). |
 
 ---

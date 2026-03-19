@@ -98,12 +98,12 @@ router.post('/auth/verify-otp', otpVerifyLimiter, validate(verifyOtpSchema), asy
       return;
     }
     if (otpRecord.expiresAt < new Date()) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'OTP expired. Request a new one.' } });
+      res.status(401).json({ error: { code: 'OTP_EXPIRED', message: 'OTP expired. Request a new one.' } });
       return;
     }
     if (otpRecord.attempts >= 3) {
       res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Too many failed attempts. Request a new OTP.' },
+        error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many failed attempts. Request a new OTP.' },
       });
       return;
     }
@@ -121,7 +121,7 @@ router.post('/auth/verify-otp', otpVerifyLimiter, validate(verifyOtpSchema), asy
         ipAddress: req.ip,
         outcome:  'failure',
       });
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid OTP' } });
+      res.status(401).json({ error: { code: 'WRONG_OTP', message: 'Invalid OTP' } });
       return;
     }
 
