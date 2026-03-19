@@ -86,6 +86,18 @@ Device testing is a distinct session type. These rules apply whenever a session 
 - When a bug is found: **log it in the session doc, continue testing**
 - After all tests are complete: **start a new Builder Agent session** for all fixes
 
+### Mandatory Device Tester Session-End Checklist
+
+Before ending a device testing session, the Device Tester MUST explicitly state each of the following:
+
+1. **Bug count:** "X bugs found: [list IDs and severities]" — or "No bugs found."
+2. **Builder handoff decision:**
+   - If ANY bugs were found (regardless of severity): "Builder Agent session required before merge — items: [list]"
+   - If zero bugs found AND all pre-device-testing open items are closed: "No Builder session needed — clear to merge."
+3. **SESSION COMPLETE line** naming the correct next agent (Builder if bugs exist; PM/merge if not)
+
+**The LOW or non-blocking designation of a bug does NOT exempt the session from the Builder handoff. Severity determines priority, not whether the handoff is required. Declaring a screen "clear to merge" while open bugs exist is a workflow violation.**
+
 ### Infrastructure Pre-flight (mandatory before any device test session)
 Before guiding any test that requires a network call:
 1. Verify `Backend Status` in `docs/project-state.md`
