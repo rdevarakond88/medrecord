@@ -64,8 +64,8 @@ Created before build starts. Every item must be confirmed or explicitly deferred
 
 | # | Item | Status | Notes |
 |---|---|---|---|
-| 34 | Empty state: no note, no scan — Save disabled | 🔶 | Pending device test. Initial render: `hasRecord = false`, `saveButtonDisabled` applied. |
-| 35 | Has-note state: note typed — Save active | 🔶 | Pending device test. `noteText.trim().length > 0` activates save. |
+| 34 | Empty state: no note, no scan — Save disabled | ✅ | Device-confirmed 2026-03-20 (D6 session 4). Save button greyed out on D6 open with no content. |
+| 35 | Has-note state: note typed — Save active | ✅ | Device-confirmed 2026-03-20 (D6 session 4). Button turns blue immediately on first character typed. |
 | 36 | Has-scan state: thumbnail shown, Save active | ✅ | Device-confirmed 2026-03-20 (D6 session 3, via photo library path). Thumbnail visible, Save button active with scan only. |
 | 37 | Has-note-and-scan state: both shown, Save active | ✅ | Device-confirmed 2026-03-20 (D6 session 3, via photo library path). Note + thumbnail both visible, Save active. |
 | 38 | Saving in progress: spinner shown, Save button non-interactive (prevents double-submit) | ✅ | Device-confirmed 2026-03-03. Save completes without noticeable delay; `isSaving` state renders `ActivityIndicator`; `disabled={isSaving}` prevents double-submit. |
@@ -121,7 +121,7 @@ Created before build starts. Every item must be confirmed or explicitly deferred
 |---|---|---|---|
 | 61 | D6 screen loads in under 1 second from D3 tap | ✅ | Device-confirmed 2026-03-03. No async data fetching on mount; synchronous render from nav params. |
 | 62 | Note input is responsive — no lag on typing on low-end Android (2GB RAM target) | ✅ | Device-confirmed 2026-03-03. TextInput with controlled state; no heavy computations in onChange. Confirmed on iPhone; Android test deferred to dedicated device session. |
-| 63 | Camera button tap → D7 launch within 300ms | 🔶 | Deferred — needs D7 built. `navigation.navigate()` is synchronous push; will measure when D7 is a real screen. |
+| 63 | Camera button tap → D7 launch within 300ms | ✅ | Device-confirmed 2026-03-20 (D6 session 4). D7 felt instant; no noticeable delay. |
 | 64 | "Save Visit" SQLite write completes in under 2 seconds | ✅ | Device-confirmed 2026-03-03. Single INSERT into `visits_draft`; completes fast with no noticeable delay. |
 | 65 | ≤3 taps from D3 entry to submittable state — measured and confirmed | ✅ | **Confirmed:** Note path = tap note area (1) + type text + tap Save (2) = 2 taps. Spec requires ≤3. ✓ |
 
@@ -133,10 +133,8 @@ Any item marked 🔶 must have a written reason here.
 
 | Checklist # | Item | Reason for Deferral | Fix By | Sign-Off |
 |---|---|---|---|---|
-| 25, 36, 37, 57, 59, 63 | Scan-dependent items | Require D7 (Document Scanner) to be built. Code paths are wired and ready. | D7 build session | |
 | 40 | Save error banner | Cannot fully confirm error path without backend returning a real failure response. Error banner and retry logic are wired. | Backend integration session | |
 | 49, 60 | Nav param validation edge cases | Require runtime simulation of missing/malformed nav params. TypeScript types guard at compile time; runtime crash path is LOW priority for v1. | D7/D9 integration session | |
-| 34, 35 | Empty/has-note data states | Pending dedicated device test. Logic wired; functionally covered by items 9 and 22 confirmed above. | D6 follow-up | |
 
 ---
 
