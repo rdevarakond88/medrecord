@@ -277,6 +277,15 @@ export default function NewVisitScreen() {
     setIsSaving(true);
     setSaveError(null);
 
+    // LOW-2: Reject future-dated visits — picker enforces maximumDate={new Date()}
+    // but state can be set programmatically; guard here is the authoritative check.
+    if (visitDate > todayISO()) {
+      setSaveError('Visit date cannot be in the future.');
+      setIsSaving(false);
+      isSavingRef.current = false;
+      return;
+    }
+
     const trimmedNote      = noteText.trim() || null;
     const trimmedComplaint = chiefComplaint.trim() || null;
 
@@ -367,6 +376,9 @@ export default function NewVisitScreen() {
       // ── 4. Navigate back — D3's useFocusEffect refreshes the visit list ─
       // savingCompletedRef prevents the beforeRemove discard guard from firing
       // on this programmatic goBack() call.
+      // LOW-1: Reset isSavingRef before goBack() — if goBack() fails to unmount
+      // (e.g. navigation stack edge case), Save button remains usable.
+      isSavingRef.current = false;
       savingCompletedRef.current = true;
       navigation.goBack();
 
