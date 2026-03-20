@@ -48,7 +48,7 @@ Created before build starts. Every item must be confirmed or explicitly deferred
 | 22 | Typing in the note area activates the "Save Visit" button | ✅ | Device-confirmed 2026-03-03. `hasRecord = noteText.trim().length > 0 \|\| scan !== null` correctly derived. |
 | 23 | Deleting all typed text deactivates the "Save Visit" button again (returns to disabled) | ✅ | Device-confirmed 2026-03-03. Empty string makes `hasRecord = false`; button returns to disabled state. |
 | 24 | Chief complaint field is skippable — Save works without it | ✅ | Device-confirmed 2026-03-03. `trimmedComplaint = chiefComplaint.trim() \|\| null` — null accepted by `insertLocalVisit`. |
-| 25 | Chief complaint field is skippable even when scan is attached | 🔶 | Deferred — needs D7 built. Same code path as #24; will confirm when D7 returns a scan to D6. |
+| 25 | Chief complaint field is skippable even when scan is attached | ✅ | Device-confirmed 2026-03-20 (D6 session 3, via photo library path). Save succeeds with scan only, no note — navigates back to D3. |
 | 26 | Tapping the date opens a date picker or inline date selector | ✅ | Device-confirmed fix: iOS Modal now always mounted (controlled by `visible` only). Conditional mount caused blank-screen flash before native animation completed. `display="spinner"` for iOS, `display="default"` for Android. |
 | 27 | Date picker defaults to today; past dates selectable; future dates blocked | ✅ | Device-confirmed 2026-03-03. `value={isoToDate(visitDate)}` defaults to today. `maximumDate={new Date()}` blocks future. Past dates allowed. |
 | 28 | "Save Visit" tap triggers save and returns to D3 with new visit in list | ✅ | Device-confirmed 2026-03-03. `navigation.goBack()` called after `insertLocalVisit()` succeeds. D3 `useFocusEffect` refreshes list on return. |
@@ -66,8 +66,8 @@ Created before build starts. Every item must be confirmed or explicitly deferred
 |---|---|---|---|
 | 34 | Empty state: no note, no scan — Save disabled | 🔶 | Pending device test. Initial render: `hasRecord = false`, `saveButtonDisabled` applied. |
 | 35 | Has-note state: note typed — Save active | 🔶 | Pending device test. `noteText.trim().length > 0` activates save. |
-| 36 | Has-scan state: thumbnail shown, Save active | 🔶 | Deferred — needs D7 built. `scan !== null` activates Save + renders thumbnail; cannot confirm until D7 returns a real scan object. |
-| 37 | Has-note-and-scan state: both shown, Save active | 🔶 | Deferred — needs D7 built. Both conditions satisfied in code; will confirm when D7 is built. |
+| 36 | Has-scan state: thumbnail shown, Save active | ✅ | Device-confirmed 2026-03-20 (D6 session 3, via photo library path). Thumbnail visible, Save button active with scan only. |
+| 37 | Has-note-and-scan state: both shown, Save active | ✅ | Device-confirmed 2026-03-20 (D6 session 3, via photo library path). Note + thumbnail both visible, Save active. |
 | 38 | Saving in progress: spinner shown, Save button non-interactive (prevents double-submit) | ✅ | Device-confirmed 2026-03-03. Save completes without noticeable delay; `isSaving` state renders `ActivityIndicator`; `disabled={isSaving}` prevents double-submit. |
 | 39 | Save success: navigates to D3; new visit appears at top of visit list | ✅ | Device-confirmed 2026-03-03. `navigation.goBack()` fires after SQLite write. New visit appears at top of D3 list via `visits_draft` union in `getCachedVisits`. |
 | 40 | Save error: error banner shown — not a silent fail; doctor can retry | 🔶 | Deferred — needs backend. Cannot fully confirm error path without server returning a failure response. `saveError` state and error banner are wired; retry re-enables Save via `isSavingRef.current = false`. |
@@ -108,9 +108,9 @@ Created before build starts. Every item must be confirmed or explicitly deferred
 |---|---|---|---|
 | 55 | D3 → D6 nav params include correct patient ID (and consent state) | ✅ | D3 `onNewVisit` now calls `navigation.navigate('NewVisit', { patientId: patientLocalId, patientServerId, patientName: patient?.name, patientMobile: patient?.mobile_number, consentGranted })`. |
 | 56 | D6 → D7 (camera tap) passes patientId and visitId context so scan is associated correctly | ✅ | `navigation.navigate('DocumentScanner', { patientId, visitId: visitLocalId })` wired. |
-| 57 | D7 → D6 returns correctly with scan thumbnail and the note area is still intact | 🔶 | Deferred — needs D7 built. D6 exposes `setScan()` which D7 will call via navigation params on return. |
+| 57 | D7 → D6 returns correctly with scan thumbnail and the note area is still intact | ✅ | Device-confirmed 2026-03-20 (D6 session 3, via photo library path). Note preserved, thumbnail visible on D7→D6 return. |
 | 58 | D6 → D3 after Save passes signal for list refresh (or uses useFocusEffect on D3 to re-fetch) | ✅ | D3 uses `useFocusEffect` — fires on every screen focus including return from D6. |
-| 59 | If D7 is cancelled (no scan taken), D6 returns to previous state without data loss | 🔶 | Deferred — needs D7 built. No scan state written until D7 explicitly returns a result. |
+| 59 | If D7 is cancelled (no scan taken), D6 returns to previous state without data loss | ✅ | Device-confirmed 2026-03-20 (D6 session 3). Tapped ✕ in D7 — note preserved, scan area empty on return. |
 | 60 | If D6 route is missing or patient ID absent — safe error state, no crash | 🔶 | Deferred — needs simulation. TypeScript types guard at compile time; runtime missing-params path not tested on device. |
 
 ---
