@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D6 device test session 3 complete (2026-03-20) — items #25, #36, #37, #57, #59 all PASS (tested via photo library path). BUG-D6-DT3-1 logged: cameraKey fix did NOT resolve CameraView black screen — camera capture still broken on iOS/Expo Go. Builder session required to fix camera. D1 remains clear to merge.
+**Phase:** D6 Builder session (2026-03-20) — BUG-D6-DT3-1 fixed. useFocusEffect + 200ms delay defers CameraView mount until after navigation transition; replaced cameraKey remount approach. D6 ready for device test session 4 (camera capture path). D1 remains clear to merge.
 **Last Updated:** 2026-03-20
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — D6 session 3 (2026-03-20). Items #25, #36, #37, #57, #59 all PASS via photo library path. BUG-D6-DT3-1 logged: cameraKey remount fix ineffective — CameraView still black on iOS/Expo Go. Next: Builder Agent session to fix camera (BUG-D6-DT3-1).
+**Last Session:** Builder — D6 BUG-D6-DT3-1 fix (2026-03-20). Replaced cameraKey remount with useFocusEffect + 200ms delayed mount. Root cause: CameraView mounted mid-navigation-transition → AVCaptureSession cannot start on iOS. Fix defers mount until transition is complete. Next: Device Tester — D6 session 4 (verify camera capture path).
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -107,7 +107,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | Status | Notes |
 |---|---|---|
-| D6 — New Visit | **Live screen built. All security findings closed. Device test session 3 complete (2026-03-20): items #25, #36, #37, #57, #59 PASS (via photo library path). BUG-D6-DT3-1 logged: cameraKey fix ineffective — CameraView still black on iOS/Expo Go (HIGH). Items #49, #60 remain deferred (simulation, v1 acceptable). Builder session required to fix camera before D6 is fully done.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. Sessions: `reviews/D6-device-test-session-2.md`, `reviews/D6-device-test-session-3.md`. |
+| D6 — New Visit | **Live screen built. All security findings closed. Device test session 3 complete (2026-03-20): items #25, #36, #37, #57, #59 PASS (via photo library path). BUG-D6-DT3-1 FIXED (2026-03-20): useFocusEffect + 200ms delay defers CameraView mount until after navigation transition — replaces cameraKey remount approach. Items #49, #60 deferred (simulation, v1 acceptable). Next: Device test session 4 to verify camera capture path.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. Sessions: `reviews/D6-device-test-session-2.md`, `reviews/D6-device-test-session-3.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |

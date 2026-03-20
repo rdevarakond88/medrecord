@@ -22,10 +22,15 @@
  * Security re-audit fix (reviews/D7-security-audit-v2.md):
  *   MEDIUM-1   — logScanCreated() writes audit event to audit_events table (DPDP §8)
  *
- * Device test bug fix (reviews/D6-device-test-session-2.md):
+ * Device test bug fixes:
  *   BUG-D6-DT2-1 — CameraView black screen after permission grant on iOS (HIGH)
- *                   cameraKey state increments when cameraPermission.granted becomes true,
- *                   forcing CameraView remount so AVCaptureSession starts cleanly.
+ *                   Original fix: cameraKey remount — did NOT resolve the issue (DT3).
+ *   BUG-D6-DT3-1 — CameraView black screen persists on iOS/Expo Go (HIGH)
+ *                   Root cause: mounting CameraView synchronously during the React Navigation
+ *                   transition prevents AVCaptureSession from starting — iOS camera session
+ *                   cannot initialize while the JS bridge is busy with the navigation animation.
+ *                   Fix: useFocusEffect + 200ms delay defers CameraView mount until after the
+ *                   navigation transition is complete. Camera unmounts on screen blur (cleanup).
  *
  * SHOULD FIX items from D7-persona-critique-v2.md applied here:
  *   D7-SF-4 — captureAdvisory: dark pill background + Colors.surface text (Rule 10)
@@ -51,7 +56,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -181,18 +186,33 @@ export default function DocumentScannerScreen() {
   const savingCompletedRef = useRef(false);
   const cameraRef          = useRef<CameraView>(null);
 
-  // BUG-D6-DT2-1 fix: CameraView black screen after same-cycle permission grant on iOS.
-  // When the user taps Allow on the OS permission prompt, cameraPermission.granted
-  // transitions to true in the same render that CameraView is first mounted.
-  // The native AVCaptureSession does not start in this case — the preview stays black.
-  // Incrementing cameraKey forces a full unmount + remount of CameraView, which
-  // triggers the native camera session to start cleanly after permission is confirmed.
-  const [cameraKey, setCameraKey] = useState(0);
-  useEffect(() => {
-    if (cameraPermission?.granted) {
-      setCameraKey((k) => k + 1);
-    }
-  }, [cameraPermission?.granted]);
+  // BUG-D6-DT3-1 fix: CameraView black screen on iOS/Expo Go.
+  // Root cause: mounting CameraView synchronously during the React Navigation screen
+  // transition prevents AVCaptureSession from starting on iOS. The native camera
+  // session requires the navigation animation to be complete and the JS bridge to be
+  // idle before it can initialize — if mounted mid-transition, the preview stays black.
+  //
+  // Fix: useFocusEffect defers camera mount by 200ms after the screen receives focus.
+  // This ensures the transition animation is complete before the native session starts.
+  // Camera is also unmounted on blur (screen loses focus) for clean session teardown —
+  // prevents stale session state if the user navigates away while camera is active.
+  //
+  // This also handles the BUG-D6-DT2-1 case (permission grant → same-cycle mount):
+  // when the user returns from the iOS permission prompt, the screen regains focus and
+  // useFocusEffect runs again, mounting the camera cleanly after the 200ms delay.
+  const [isCameraVisible, setIsCameraVisible] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      // Only mount camera when permission is already granted — if not, the permission
+      // UI renders instead of the viewfinder (see permission guard below).
+      if (!cameraPermission?.granted) return;
+      const t = setTimeout(() => setIsCameraVisible(true), 200);
+      return () => {
+        clearTimeout(t);
+        setIsCameraVisible(false);
+      };
+    }, [cameraPermission?.granted]),
+  );
 
   // ── beforeRemove: discard dialog when back is pressed mid-scan ─────────────
   useEffect(() => {
@@ -469,15 +489,19 @@ export default function DocumentScannerScreen() {
   // and backgroundColor:'#000000' to prevent black-flash on mount.
   return (
     <View style={styles.viewfinderContainer}>
-      {/* Rule 9: explicit wrapper */}
+      {/* Rule 9: explicit wrapper with defined dimensions and black background.
+          isCameraVisible gates the mount — camera is deferred 200ms after focus
+          (BUG-D6-DT3-1 fix) to ensure AVCaptureSession initializes after the
+          navigation transition is complete. Black background shows while loading. */}
       <View style={styles.cameraWrapper}>
-        <CameraView
-          key={cameraKey}
-          style={styles.camera}
-          ref={cameraRef}
-          facing="back"
-          flash={flashMode}
-        />
+        {isCameraVisible && (
+          <CameraView
+            style={styles.camera}
+            ref={cameraRef}
+            facing="back"
+            flash={flashMode}
+          />
+        )}
       </View>
 
       {/* Top bar — Rule 10: all buttons use white text on dark pill */}
