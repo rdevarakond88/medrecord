@@ -22,6 +22,11 @@
  * Security re-audit fix (reviews/D7-security-audit-v2.md):
  *   MEDIUM-1   — logScanCreated() writes audit event to audit_events table (DPDP §8)
  *
+ * Device test bug fix (reviews/D6-device-test-session-2.md):
+ *   BUG-D6-DT2-1 — CameraView black screen after permission grant on iOS (HIGH)
+ *                   cameraKey state increments when cameraPermission.granted becomes true,
+ *                   forcing CameraView remount so AVCaptureSession starts cleanly.
+ *
  * SHOULD FIX items from D7-persona-critique-v2.md applied here:
  *   D7-SF-4 — captureAdvisory: dark pill background + Colors.surface text (Rule 10)
  *   D7-SF-5 — privacyLine: rgba(255,255,255,0.55) on dark preview background
@@ -175,6 +180,19 @@ export default function DocumentScannerScreen() {
   // allows programmatic goBack() from save-success without triggering discard dialog
   const savingCompletedRef = useRef(false);
   const cameraRef          = useRef<CameraView>(null);
+
+  // BUG-D6-DT2-1 fix: CameraView black screen after same-cycle permission grant on iOS.
+  // When the user taps Allow on the OS permission prompt, cameraPermission.granted
+  // transitions to true in the same render that CameraView is first mounted.
+  // The native AVCaptureSession does not start in this case — the preview stays black.
+  // Incrementing cameraKey forces a full unmount + remount of CameraView, which
+  // triggers the native camera session to start cleanly after permission is confirmed.
+  const [cameraKey, setCameraKey] = useState(0);
+  useEffect(() => {
+    if (cameraPermission?.granted) {
+      setCameraKey((k) => k + 1);
+    }
+  }, [cameraPermission?.granted]);
 
   // ── beforeRemove: discard dialog when back is pressed mid-scan ─────────────
   useEffect(() => {
@@ -454,6 +472,7 @@ export default function DocumentScannerScreen() {
       {/* Rule 9: explicit wrapper */}
       <View style={styles.cameraWrapper}>
         <CameraView
+          key={cameraKey}
           style={styles.camera}
           ref={cameraRef}
           facing="back"

@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D6 device test session 2 complete (2026-03-20). 4 deferred items PASS, 5 blocked by BUG-D6-DT2-1 (CameraView black screen — HIGH). Builder session required to fix before scan-dependent items can be cleared. D1 remains clear to merge.
+**Phase:** BUG-D6-DT2-1 fixed (2026-03-20) — CameraView black screen resolved via cameraKey remount. D6 device test session 3 required to clear checklist items #36, #37, #25, #57, #59. D1 remains clear to merge.
 **Last Updated:** 2026-03-20
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — D6 session 2 (2026-03-20). Tested 9 deferred items. PASS: #34 (Save disabled on empty), #35 (Save active on note), #40 (offline draft save), #63 (D7 navigation speed). BLOCKED: #36, #37, #25, #57, #59 — BUG-D6-DT2-1 (CameraView black screen after permission grant, HIGH). Still deferred: #49, #60 (simulation required, v1 acceptable). Builder Agent session required to fix BUG-D6-DT2-1 before scan items can be cleared.
+**Last Session:** Builder Agent — BUG-D6-DT2-1 fix (2026-03-20). CameraView black screen on iOS fixed: `cameraKey` state increments when `cameraPermission.granted` transitions to true, forcing CameraView remount so AVCaptureSession starts cleanly after permission grant. Next: Device Tester session 3 to clear items #36, #37, #25, #57, #59.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -107,7 +107,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | Status | Notes |
 |---|---|---|
-| D6 — New Visit | **Live screen built. All security findings closed. Device test session 2 complete (2026-03-20): items #34, #35, #40, #63 PASS. 5 items blocked by BUG-D6-DT2-1 (CameraView black screen — HIGH) in D7. Builder fix required, then D6 device test session 3 needed to clear #36, #37, #25, #57, #59. Items #49, #60 remain deferred (simulation, v1 acceptable).** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. Session: `reviews/D6-device-test-session-2.md`. |
+| D6 — New Visit | **Live screen built. All security findings closed. Device test session 2 complete (2026-03-20): items #34, #35, #40, #63 PASS. BUG-D6-DT2-1 (CameraView black screen — HIGH) FIXED (2026-03-20) in D7. Device test session 3 required to clear #36, #37, #25, #57, #59. Items #49, #60 remain deferred (simulation, v1 acceptable).** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. Session: `reviews/D6-device-test-session-2.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
