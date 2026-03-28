@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D6 device testing COMPLETE (2026-03-28) — Session 6 passed all tests (Expo Go fallback UI ✅, photo library capture path ✅, save + D3 return ✅). Zero bugs. D6 is clear to merge. D1 also clear to merge.
+**Phase:** PM Agent Moment 2 v2 complete (2026-03-28). D6 + D7 + D2 clear to merge to main. D3 and D1 must be device tested before their merge. Next: D3 device testing (Step 8), then D1 device testing (Step 8).
 **Last Updated:** 2026-03-28
 
 ---
@@ -24,19 +24,18 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — D6 session 6 (2026-03-28). BUG-D6-DT5-1 fix verified: Expo Go fallback panel renders correctly, photo library path confirmed end-to-end, save + D3 return confirmed. Zero bugs. D6 device testing COMPLETE — clear to merge. Next: PM Agent — D6 + D7 merge review / PR to main.
+**Last Session:** PM Agent — Moment 2 v2 (2026-03-28). D6 + D7 + D2 assessed clear to merge to main. D3 and D1 device testing flagged as next mandatory sessions. SW-M-2 flagged for fix before pilot. Report: `reviews/doctor-visit-flow-pm-review-moment2-v2.md`.
 
-### Recommended Next Build Order
-| Priority | Item | Reason |
+### Recommended Next Session Order
+| Priority | Session | Reason |
 |---|---|---|
-| 1 | ~~Pre-merge blockers (D2 H-2, H-3; D6 M-1, M-4, M-5, M-6)~~ | **CLOSED 2026-03-13** |
-| 2 | ~~Sync worker — PM pre-flight DONE. Builder DONE. Security audit DONE.~~ | **CLOSED 2026-03-13** — HIGH fixes needed before device testing |
-| 2 | ~~Sync worker — Fix HIGH findings (H-1, H-2, H-3) + M-1~~ | **CLOSED 2026-03-13** |
-| 3 | D1 (Login / OTP) — **QA complete. Next: device testing.** | Required for real auth before pilot |
-| 4 | D5 (New Patient Form) | New patients break the flow without it |
-| 5 | D4 (Visit Detail) | Unlocks D3 history list value |
-| 6 | D9 (Consent Request) | Unlocks multi-doctor use cases |
-| 7 | D8 (Full Scan View) | Additive, not blocking anything |
+| 1 | **D3 device testing (Step 8)** | Consent screen unverified — highest risk item before merge or pilot |
+| 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
+| 3 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
+| 4 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
+| 5 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
+| 6 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 7 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
 ---
 
