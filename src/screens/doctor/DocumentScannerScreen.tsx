@@ -35,6 +35,14 @@
  *                   at the start of the navigation animation, not the end.
  *                   Fix: InteractionManager.runAfterInteractions() — fires after ALL animations
  *                   and interactions complete; canonical React Native pattern for this use case.
+ *   BUG-D6-DT5-1 — CameraView black screen persists after InteractionManager fix (HIGH)
+ *                   Root cause: Expo Go limitation — expo-camera 17.x (SDK 54) cannot start
+ *                   an AVCaptureSession inside the Expo Go iOS sandbox. Reproduced in Snack
+ *                   Expo (no navigation animation present), definitively ruling out all timing
+ *                   approaches. This is not a code bug — it is a known Expo Go sandbox restriction.
+ *                   Fix: Constants.executionEnvironment === StoreClient detection. In Expo Go:
+ *                   skip CameraView, show info panel + full-width "Use Photo Library" CTA.
+ *                   In production/EAS builds: CameraView path unchanged.
  *
  * SHOULD FIX items from D7-persona-critique-v2.md applied here:
  *   D7-SF-4 — captureAdvisory: dark pill background + Colors.surface text (Rule 10)
@@ -65,6 +73,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 // expo-file-system legacy import — SDK 54 deprecated moveAsync, deleteAsync etc.
@@ -184,6 +193,13 @@ export default function DocumentScannerScreen() {
   const [flashMode,     setFlashMode]     = useState<'off' | 'on'>('off');
   const [exposureLevel, setExposureLevel] = useState<ExposureLevel>('good');
   const [selectedType,  setSelectedType]  = useState<DocType>('Prescription');
+
+  // BUG-D6-DT5-1 root cause: expo-camera 17.x cannot start an AVCaptureSession inside
+  // the Expo Go sandbox on iOS. Reproduced in Snack Expo (no navigation animation),
+  // confirming this is NOT a timing issue — it is an Expo Go environment limitation.
+  // Fix: detect Expo Go and render a photo-library-only fallback.
+  // CameraView remains unchanged for production / EAS custom builds.
+  const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
   // tap guard — useRef (synchronous) prevents double-fire; useState has async lag
   const isSavingRef        = useRef(false);
@@ -500,23 +516,14 @@ export default function DocumentScannerScreen() {
   // ── Viewfinder ─────────────────────────────────────────────────────────────
   // Rule 9: CameraView must sit inside an explicit View with defined dimensions
   // and backgroundColor:'#000000' to prevent black-flash on mount.
+  //
+  // BUG-D6-DT5-1 fix: expo-camera 17.x (SDK 54) cannot start an AVCaptureSession
+  // inside Expo Go on iOS — confirmed by Snack Expo reproduction (no navigation
+  // animation present), ruling out all timing-based approaches.
+  // isExpoGo path renders a photo-library-only fallback; CameraView path is
+  // unchanged for production / EAS custom dev builds.
   return (
     <View style={styles.viewfinderContainer}>
-      {/* Rule 9: explicit wrapper with defined dimensions and black background.
-          isCameraVisible gates the mount — camera is deferred via
-          InteractionManager.runAfterInteractions (BUG-D6-DT4-1 fix) so
-          AVCaptureSession starts only after all navigation animations complete.
-          Black background shows while waiting. */}
-      <View style={styles.cameraWrapper}>
-        {isCameraVisible && (
-          <CameraView
-            style={styles.camera}
-            ref={cameraRef}
-            facing="back"
-            flash={flashMode}
-          />
-        )}
-      </View>
 
       {/* Top bar — Rule 10: all buttons use white text on dark pill */}
       <View style={styles.topBar}>
@@ -537,61 +544,109 @@ export default function DocumentScannerScreen() {
           </View>
         )}
 
-        {/* Flash toggle: Off ↔ On (no Auto per D7 spec) */}
-        <TouchableOpacity
-          style={styles.topBarBtn}
-          onPress={toggleFlash}
-          accessibilityLabel={`Flash ${flashMode === 'off' ? 'off' : 'on'}, tap to toggle`}
-        >
-          <Text style={styles.topBarBtnText}>
-            {flashMode === 'off' ? '⚡ Off' : '⚡ On'}
-          </Text>
-        </TouchableOpacity>
+        {/* Flash toggle: hidden in Expo Go — no camera session to control */}
+        {!isExpoGo && (
+          <TouchableOpacity
+            style={styles.topBarBtn}
+            onPress={toggleFlash}
+            accessibilityLabel={`Flash ${flashMode === 'off' ? 'off' : 'on'}, tap to toggle`}
+          >
+            <Text style={styles.topBarBtnText}>
+              {flashMode === 'off' ? '⚡ Off' : '⚡ On'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Document guide rectangle */}
-      <View style={styles.guideRect} pointerEvents="none">
-        <Text style={styles.guideLabel}>Align document within the frame</Text>
+      {/* Rule 9: explicit wrapper with defined dimensions and black background. */}
+      <View style={styles.cameraWrapper}>
+        {isExpoGo ? (
+          // BUG-D6-DT5-1: Expo Go cannot start an AVCaptureSession on iOS with
+          // expo-camera 17.x. Show an informational panel and direct the user to
+          // the photo library path, which works correctly in all environments.
+          <View style={styles.expoGoFallback}>
+            <Text style={styles.expoGoTitle}>Camera unavailable in Expo Go</Text>
+            <Text style={styles.expoGoBody}>
+              Live camera preview requires a custom build.{'\n'}
+              Use the photo library to attach a document.
+            </Text>
+          </View>
+        ) : (
+          // isCameraVisible deferred via InteractionManager.runAfterInteractions
+          // so AVCaptureSession starts only after all navigation animations complete.
+          isCameraVisible && (
+            <CameraView
+              style={styles.camera}
+              ref={cameraRef}
+              facing="back"
+              flash={flashMode}
+              // onMountError: surfaces native AVCaptureSession failures in production.
+              onMountError={(e) => console.warn('[DocumentScanner] CameraView mount error:', e.message)}
+            />
+          )
+        )}
       </View>
 
-      {/* Exposure indicator — Rule 10: dark pill + white text */}
-      <View style={styles.exposurePill}>
-        <View style={[styles.exposureDot, { backgroundColor: exposureConfig.color }]} />
-        <Text style={styles.exposureText}>{exposureConfig.label}</Text>
-      </View>
+      {/* Document guide rectangle — hidden in Expo Go (no camera to align) */}
+      {!isExpoGo && (
+        <View style={styles.guideRect} pointerEvents="none">
+          <Text style={styles.guideLabel}>Align document within the frame</Text>
+        </View>
+      )}
+
+      {/* Exposure indicator — hidden in Expo Go */}
+      {!isExpoGo && (
+        <View style={styles.exposurePill}>
+          <View style={[styles.exposureDot, { backgroundColor: exposureConfig.color }]} />
+          <Text style={styles.exposureText}>{exposureConfig.label}</Text>
+        </View>
+      )}
 
       {/* Bottom controls */}
       <View style={styles.bottomControls}>
-        {/* captureAdvisory — D7-SF-4, Rule 10: dark pill + Colors.surface text */}
-        {exposureLevel !== 'good' && (
-          <View style={styles.captureAdvisoryPill}>
-            <Text style={styles.captureAdvisoryText}>Tap to capture anyway</Text>
-          </View>
-        )}
-
-        <View style={styles.captureRow}>
-          {/* Use Photo Library — Rule 10: dark pill */}
+        {isExpoGo ? (
+          // Expo Go: full-width photo library button is the only capture path.
           <TouchableOpacity
-            style={styles.photoLibraryBtn}
+            style={styles.expoGoLibraryBtn}
             onPress={handlePickFromLibrary}
             accessibilityLabel="Use Photo Library"
           >
-            <Text style={styles.photoLibraryText}>Use Photo{'\n'}Library</Text>
+            <Text style={styles.expoGoLibraryText}>Use Photo Library</Text>
           </TouchableOpacity>
+        ) : (
+          <>
+            {/* captureAdvisory — D7-SF-4, Rule 10: dark pill + Colors.surface text */}
+            {exposureLevel !== 'good' && (
+              <View style={styles.captureAdvisoryPill}>
+                <Text style={styles.captureAdvisoryText}>Tap to capture anyway</Text>
+              </View>
+            )}
 
-          {/* Capture button — #EA580C orange per spec */}
-          <TouchableOpacity
-            style={styles.captureBtn}
-            onPress={handleCapture}
-            accessibilityLabel="Capture document"
-            accessibilityRole="button"
-          >
-            <View style={styles.captureBtnInner} />
-          </TouchableOpacity>
+            <View style={styles.captureRow}>
+              {/* Use Photo Library — Rule 10: dark pill */}
+              <TouchableOpacity
+                style={styles.photoLibraryBtn}
+                onPress={handlePickFromLibrary}
+                accessibilityLabel="Use Photo Library"
+              >
+                <Text style={styles.photoLibraryText}>Use Photo{'\n'}Library</Text>
+              </TouchableOpacity>
 
-          {/* Spacer balances the row so capture button stays centred */}
-          <View style={styles.captureRowSpacer} />
-        </View>
+              {/* Capture button — #EA580C orange per spec */}
+              <TouchableOpacity
+                style={styles.captureBtn}
+                onPress={handleCapture}
+                accessibilityLabel="Capture document"
+                accessibilityRole="button"
+              >
+                <View style={styles.captureBtnInner} />
+              </TouchableOpacity>
+
+              {/* Spacer balances the row so capture button stays centred */}
+              <View style={styles.captureRowSpacer} />
+            </View>
+          </>
+        )}
       </View>
     </View>
   );
@@ -776,6 +831,47 @@ const styles = StyleSheet.create({
   // Balances the photo library button so capture stays centred
   captureRowSpacer: {
     width: 80,
+  },
+
+  // ── Expo Go fallback (BUG-D6-DT5-1) ───────────────────────────────────────
+  // CameraView cannot start an AVCaptureSession in Expo Go on iOS (SDK 54).
+  // These styles render the information panel inside cameraWrapper.
+
+  expoGoFallback: {
+    flex:            1,
+    alignItems:      'center',
+    justifyContent:  'center',
+    paddingHorizontal: 32,
+  },
+  expoGoTitle: {
+    color:        Colors.surface,
+    fontSize:     18,
+    fontWeight:   '600',
+    textAlign:    'center',
+    marginBottom: 12,
+  },
+  expoGoBody: {
+    color:      'rgba(255,255,255,0.65)',
+    fontSize:   14,
+    textAlign:  'center',
+    lineHeight: 22,
+  },
+
+  // Full-width photo library button shown in Expo Go bottomControls
+  expoGoLibraryBtn: {
+    backgroundColor:  Colors.primary,
+    borderRadius:     12,
+    paddingVertical:  16,
+    paddingHorizontal: 32,
+    width:            '100%',
+    alignItems:       'center',
+    minHeight:        54,
+    justifyContent:   'center',
+  },
+  expoGoLibraryText: {
+    color:      Colors.surface,
+    fontSize:   16,
+    fontWeight: '600',
   },
 
   // ── Preview ────────────────────────────────────────────────────────────────

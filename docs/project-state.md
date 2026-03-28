@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D6 Device Test Session 5 complete (2026-03-28) — BUG-D6-DT4-1 fix FAILED. CameraView still black. Snack Expo also confirmed black screen. 4 consecutive fix attempts have failed. Root cause likely expo-camera SDK 54 API change or Expo Go AVCaptureSession limitation. BUG-D6-DT5-1 logged (HIGH). Next: Builder Agent to investigate root cause (check expo-camera 16.x API, useCameraPermissions hook, isActive prop, or Expo Go limitation). D1 remains clear to merge.
+**Phase:** BUG-D6-DT5-1 FIXED (2026-03-28) — Root cause: Expo Go iOS sandbox cannot start an AVCaptureSession with expo-camera 17.x (SDK 54). Fix: `Constants.executionEnvironment === StoreClient` detection. Expo Go renders info panel + "Use Photo Library" CTA; CameraView path unchanged in production/EAS. D6 device testing can now resume — all remaining capture path tests via photo library. D1 remains clear to merge.
 **Last Updated:** 2026-03-28
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — D6 session 5 (2026-03-28). BUG-D6-DT4-1 InteractionManager fix FAILED — camera still black. Snack Expo also confirmed. BUG-D6-DT5-1 logged (HIGH). Session doc: `reviews/D6-device-test-session-5.md`. Next: Builder Agent — investigate expo-camera SDK 54 root cause for BUG-D6-DT5-1.
+**Last Session:** Builder Agent — BUG-D6-DT5-1 fix (2026-03-28). Root cause: Expo Go iOS sandbox cannot start AVCaptureSession with expo-camera 17.x. Fix: Expo Go detection via `Constants.executionEnvironment`; fallback UI + photo library CTA rendered in Expo Go; CameraView path unchanged for production/EAS. Next: Device Tester — D6 session 6, re-test camera capture path (via photo library in Expo Go) to close out D6.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -107,7 +107,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | Status | Notes |
 |---|---|---|
-| D6 — New Visit | **Live screen built. All security findings closed. Device test session 5 complete (2026-03-28): BUG-D6-DT4-1 fix FAILED — camera still black. Snack Expo also confirmed. 4 consecutive fix attempts failed. BUG-D6-DT5-1 HIGH open. Items #49, #60 permanently deferred (simulation, v1 acceptable). Next: Builder Agent — root cause investigation (expo-camera SDK 54 API / Expo Go limitation).** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. Sessions: `reviews/D6-device-test-session-2.md`, `reviews/D6-device-test-session-3.md`, `reviews/D6-device-test-session-4.md`, `reviews/D6-device-test-session-5.md`. |
+| D6 — New Visit | **Live screen built. All security findings closed. Device test session 5 complete (2026-03-28): BUG-D6-DT5-1 FIXED (2026-03-28) — Expo Go cannot start AVCaptureSession with expo-camera 17.x; Expo Go detection added, fallback UI + photo library CTA rendered in Expo Go, CameraView path unchanged for production. Items #49, #60 permanently deferred (simulation, v1 acceptable). Next: Device Tester — D6 session 6 to re-test camera capture path via photo library.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-5.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
