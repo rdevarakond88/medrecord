@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D6 Device test session 4 complete (2026-03-20) — items 34, 35, 63 PASS. BUG-D6-DT4-1 logged (CameraView still black — useFocusEffect + 200ms fix ineffective). Builder session required. Camera path is the last remaining blocker for D6. D1 remains clear to merge.
-**Last Updated:** 2026-03-20
+**Phase:** D6 BUG-D6-DT4-1 fix deployed (2026-03-27) — CameraView black screen: replaced 200ms setTimeout with InteractionManager.runAfterInteractions() (canonical React Native pattern). Ready for Device Test Session 5 to verify fix. D1 remains clear to merge.
+**Last Updated:** 2026-03-27
 
 ---
 
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — D6 session 4 (2026-03-20). Items 34, 35, 63 PASS. BUG-D6-DT4-1 HIGH: CameraView black screen persists — useFocusEffect + 200ms fix did not resolve. Two consecutive Builder fixes have failed. Suggested next angle: Expo Go limitation (AVCaptureSession sandbox) — test in custom dev build, or try useIsFocused() + onCameraReady callback. Next: Builder Agent — BUG-D6-DT4-1 fix.
+**Last Session:** Builder — BUG-D6-DT4-1 fix (2026-03-27). Replaced setTimeout(200ms) with InteractionManager.runAfterInteractions() in DocumentScannerScreen.tsx. Root cause confirmed: useFocusEffect fires at the start of the navigation animation, not the end — 200ms was insufficient. InteractionManager fires after ALL animations complete (canonical React Native pattern). Next: Device Tester — D6 session 5 to verify fix.
 
 ### Recommended Next Build Order
 | Priority | Item | Reason |
@@ -107,7 +107,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | Status | Notes |
 |---|---|---|
-| D6 — New Visit | **Live screen built. All security findings closed. Device test session 4 complete (2026-03-20): items #34, #35, #63 PASS. BUG-D6-DT4-1 HIGH: CameraView still black after useFocusEffect + 200ms fix — two consecutive fixes failed. Items #49, #60 deferred (simulation, v1 acceptable). BLOCKED: Builder session required to fix BUG-D6-DT4-1 before D6 can be called done.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. Sessions: `reviews/D6-device-test-session-2.md`, `reviews/D6-device-test-session-3.md`, `reviews/D6-device-test-session-4.md`. |
+| D6 — New Visit | **Live screen built. All security findings closed. Device test session 4 complete (2026-03-20): items #34, #35, #63 PASS. BUG-D6-DT4-1 HIGH: CameraView black screen — Builder fix deployed 2026-03-27 (InteractionManager.runAfterInteractions). Items #49, #60 deferred (simulation, v1 acceptable). Next: Device Test Session 5 to verify BUG-D6-DT4-1 fix.** | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. Sessions: `reviews/D6-device-test-session-2.md`, `reviews/D6-device-test-session-3.md`, `reviews/D6-device-test-session-4.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |

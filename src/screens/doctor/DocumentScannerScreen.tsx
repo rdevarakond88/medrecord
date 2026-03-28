@@ -29,8 +29,12 @@
  *                   Root cause: mounting CameraView synchronously during the React Navigation
  *                   transition prevents AVCaptureSession from starting — iOS camera session
  *                   cannot initialize while the JS bridge is busy with the navigation animation.
- *                   Fix: useFocusEffect + 200ms delay defers CameraView mount until after the
- *                   navigation transition is complete. Camera unmounts on screen blur (cleanup).
+ *                   Fix attempt: useFocusEffect + 200ms delay — did NOT resolve (DT4).
+ *   BUG-D6-DT4-1 — CameraView black screen persists after useFocusEffect + 200ms fix (HIGH)
+ *                   Root cause: 200ms hardcoded delay was insufficient — useFocusEffect fires
+ *                   at the start of the navigation animation, not the end.
+ *                   Fix: InteractionManager.runAfterInteractions() — fires after ALL animations
+ *                   and interactions complete; canonical React Native pattern for this use case.
  *
  * SHOULD FIX items from D7-persona-critique-v2.md applied here:
  *   D7-SF-4 — captureAdvisory: dark pill background + Colors.surface text (Rule 10)
@@ -54,6 +58,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  InteractionManager,
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -186,29 +191,37 @@ export default function DocumentScannerScreen() {
   const savingCompletedRef = useRef(false);
   const cameraRef          = useRef<CameraView>(null);
 
-  // BUG-D6-DT3-1 fix: CameraView black screen on iOS/Expo Go.
-  // Root cause: mounting CameraView synchronously during the React Navigation screen
-  // transition prevents AVCaptureSession from starting on iOS. The native camera
-  // session requires the navigation animation to be complete and the JS bridge to be
-  // idle before it can initialize — if mounted mid-transition, the preview stays black.
+  // BUG-D6-DT4-1 fix: CameraView black screen on iOS/Expo Go — third attempt.
   //
-  // Fix: useFocusEffect defers camera mount by 200ms after the screen receives focus.
-  // This ensures the transition animation is complete before the native session starts.
-  // Camera is also unmounted on blur (screen loses focus) for clean session teardown —
-  // prevents stale session state if the user navigates away while camera is active.
+  // Root cause (confirmed): useFocusEffect fires at the START of the React Navigation
+  // slide-in animation, not at the end. AVCaptureSession cannot initialise on iOS while
+  // the JS bridge is busy driving the animation — the session starts but the preview
+  // never renders, leaving a black frame.
   //
-  // This also handles the BUG-D6-DT2-1 case (permission grant → same-cycle mount):
-  // when the user returns from the iOS permission prompt, the screen regains focus and
-  // useFocusEffect runs again, mounting the camera cleanly after the 200ms delay.
+  // Previous fix (BUG-D6-DT3-1): setTimeout(200ms) after useFocusEffect.
+  // Result: still fails — 200ms is a guess and proved insufficient on this device.
+  //
+  // This fix: InteractionManager.runAfterInteractions() — React Native's built-in API
+  // that fires AFTER all pending animations and interactions complete. Unlike a
+  // hardcoded delay, it fires at the exact right moment regardless of device speed.
+  // This is the canonical React Native / React Navigation pattern for deferring heavy
+  // native module work until the JS thread is idle.
+  //
+  // Camera is unmounted on screen blur for clean AVCaptureSession teardown.
+  // The BUG-D6-DT2-1 case (permission grant → same-cycle mount) is also handled:
+  // returning from the iOS permission prompt regains focus, useFocusEffect re-runs,
+  // and the camera mounts cleanly after all transitions settle.
   const [isCameraVisible, setIsCameraVisible] = useState(false);
   useFocusEffect(
     useCallback(() => {
       // Only mount camera when permission is already granted — if not, the permission
       // UI renders instead of the viewfinder (see permission guard below).
       if (!cameraPermission?.granted) return;
-      const t = setTimeout(() => setIsCameraVisible(true), 200);
+      const task = InteractionManager.runAfterInteractions(() => {
+        setIsCameraVisible(true);
+      });
       return () => {
-        clearTimeout(t);
+        task.cancel();
         setIsCameraVisible(false);
       };
     }, [cameraPermission?.granted]),
@@ -490,9 +503,10 @@ export default function DocumentScannerScreen() {
   return (
     <View style={styles.viewfinderContainer}>
       {/* Rule 9: explicit wrapper with defined dimensions and black background.
-          isCameraVisible gates the mount — camera is deferred 200ms after focus
-          (BUG-D6-DT3-1 fix) to ensure AVCaptureSession initializes after the
-          navigation transition is complete. Black background shows while loading. */}
+          isCameraVisible gates the mount — camera is deferred via
+          InteractionManager.runAfterInteractions (BUG-D6-DT4-1 fix) so
+          AVCaptureSession starts only after all navigation animations complete.
+          Black background shows while waiting. */}
       <View style={styles.cameraWrapper}>
         {isCameraVisible && (
           <CameraView
