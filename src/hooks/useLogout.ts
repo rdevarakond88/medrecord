@@ -31,7 +31,7 @@ import { clearDoctorPatients } from '../db/patients';
 import {
   clearDoctorVisits,
   clearDoctorDraftVisits,
-  countPendingDraftVisits,
+  countUnsyncedDraftVisits,
 } from '../db/visits';
 import { clearDoctorScans, clearDoctorScanRecords } from '../db/scans';
 import { clearDoctorSyncQueue } from '../sync/syncQueue';
@@ -50,16 +50,20 @@ export function useLogout(): () => Promise<void> {
     // clearDoctorDraftVisits() below deletes pending/failed drafts — irreversible
     // data loss on a shared clinic device where the sync worker has not yet
     // uploaded the visit. sync_status='synced' rows are preserved (BUG-D3-DT1-2 fix).
-    // Require explicit confirmation before deleting pending rows.
+    // Require explicit confirmation before deleting pending or failed rows.
+    //
+    // BUG-D3-DT4-1 fix: count both 'pending' AND 'failed' rows. Previously only
+    // 'pending' was counted — if the sync worker exhausted max_attempts and moved the
+    // row to 'failed', the M-6 dialog was skipped and the visit was silently deleted.
     if (doctorId) {
-      const pendingCount = await countPendingDraftVisits(db, doctorId);
+      const pendingCount = await countUnsyncedDraftVisits(db, doctorId);
       if (pendingCount > 0) {
         const confirmed = await new Promise<boolean>((resolve) => {
           Alert.alert(
             'Unsynced visits',
             `${pendingCount} visit${pendingCount > 1 ? 's have' : ' has'} not been ` +
-            `uploaded to the server yet. ` +
-            `${pendingCount > 1 ? 'They' : 'It'} will be lost if you log out now.`,
+            `uploaded to the server and will be lost if you log out now. ` +
+            `Connect to the internet to sync before logging out.`,
             [
               {
                 text: 'Stay logged in',

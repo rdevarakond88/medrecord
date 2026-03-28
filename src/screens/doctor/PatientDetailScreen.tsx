@@ -62,6 +62,7 @@ import {
   getCachedVisits,
   getPendingDraftVisits,
   getSyncedDraftVisitsNotInServer,
+  getFailedDraftVisits,
   upsertVisitsFromServer,
   logConsentAccess,
 } from '../../db/visits';
@@ -159,8 +160,8 @@ export default function PatientDetailScreen() {
 
         setConsentGranted(result.consent_granted);
 
-        // BUG-D3-DT1-1 + BUG-D3-DT1-2 fix: merge draft visits that the server response
-        // does not yet include. Two failure modes are covered:
+        // BUG-D3-DT1-1 + BUG-D3-DT1-2 + BUG-D3-DT4-1 fix: merge draft visits that the
+        // server response does not yet include. Three failure modes are now covered:
         //
         //   Mode 1 (BUG-D3-DT1-1): createVisit() failed silently → sync_status='pending'.
         //     getPendingDraftVisits returns these rows.
@@ -170,6 +171,12 @@ export default function PatientDetailScreen() {
         //     new visit (server propagation delay on Render free tier).
         //     getSyncedDraftVisitsNotInServer returns these rows, filtering by server_id
         //     NOT IN the server response to prevent duplicates.
+        //
+        //   Mode 3 (BUG-D3-DT4-1): sync worker exhausted max_attempts → sync_status='failed'.
+        //     These visits will never be uploaded automatically and are deleted at logout
+        //     (with M-6 warning). They must be visible to the doctor before logout so they
+        //     can take action (e.g. note the visit manually, contact support).
+        //     getFailedDraftVisits returns these rows.
         const serverMapped = result.my_visits.map(adaptMyVisit);
         const serverIds    = result.my_visits.map((v) => v.id);
         const pendingDrafts = await getPendingDraftVisits(
@@ -178,10 +185,16 @@ export default function PatientDetailScreen() {
         const syncedDraftsNotOnServer = await getSyncedDraftVisitsNotInServer(
           db, patientServerId, patientLocalId, user.id, serverIds,
         );
-        // Merge all three sources; YYYY-MM-DD strings compare correctly for newest-first sort.
-        const mergedMyVisits = [...pendingDrafts, ...syncedDraftsNotOnServer, ...serverMapped].sort(
-          (a, b) => b.visit_date.localeCompare(a.visit_date),
+        const failedDrafts = await getFailedDraftVisits(
+          db, patientServerId, patientLocalId, user.id,
         );
+        // Merge all four sources; YYYY-MM-DD strings compare correctly for newest-first sort.
+        const mergedMyVisits = [
+          ...failedDrafts,
+          ...pendingDrafts,
+          ...syncedDraftsNotOnServer,
+          ...serverMapped,
+        ].sort((a, b) => b.visit_date.localeCompare(a.visit_date));
         setMyVisits(mergedMyVisits);
         setOtherVisits(result.other_doctor_visits.map(adaptOtherVisit));
         setLastVerifiedAt(result.checked_at);

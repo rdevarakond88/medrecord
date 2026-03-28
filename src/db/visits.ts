@@ -258,23 +258,78 @@ export async function markVisitSynced(
 }
 
 /**
- * Count locally-created draft visits that have not yet synced to the server.
- * Called by useLogout before proceeding, so the doctor can be warned before
- * unsynced visits are permanently deleted from the device (M-6 pre-merge fix).
+ * Count locally-created draft visits that will be permanently deleted at logout.
+ * Called by useLogout before proceeding, so the doctor can be warned (M-6).
  *
- * Only counts sync_status = 'pending' rows — 'synced' and 'failed' rows are
- * either already on the server or have exceeded max_attempts and are dead-lettered.
+ * Counts BOTH:
+ *   sync_status = 'pending' — not yet uploaded; sync worker will retry.
+ *   sync_status = 'failed'  — exceeded max_attempts; dead-lettered, will never sync.
+ *
+ * Both are deleted by clearDoctorDraftVisits() at logout. Counting only 'pending'
+ * misses 'failed' rows, allowing them to be silently lost without warning the doctor.
+ * (BUG-D3-DT4-1 root cause: sync worker hit max_attempts → row became 'failed' →
+ * countPendingDraftVisits returned 0 → no M-6 → row deleted.)
  */
-export async function countPendingDraftVisits(
+export async function countUnsyncedDraftVisits(
   db: SQLite.SQLiteDatabase,
   doctorId: string,
 ): Promise<number> {
   const result = await db.getFirstAsync<{ count: number }>(
     `SELECT COUNT(*) AS count FROM visits_draft
-     WHERE doctor_id = ? AND sync_status = 'pending'`,
+     WHERE doctor_id = ? AND sync_status IN ('pending', 'failed')`,
     [doctorId],
   );
   return result?.count ?? 0;
+}
+
+/**
+ * Return locally-created visits that have exceeded max_attempts and can no
+ * longer be synced automatically (sync_status='failed', dead-lettered).
+ *
+ * Used by D3's online path so the doctor can see these visits and know they
+ * need attention. They will be deleted at logout — the doctor is warned via M-6.
+ *
+ * (BUG-D3-DT4-1 fix: 'failed' visits were invisible in the online path because
+ * getPendingDraftVisits only returned 'pending' rows and the server does not have
+ * these visits. Result: visit appeared after save but vanished after re-login.)
+ */
+export async function getFailedDraftVisits(
+  db: SQLite.SQLiteDatabase,
+  patientServerId: string | null,
+  patientLocalId: string,
+  doctorId: string,
+): Promise<LocalVisit[]> {
+  const rows = await db.getAllAsync<{
+    local_id:          string;
+    patient_server_id: string | null;
+    visit_date:        string;
+    chief_complaint:   string | null;
+    created_at:        string;
+  }>(
+    `SELECT local_id, patient_server_id, visit_date, chief_complaint, created_at
+     FROM visits_draft
+     WHERE doctor_id = ?
+       AND sync_status = 'failed'
+       AND (
+         patient_server_id = ?
+         OR (patient_server_id IS NULL AND patient_id = ?)
+       )
+     ORDER BY visit_date DESC`,
+    [doctorId, patientServerId, patientLocalId],
+  );
+
+  return rows.map((r) => ({
+    server_id:           r.local_id,
+    patient_server_id:   r.patient_server_id ?? '',
+    visit_date:          r.visit_date,
+    chief_complaint:     r.chief_complaint,
+    clinic_name:         '',
+    record_count:        0,
+    is_own_visit:        true,
+    cached_by_doctor_id: doctorId,
+    synced_at:           r.created_at,
+    sync_status:         'draft' as const,
+  }));
 }
 
 /**
