@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** BUG-D3-DT1-2 fix FAILED verification (2026-03-28, session 3). D3 still shows only "Fever and headache"; all newer visits absent. Fix code is present but symptom persists — likely root cause: `clearDoctorDraftVisits()` on logout deletes the `visits_draft` rows the fix depends on; fix does not survive cross-session logout. Builder session required. Also: BUG-D6-DT-1 found — D6 Save disabled with chief complaint only; note or scan required (hasRecord gate excludes chiefComplaint).
+**Phase:** BUG-D3-DT1-2 + BUG-D6-DT-1 fixed by Builder (2026-03-28). D3 cross-session visit visibility fix applied: `clearDoctorDraftVisits()` now preserves `sync_status='synced'` rows across logout so `getSyncedDraftVisitsNotInServer` can still merge them on re-login. D6 save gate fixed: `hasRecord` now includes `chiefComplaint`. Ready for D3 device test session 4.
 **Last Updated:** 2026-03-28
 
 ---
@@ -24,19 +24,18 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — D3 session 3 (2026-03-28). BUG-D3-DT1-2 fix not resolving symptom — D3 still shows only "Fever and headache", newer visits absent. New bug BUG-D6-DT-1 found: D6 Save disabled with chief complaint only. Report: `reviews/D3-device-test-session-3.md`.
+**Last Session:** Builder — BUG-D3-DT1-2 + BUG-D6-DT-1 fixed (2026-03-28). `clearDoctorDraftVisits()` now preserves synced rows; `hasRecord` in D6 now includes chief complaint.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder — fix BUG-D3-DT1-2 + BUG-D6-DT-1** | D3 visits still not appearing; D6 save gate too strict |
-| 2 | **D3 device test session 4** | After Builder fixes verified |
-| 3 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
-| 4 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
-| 5 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
-| 5 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
-| 6 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
-| 7 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
+| 1 | **D3 device test session 4** | Verify BUG-D3-DT1-2 + BUG-D6-DT-1 fixes |
+| 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
+| 3 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
+| 4 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
+| 4 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
+| 5 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 6 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
 ---
 

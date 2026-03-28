@@ -165,7 +165,10 @@ export default function NewVisitScreen() {
   // show the discard dialog for the programmatic back navigation.
   const savingCompletedRef = useRef(false);
 
-  const hasRecord = noteText.trim().length > 0 || scan !== null;
+  // BUG-D6-DT-1 fix: chief complaint alone is sufficient to save a visit.
+  // The prior gate (noteText || scan) conflicted with the "Chief Complaint (optional)"
+  // label and violated the 60-second design goal for the fastest-path use case.
+  const hasRecord = chiefComplaint.trim().length > 0 || noteText.trim().length > 0 || scan !== null;
   const hasNote   = noteText.trim().length > 0;
 
   // ─── Back navigation guard (checklist #30, #31, #54) ─────────────────
@@ -728,7 +731,7 @@ export default function NewVisitScreen() {
               hintHighlighted && styles.saveHintHighlighted,
             ]}
           >
-            Add a scan or note to save this visit.
+            Add a chief complaint, note, or scan to save this visit.
           </Text>
         )}
       </View>

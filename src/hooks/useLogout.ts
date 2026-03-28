@@ -47,9 +47,10 @@ export function useLogout(): () => Promise<void> {
     const doctorId = user?.id ?? '';
 
     // M-6: warn if unsynced draft visits would be permanently deleted.
-    // clearDoctorDraftVisits() below deletes ALL drafts including pending ones —
-    // irreversible data loss on a shared clinic device where the sync worker
-    // has not yet uploaded the visit. Require explicit confirmation.
+    // clearDoctorDraftVisits() below deletes pending/failed drafts — irreversible
+    // data loss on a shared clinic device where the sync worker has not yet
+    // uploaded the visit. sync_status='synced' rows are preserved (BUG-D3-DT1-2 fix).
+    // Require explicit confirmation before deleting pending rows.
     if (doctorId) {
       const pendingCount = await countPendingDraftVisits(db, doctorId);
       if (pendingCount > 0) {

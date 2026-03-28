@@ -278,16 +278,25 @@ export async function countPendingDraftVisits(
 }
 
 /**
- * Delete all draft visits for the given doctor from SQLite.
+ * Delete pending and failed draft visits for the given doctor from SQLite.
  * Called during logout to prevent cross-doctor data leakage on shared devices.
- * Must be added to the useLogout sequence alongside clearDoctorVisits().
+ *
+ * sync_status='synced' rows are intentionally preserved. They have already been
+ * committed to the server but may not yet appear in a subsequent GET /patients/:id/visits
+ * response (Render free-tier propagation delay). Deleting them on logout causes
+ * getSyncedDraftVisitsNotInServer to find nothing on re-login, making those visits
+ * permanently invisible to the doctor even though they are on the server. (BUG-D3-DT1-2)
+ *
+ * Security note: synced rows are scoped by doctor_id and cannot be read by a
+ * different doctor logging in on the same device — the same scoping that applies
+ * to all visits_draft reads in D3's online merge path.
  */
 export async function clearDoctorDraftVisits(
   db: SQLite.SQLiteDatabase,
   doctorId: string,
 ): Promise<void> {
   await db.runAsync(
-    `DELETE FROM visits_draft WHERE doctor_id = ?`,
+    `DELETE FROM visits_draft WHERE doctor_id = ? AND sync_status != 'synced'`,
     [doctorId],
   );
 }
