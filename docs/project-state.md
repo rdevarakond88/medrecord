@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** BUG-D3-DT1-2 found in D3 device test session 2 (2026-03-28). POST /visits returns 2xx but GET /patients/:id/visits does not return current-session visits — visits disappear from online D3 after save. BUG-D3-DT1-1 fix (fb6fe40) does not cover this failure mode. Builder Agent session required.
+**Phase:** BUG-D3-DT1-2 fixed (2026-03-28). `getSyncedDraftVisitsNotInServer` added to `visits.ts`; D3 online fetchData now merges pending AND synced draft visits not in server response. Ready for D3 device test session 3.
 **Last Updated:** 2026-03-28
 
 ---
@@ -24,19 +24,18 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — D3 device test session 2 (2026-03-28). BUG-D3-DT1-1 fix verified insufficient. BUG-D3-DT1-2 found and root-caused: POST /visits succeeds (sync_status='synced'), but GET /patients/:id/visits does not return current-session visits. Offline path shows them correctly (getCachedVisits has no sync_status filter). Builder handoff required.
+**Last Session:** Builder — D3 BUG-D3-DT1-2 fix (2026-03-28). Added `getSyncedDraftVisitsNotInServer()` to `src/db/visits.ts`. D3 online fetchData now merges three sources: pending drafts (Mode 1), synced drafts absent from server response (Mode 2), and server response. Both BUG-D3-DT1-1 and BUG-D3-DT1-2 failure modes covered.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder Agent — fix BUG-D3-DT1-2** | Server-side + client-side gap preventing new visits from showing in D3 online view |
-| 2 | **D3 device test session 3 (Step 8)** | Verify BUG-D3-DT1-2 fix and complete remaining checklist items |
-| 3 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
-| 4 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
-| 5 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
-| 6 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
-| 7 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
-| 8 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
+| 1 | **D3 device test session 3 (Step 8)** | Verify BUG-D3-DT1-2 fix and complete remaining checklist items |
+| 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
+| 3 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
+| 4 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
+| 5 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
+| 6 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 7 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
 ---
 
@@ -101,7 +100,7 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|---|
 | Sync Worker | `src/sync/syncWorker.ts`, `src/sync/useSyncWorker.ts`, `src/store/useSyncStore.ts`, `src/auth/constants.ts` | 2026-03-13 | Builder complete. Drain loop: batches 20 entries, strict queued_at ASC order, record entries deferred (S3 v2), JWT 401 refresh + retry once, per-result id_mapping + entity updates, audit event flush. Three triggers: AppState active, NetInfo restored, 5-min interval. App.tsx mounted via SyncWorkerMount. **Security audit complete (2026-03-13) — BLOCKED: 3 HIGH findings. See Known Technical Debt — Sync Worker.** |
 | D2 — Patient Search / Home | `mockups/D2PatientSearchScreen.tsx` (mockup) / `src/screens/doctor/PatientSearchScreen.tsx` (live) | 2026-02-19 | Static mockup approved. Live screen wired: SQLite primary path, GET /patients/lookup on 10 digits, server result cached to SQLite, offline banner + context card, sync badges, navigation stubs to D3/D5. **All agents run:** security audit v1 (BLOCKED), persona critique (3.2/5), QA test plan (`reviews/D2-qa-test-plan.md`). C-1/C-2/C-3 fixed (2026-02-20). Security re-audit v2 passed. All HIGH debt items closed (2026-02-22). **Real device verified (2026-02-22) on iPhone via Expo Go:** search bar focus/unfocus, cursor after digit, FAB position, digit entry — all confirmed. Checklist: `reviews/D2-VALIDATION-CHECKLIST.md`. **On `dev`. Do not merge to `main` until H-2 + H-3 resolved.** |
-| D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) / `src/screens/doctor/PatientDetailScreen.tsx` (live) | 2026-02-23 / 2026-02-24 | Static mockup with four variants approved. Live screen wired: `getPatientVisits()` two-list API (`myVisits` + `otherDoctorVisits`), loading skeleton on mount, server consent gate (D3-H-2), offline SQLite fallback (`getCachedVisits()`), synchronous auth guard (D3-H-3), `useFocusEffect` for dynamic consent transition on D9 return, AppState foreground re-verify, offline guard on Request Access, DPDP audit event to `audit_events` table, FlatList with `maxToRenderPerBatch={10}` + client-side pagination, `recordCount=0 → 'Draft'`, `numberOfLines={1}` on patient name, no consent badge on empty state, last-verified timestamp in offline banner, per-variant consent gate box, "View Full Visit" disabled stub until D4. Supporting modules: `src/api/visits.ts`, `src/db/visits.ts`, `getPatientByLocalId()` in db/patients. Schema: visits + audit_events tables. All D3 HIGH pre-merge debt closed. **Device test session 1 complete (2026-03-28) — 1 HIGH bug BUG-D3-DT1-1 FIXED (2026-03-28) — online path now merges pending drafts via getPendingDraftVisits(). Report: `reviews/D3-device-test-session-1.md`. Ready for device test session 2.** |
+| D3 — Patient Detail / History | `mockups/D3PatientDetailScreen.tsx` (mockup) / `src/screens/doctor/PatientDetailScreen.tsx` (live) | 2026-02-23 / 2026-02-24 | Static mockup with four variants approved. Live screen wired: `getPatientVisits()` two-list API (`myVisits` + `otherDoctorVisits`), loading skeleton on mount, server consent gate (D3-H-2), offline SQLite fallback (`getCachedVisits()`), synchronous auth guard (D3-H-3), `useFocusEffect` for dynamic consent transition on D9 return, AppState foreground re-verify, offline guard on Request Access, DPDP audit event to `audit_events` table, FlatList with `maxToRenderPerBatch={10}` + client-side pagination, `recordCount=0 → 'Draft'`, `numberOfLines={1}` on patient name, no consent badge on empty state, last-verified timestamp in offline banner, per-variant consent gate box, "View Full Visit" disabled stub until D4. Supporting modules: `src/api/visits.ts`, `src/db/visits.ts`, `getPatientByLocalId()` in db/patients. Schema: visits + audit_events tables. All D3 HIGH pre-merge debt closed. **Device test session 1 complete (2026-03-28) — BUG-D3-DT1-1 FIXED (commit fb6fe40). Device test session 2 complete (2026-03-28) — BUG-D3-DT1-2 FIXED (2026-03-28) — getSyncedDraftVisitsNotInServer() added; online fetchData now covers both Mode 1 (pending) and Mode 2 (synced-but-absent) failure modes. Reports: `reviews/D3-device-test-session-1.md`, `reviews/D3-device-test-session-2.md`. Ready for device test session 3.** |
 
 ## Screens Pending
 

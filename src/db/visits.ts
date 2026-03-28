@@ -392,6 +392,69 @@ export async function getPendingDraftVisits(
 }
 
 /**
+ * Return locally-created visits that were successfully synced to the server
+ * (sync_status='synced') but whose server_id is NOT present in the current
+ * server response.
+ *
+ * Used by D3's online path to cover the failure mode where POST /visits succeeded
+ * and markVisitSynced() was called, but GET /patients/:id/visits does not yet
+ * return the new visit — a server-side propagation delay. (BUG-D3-DT1-2 fix)
+ *
+ * Together with getPendingDraftVisits, this makes D3's online view complete:
+ *   getPendingDraftVisits             → sync_status='pending'  (server call failed)
+ *   getSyncedDraftVisitsNotInServer   → sync_status='synced', server_id absent from response
+ *
+ * @param serverIds  IDs from the current GET /patients/:id/visits my_visits response.
+ *                   Rows already in this set are excluded to prevent duplicates.
+ */
+export async function getSyncedDraftVisitsNotInServer(
+  db: SQLite.SQLiteDatabase,
+  patientServerId: string | null,
+  patientLocalId: string,
+  doctorId: string,
+  serverIds: string[],
+): Promise<LocalVisit[]> {
+  // Build NOT IN clause — if serverIds is empty, include all synced rows (no exclusion needed)
+  const notInClause = serverIds.length > 0
+    ? `AND (server_id IS NULL OR server_id NOT IN (${serverIds.map(() => '?').join(',')}))`
+    : '';
+
+  const rows = await db.getAllAsync<{
+    local_id:          string;
+    patient_server_id: string | null;
+    visit_date:        string;
+    chief_complaint:   string | null;
+    created_at:        string;
+    server_id:         string | null;
+  }>(
+    `SELECT local_id, patient_server_id, visit_date, chief_complaint, created_at, server_id
+     FROM visits_draft
+     WHERE doctor_id = ?
+       AND sync_status = 'synced'
+       AND (
+         patient_server_id = ?
+         OR (patient_server_id IS NULL AND patient_id = ?)
+       )
+       ${notInClause}
+     ORDER BY visit_date DESC`,
+    [doctorId, patientServerId, patientLocalId, ...serverIds],
+  );
+
+  return rows.map((r) => ({
+    server_id:           r.server_id ?? r.local_id,
+    patient_server_id:   r.patient_server_id ?? '',
+    visit_date:          r.visit_date,
+    chief_complaint:     r.chief_complaint,
+    clinic_name:         '',
+    record_count:        0,
+    is_own_visit:        true,
+    cached_by_doctor_id: doctorId,
+    synced_at:           r.created_at,
+    sync_status:         'draft' as const,
+  }));
+}
+
+/**
  * Write a consent_accessed audit event to the local audit_events table.
  * Called by D3 on mount when visit history is displayed with consent granted.
  *

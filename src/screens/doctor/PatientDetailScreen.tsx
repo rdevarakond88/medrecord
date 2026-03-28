@@ -61,6 +61,7 @@ import {
   LocalVisit,
   getCachedVisits,
   getPendingDraftVisits,
+  getSyncedDraftVisitsNotInServer,
   upsertVisitsFromServer,
   logConsentAccess,
 } from '../../db/visits';
@@ -158,16 +159,27 @@ export default function PatientDetailScreen() {
 
         setConsentGranted(result.consent_granted);
 
-        // BUG-D3-DT1-1 fix: merge any pending drafts not yet on the server.
-        // createVisit() in D6 swallows server errors silently — the visit stays in
-        // visits_draft (sync_status='pending') until the sync worker pushes it.
-        // Without this merge, D3 shows empty while the draft exists only in SQLite.
+        // BUG-D3-DT1-1 + BUG-D3-DT1-2 fix: merge draft visits that the server response
+        // does not yet include. Two failure modes are covered:
+        //
+        //   Mode 1 (BUG-D3-DT1-1): createVisit() failed silently → sync_status='pending'.
+        //     getPendingDraftVisits returns these rows.
+        //
+        //   Mode 2 (BUG-D3-DT1-2): createVisit() succeeded, markVisitSynced() called →
+        //     sync_status='synced'. But GET /patients/:id/visits does not yet return the
+        //     new visit (server propagation delay on Render free tier).
+        //     getSyncedDraftVisitsNotInServer returns these rows, filtering by server_id
+        //     NOT IN the server response to prevent duplicates.
+        const serverMapped = result.my_visits.map(adaptMyVisit);
+        const serverIds    = result.my_visits.map((v) => v.id);
         const pendingDrafts = await getPendingDraftVisits(
           db, patientServerId, patientLocalId, user.id,
         );
-        const serverMapped = result.my_visits.map(adaptMyVisit);
-        // Merge and keep newest-first order; YYYY-MM-DD strings compare correctly.
-        const mergedMyVisits = [...pendingDrafts, ...serverMapped].sort(
+        const syncedDraftsNotOnServer = await getSyncedDraftVisitsNotInServer(
+          db, patientServerId, patientLocalId, user.id, serverIds,
+        );
+        // Merge all three sources; YYYY-MM-DD strings compare correctly for newest-first sort.
+        const mergedMyVisits = [...pendingDrafts, ...syncedDraftsNotOnServer, ...serverMapped].sort(
           (a, b) => b.visit_date.localeCompare(a.visit_date),
         );
         setMyVisits(mergedMyVisits);
