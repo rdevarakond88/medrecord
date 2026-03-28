@@ -60,6 +60,7 @@ import { LocalPatient, getPatientByLocalId } from '../../db/patients';
 import {
   LocalVisit,
   getCachedVisits,
+  getPendingDraftVisits,
   upsertVisitsFromServer,
   logConsentAccess,
 } from '../../db/visits';
@@ -156,7 +157,20 @@ export default function PatientDetailScreen() {
         if (refreshedPatient) setPatient(refreshedPatient);
 
         setConsentGranted(result.consent_granted);
-        setMyVisits(result.my_visits.map(adaptMyVisit));
+
+        // BUG-D3-DT1-1 fix: merge any pending drafts not yet on the server.
+        // createVisit() in D6 swallows server errors silently — the visit stays in
+        // visits_draft (sync_status='pending') until the sync worker pushes it.
+        // Without this merge, D3 shows empty while the draft exists only in SQLite.
+        const pendingDrafts = await getPendingDraftVisits(
+          db, patientServerId, patientLocalId, user.id,
+        );
+        const serverMapped = result.my_visits.map(adaptMyVisit);
+        // Merge and keep newest-first order; YYYY-MM-DD strings compare correctly.
+        const mergedMyVisits = [...pendingDrafts, ...serverMapped].sort(
+          (a, b) => b.visit_date.localeCompare(a.visit_date),
+        );
+        setMyVisits(mergedMyVisits);
         setOtherVisits(result.other_doctor_visits.map(adaptOtherVisit));
         setLastVerifiedAt(result.checked_at);
 

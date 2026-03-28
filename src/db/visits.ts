@@ -341,6 +341,57 @@ export async function logVisitCreated(
 }
 
 /**
+ * Return locally-created visits that have not yet reached the server.
+ *
+ * Used by D3's online path to merge pending drafts with the server response.
+ * createVisit() in D6 swallows server errors silently — the visit lives in
+ * visits_draft (sync_status='pending') until the sync worker pushes it.
+ * Without this merge, D3 shows an empty list when the online createVisit call
+ * failed even though the visit is safely in SQLite. (BUG-D3-DT1-1 fix)
+ *
+ * Only 'pending' rows are returned — 'synced' rows are already in the server
+ * response and 'failed' rows have exceeded max_attempts and are dead-lettered.
+ */
+export async function getPendingDraftVisits(
+  db: SQLite.SQLiteDatabase,
+  patientServerId: string | null,
+  patientLocalId: string,
+  doctorId: string,
+): Promise<LocalVisit[]> {
+  const rows = await db.getAllAsync<{
+    local_id:          string;
+    patient_server_id: string | null;
+    visit_date:        string;
+    chief_complaint:   string | null;
+    created_at:        string;
+  }>(
+    `SELECT local_id, patient_server_id, visit_date, chief_complaint, created_at
+     FROM visits_draft
+     WHERE doctor_id = ?
+       AND sync_status = 'pending'
+       AND (
+         patient_server_id = ?
+         OR (patient_server_id IS NULL AND patient_id = ?)
+       )
+     ORDER BY visit_date DESC`,
+    [doctorId, patientServerId, patientLocalId],
+  );
+
+  return rows.map((r) => ({
+    server_id:           r.local_id,
+    patient_server_id:   r.patient_server_id ?? '',
+    visit_date:          r.visit_date,
+    chief_complaint:     r.chief_complaint,
+    clinic_name:         '',
+    record_count:        0,
+    is_own_visit:        true,
+    cached_by_doctor_id: doctorId,
+    synced_at:           r.created_at,
+    sync_status:         'draft' as const,
+  }));
+}
+
+/**
  * Write a consent_accessed audit event to the local audit_events table.
  * Called by D3 on mount when visit history is displayed with consent granted.
  *
