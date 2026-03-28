@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** BUG-D3-DT1-1 fixed (2026-03-28). D3's online fetchData() now merges pending draft visits from visits_draft with the server response — draft visits created in D6 now appear in D3 even when createVisit() server call failed silently. Ready for D3 device test session 2.
+**Phase:** BUG-D3-DT1-2 found in D3 device test session 2 (2026-03-28). POST /visits returns 2xx but GET /patients/:id/visits does not return current-session visits — visits disappear from online D3 after save. BUG-D3-DT1-1 fix (fb6fe40) does not cover this failure mode. Builder Agent session required.
 **Last Updated:** 2026-03-28
 
 ---
@@ -24,18 +24,19 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — BUG-D3-DT1-1 fix (2026-03-28). Added `getPendingDraftVisits()` to `src/db/visits.ts`; D3 online fetchData() now merges pending drafts with server response. Commit: fb6fe40.
+**Last Session:** Device Tester — D3 device test session 2 (2026-03-28). BUG-D3-DT1-1 fix verified insufficient. BUG-D3-DT1-2 found and root-caused: POST /visits succeeds (sync_status='synced'), but GET /patients/:id/visits does not return current-session visits. Offline path shows them correctly (getCachedVisits has no sync_status filter). Builder handoff required.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D3 device test session 2 (Step 8)** | BUG-D3-DT1-1 fixed — resume session 2 to verify fix and complete remaining checklist items |
-| 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
-| 3 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
-| 4 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
-| 5 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
-| 6 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
-| 7 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
+| 1 | **Builder Agent — fix BUG-D3-DT1-2** | Server-side + client-side gap preventing new visits from showing in D3 online view |
+| 2 | **D3 device test session 3 (Step 8)** | Verify BUG-D3-DT1-2 fix and complete remaining checklist items |
+| 3 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
+| 4 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
+| 5 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
+| 6 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
+| 7 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 8 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
 ---
 
