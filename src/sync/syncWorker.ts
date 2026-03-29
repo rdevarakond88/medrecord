@@ -416,6 +416,16 @@ export async function runSyncWorker(
                  WHERE id = ?`,
                 [newAttempts, now, err instanceof Error ? err.message : 'Unknown error', row.id],
               );
+              // Mirror the 'failed' status to the entity so D3's getFailedDraftVisits()
+              // can surface it and countUnsyncedDraftVisits() warns the doctor at logout.
+              // Without this, visits_draft.sync_status stays 'pending' forever even though
+              // the sync_queue entry is dead-lettered and will never be retried.
+              if (row.entity_type === 'visit') {
+                await db.runAsync(
+                  `UPDATE visits_draft SET sync_status = 'failed', updated_at = ? WHERE local_id = ?`,
+                  [now, row.entity_local_id],
+                );
+              }
             } else {
               await db.runAsync(
                 `UPDATE sync_queue

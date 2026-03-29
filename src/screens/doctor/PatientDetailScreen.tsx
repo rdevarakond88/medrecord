@@ -54,6 +54,7 @@ import { Colors } from '../../constants/theme';
 import { formatDateForDisplay } from '../../utils/formatters';
 import { useNetworkStatus } from '../../utils/useNetworkStatus';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useSyncStore } from '../../store/useSyncStore';
 import { ApiError } from '../../api/apiClient';
 import { getPatientVisits } from '../../api/visits';
 import { LocalPatient, getPatientByLocalId } from '../../db/patients';
@@ -101,8 +102,9 @@ export default function PatientDetailScreen() {
   const db         = useSQLiteContext();
   const navigation = useNavigation<any>();
   const route      = useRoute<RouteProp<PatientDetailParams, 'PatientDetail'>>();
-  const isOnline   = useNetworkStatus();
+  const isOnline    = useNetworkStatus();
   const { token, user } = useAuthStore();
+  const lastSyncAt  = useSyncStore((state) => state.lastSyncAt);
 
   // consentGranted nav param is the initial signal only (D3-H-2).
   // H-1: offline path reads consent_granted from SQLite via getPatientByLocalId, not this
@@ -278,6 +280,16 @@ export default function PatientDetailScreen() {
     });
     return () => sub.remove();
   }, [fetchData]);
+
+  // Re-fetch visit list when background sync completes.
+  // useSyncStore.lastSyncAt is updated at the end of each successful drain run.
+  // Without this, Draft+cloud icons persist until the doctor manually navigates
+  // away and back — the visit was uploaded but D3 doesn't know to re-render.
+  useEffect(() => {
+    if (lastSyncAt) {
+      void fetchData();
+    }
+  }, [lastSyncAt, fetchData]);
 
   // Emit DPDP consent_accessed audit event when visit history is first displayed.
   // consent-layer-spec.md: patients can request a log of who accessed their data.

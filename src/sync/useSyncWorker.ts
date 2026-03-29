@@ -23,15 +23,20 @@ import { runSyncWorker } from './syncWorker';
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;  // 5 minutes
 
 function isOnline(state: NetInfoState): boolean {
-  // On iOS (including Expo Go), NetInfo.fetch() point-in-time calls frequently
-  // return isInternetReachable: null even when the device has real connectivity,
-  // because the OS reachability probe hasn't completed at that instant.
-  // Using !== false (rather than === true) allows sync to proceed when reachability
-  // is unknown-but-connected. If the device is actually offline the API calls will
-  // fail and retry via the normal attempt-increment path.
-  // Note: useNetworkStatus (D3 consent check) intentionally stays conservative
-  // (=== true) for UI display purposes — this is sync-only permissiveness.
-  return state.isConnected === true && state.isInternetReachable !== false;
+  // On iOS (including Expo Go), NetInfo frequently returns both isConnected: null
+  // AND isInternetReachable: null before the OS reachability probe completes.
+  // Both checks use !== false (permissive) rather than === true (strict) so sync
+  // proceeds when connectivity state is unknown-but-not-explicitly-offline.
+  // If the device is actually offline the API calls will fail and retry via the
+  // normal attempt-increment path — this is safe and by design.
+  //
+  // DT6-1 fix:  isInternetReachable changed from === true to !== false.
+  // DT7-1 fix:  isConnected changed from === true to !== false (same reasoning —
+  //             isConnected: null on iOS after foreground was blocking all sync).
+  //
+  // Note: useNetworkStatus (D3 consent check, D6 online guard) intentionally stays
+  // conservative (=== true) for UI display — this permissiveness is sync-only.
+  return state.isConnected !== false && state.isInternetReachable !== false;
 }
 
 export function useSyncWorker(): void {
