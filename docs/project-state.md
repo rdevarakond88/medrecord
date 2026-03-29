@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** BUG-D3-DT6-1 NEW (2026-03-29) — BUG-D3-DT5-1 fix NOT verified on device. Sync still not completing after fix. Visit stays Draft + cloud after multiple AppState triggers and navigation cycle. Network confirmed reachable. Builder investigation required with sync worker logging.
+**Phase:** BUG-D3-DT6-1 FIX APPLIED (2026-03-29) — Root cause identified: `NetInfo.fetch()` point-in-time calls on iOS return `isInternetReachable: null` even when device is online. Sync triggers treated this as offline and never ran. Fix: `isOnline()` in `useSyncWorker.ts` changed to `!== false` (treats null as "probably online"). Console logging added throughout `useSyncWorker.ts` and `syncWorker.ts` for DT session 7 verification. Awaiting device test session 7 to confirm.
 **Last Updated:** 2026-03-29
 
 ---
@@ -24,13 +24,13 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester (2026-03-29). D3 device test session 6. BUG-D3-DT5-1 fix NOT verified — sync still not completing on device despite code fix. BUG-D3-DT6-1 logged (HIGH): visits remain Draft + cloud after multiple AppState triggers and navigation cycle; network confirmed reachable (consent check reached server). Builder investigation needed: add sync worker logging to trace execution path. Report: reviews/D3-device-test-session-6.md.
+**Last Session:** Builder (2026-03-29). BUG-D3-DT6-1 fix. Root cause: `NetInfo.fetch()` on iOS returns `isInternetReachable: null` (not `true`) for point-in-time calls, so `useSyncWorker` sync triggers treated the device as offline and never invoked `runSyncWorker`. D3's consent check fired because it uses subscription-based `useNetworkStatus` (which held `true` from an earlier event). Fix: `isOnline()` in `useSyncWorker.ts` changed from `=== true` to `!== false`. Logging added to `useSyncWorker.ts` and `syncWorker.ts` for DT7 trace.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder — fix BUG-D3-DT6-1** | Sync still not completing after DT5-1 fix; add logging + find root cause |
-| 2 | **D3 device test session 7 (Step 8)** | Verify BUG-D3-DT6-1 fix + BUG-D3-DT5-1 re-verify + BUG-D3-DT1-2 cross-session persistence |
+| 1 | **D3 device test session 7 (Step 8)** | Verify BUG-D3-DT6-1 fix + BUG-D3-DT5-1 re-verify + BUG-D3-DT1-2 cross-session persistence |
+| 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
 | 3 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
 | 4 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
 | 5 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
