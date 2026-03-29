@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** BUG-D3-DT6-1 FIX APPLIED (2026-03-29) — Root cause identified: `NetInfo.fetch()` point-in-time calls on iOS return `isInternetReachable: null` even when device is online. Sync triggers treated this as offline and never ran. Fix: `isOnline()` in `useSyncWorker.ts` changed to `!== false` (treats null as "probably online"). Console logging added throughout `useSyncWorker.ts` and `syncWorker.ts` for DT session 7 verification. Awaiting device test session 7 to confirm.
+**Phase:** BUG-D3-DT7-1 OPEN (2026-03-29) — Device test session 7 confirmed: `isOnline() !== false` fix did NOT resolve sync on iOS. Visits still remain Draft + cloud after AppState foreground and navigation triggers. Sync worker is not running at all on device. BUG-D3-DT1-2 re-verification blocked. Builder Agent investigation required — must find why sync worker never executes on device (console logs added in DT6 builder session, but not visible via verbal device testing).
 **Last Updated:** 2026-03-29
 
 ---
@@ -24,16 +24,15 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder (2026-03-29). BUG-D3-DT6-1 fix. Root cause: `NetInfo.fetch()` on iOS returns `isInternetReachable: null` (not `true`) for point-in-time calls, so `useSyncWorker` sync triggers treated the device as offline and never invoked `runSyncWorker`. D3's consent check fired because it uses subscription-based `useNetworkStatus` (which held `true` from an earlier event). Fix: `isOnline()` in `useSyncWorker.ts` changed from `=== true` to `!== false`. Logging added to `useSyncWorker.ts` and `syncWorker.ts` for DT7 trace.
+**Last Session:** Device Tester (2026-03-29). D3 device test session 7. BUG-D3-DT6-1 fix NOT verified — sync worker still not executing on iOS device. Neither AppState foreground nor navigation trigger completed sync. BUG-D3-DT1-2 re-verification blocked (visit never synced). BUG-D3-DT7-1 logged. Builder Agent session required for deeper sync worker investigation.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D3 device test session 7 (Step 8)** | Verify BUG-D3-DT6-1 fix + BUG-D3-DT5-1 re-verify + BUG-D3-DT1-2 cross-session persistence |
+| 1 | **Builder Agent — BUG-D3-DT7-1** | Sync worker not running on iOS — `isOnline() !== false` fix insufficient; deeper investigation required |
 | 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
-| 3 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
-| 4 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
-| 5 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
+| 3 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
+| 4 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
 | 5 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
 | 6 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 | 7 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |

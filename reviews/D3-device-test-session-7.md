@@ -31,26 +31,30 @@
 
 | # | Item | Status | Notes |
 |---|---|---|---|
-| T1 | Login → D2: patient search loads | ⬜ | |
-| T2 | Search for Test Patient One (8888888888) → navigate to D3 | ⬜ | |
-| T3 | Create new visit in D6 ("session 7 test") → returns to D3 → card visible with Draft + cloud | ⬜ | |
-| T4 | Background app (Home button) → foreground → sync completes (Draft + cloud disappear) | ⬜ | |
-| T5 | Navigate away (D2) → return to D3 → sync complete state still reflected | ⬜ | |
+| T1 | Login → D2: patient search loads | ✅ PASS | |
+| T2 | Search for Test Patient One (8888888888) → navigate to D3 | ✅ PASS | Visit history card visible on D3 |
+| T3 | Create new visit in D6 ("session 7 test") → returns to D3 → card visible with Draft + cloud | ✅ PASS | Card visible with Draft label + cloud icon |
+| T4 | Background app (Home button) → foreground → sync completes (Draft + cloud disappear) | ❌ FAIL | Draft + cloud still visible after foreground — BUG-D3-DT6-1 NOT fixed |
+| T5 | Navigate away (D2) → return to D3 → sync complete state still reflected | ❌ FAIL | Draft + cloud still visible after nav away and return |
 
 ### Phase 2 — Cross-session persistence (BUG-D3-DT1-2)
 
 | # | Item | Status | Notes |
 |---|---|---|---|
-| R1 | Logout from app | ⬜ | |
-| R2 | Re-login with same credentials | ⬜ | |
-| R3 | Navigate to D3 for Test Patient One | ⬜ | |
-| R4 | Visit created this session visible (synced, no Draft label) | ⬜ | |
+| R1 | Logout from app | ✅ PASS | |
+| R2 | Re-login with same credentials | ✅ PASS | |
+| R3 | Navigate to D3 for Test Patient One | ✅ PASS | |
+| R4 | Visit created this session visible (synced, no Draft label) | ❌ FAIL | Session 7 visit not visible — sync never completed so visit never uploaded; BUG-D3-DT1-2 re-verification blocked by sync failure |
 
 ---
 
 ## Bugs Found
 
-_(none yet)_
+### BUG-D3-DT7-1 (carried from DT6-1) — HIGH
+**Summary:** Sync worker still not completing on iOS. Draft + cloud icon persist after AppState foreground trigger and navigation cycle. BUG-D3-DT6-1 fix (`isOnline() !== false`) did not resolve the issue.
+**Repro:** Login → D3 → create visit in D6 → return to D3 → background → foreground → Draft + cloud remain. Navigate away and back → still Draft + cloud.
+**Impact:** Visits never upload. Cross-session persistence (BUG-D3-DT1-2) cannot be verified because visits never reach the server.
+**Status:** OPEN — requires deeper Builder investigation (console logs added in DT6 builder session; need Expo Go console output or alternative debug strategy)
 
 ---
 
@@ -75,4 +79,14 @@ _(none yet)_
 
 ## Session Summary
 
-_(in progress)_
+**Session 7 complete — 2026-03-29**
+
+**Results:**
+- T1, T2, T3: PASS — login, search, D3 navigation, visit creation all work
+- T4, T5: FAIL — BUG-D3-DT6-1 fix not effective; sync worker still not triggering on iOS
+- R1, R2, R3: PASS — logout and re-login flow works
+- R4: FAIL — BUG-D3-DT1-2 re-verification blocked (visit never synced, so not visible after re-login)
+
+**Root issue:** Sync worker is not running on device despite all three triggers (AppState, NetInfo, 5-min interval). The `isOnline() !== false` fix was insufficient. Deeper investigation needed — the console logs added by the Builder in DT6 session are not visible via verbal device testing; a different debug approach is required.
+
+**BUG-D3-DT1-2 status:** Cannot verify until sync works. Blocked.
