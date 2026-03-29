@@ -24,13 +24,12 @@ import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSyncStore } from '../store/useSyncStore';
 import { markVisitSynced } from '../db/visits';
-import { apiFetch, ApiError } from '../api/apiClient';
+import { apiFetch, ApiError, API_BASE_URL } from '../api/apiClient';
 import { pinnedFetch } from '../api/pinnedFetch';
 import { REFRESH_TOKEN_KEY } from '../auth/constants';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const BASE_URL   = 'https://api.medrecord.in/v1';
 const BATCH_SIZE = 20;  // max operations per POST /sync call (PM spec)
 
 // ─── Module-level state ────────────────────────────────────────────────────
@@ -105,7 +104,7 @@ async function tryRefreshToken(): Promise<string | null> {
     const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
     if (!refreshToken) return null;
 
-    const response = await pinnedFetch(`${BASE_URL}/auth/refresh`, {
+    const response = await pinnedFetch(`${API_BASE_URL}/auth/refresh`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ refresh_token: refreshToken }),
@@ -263,18 +262,22 @@ async function flushAuditEvents(
  * Safe to call concurrently — the module-level isSyncing guard ensures only
  * one run executes at a time. Extra calls return immediately.
  *
- * @param db        SQLiteDatabase from useSQLiteContext() — passed by the hook so
- *                  this function can be called outside a React component.
- * @param doctorId  Authenticated doctor's ID — scopes all SQL reads to this
- *                  doctor only (SW-H-1, SW-H-3).
+ * @param db  SQLiteDatabase from useSQLiteContext() — passed by the hook so
+ *            this function can be called outside a React component.
+ *
+ * doctorId is read directly from useAuthStore at call time (not passed as a
+ * parameter) to avoid the stale-ref bug where useSyncWorker captures the
+ * doctor ID once at mount — before the user logs in on a fresh session.
  */
 export async function runSyncWorker(
   db: SQLite.SQLiteDatabase,
-  doctorId: string,
 ): Promise<void> {
-  // ── Token guard ────────────────────────────────────────────────────────
-  const { token } = useAuthStore.getState();
-  if (!token) return;
+  // ── Token + doctor guard ───────────────────────────────────────────────
+  // Read both from auth store at call time so fresh-login sessions get the
+  // correct doctor ID even though useSyncWorker mounted before login completed.
+  const { token, user } = useAuthStore.getState();
+  if (!token || !user) return;
+  const doctorId = user.id;
 
   // ── Concurrency guard ──────────────────────────────────────────────────
   if (isSyncing) return;
