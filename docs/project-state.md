@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** BUG-D3-DT4-1 FIXED (2026-03-28). Root cause: sync worker hit max_attempts → visits_draft row became 'failed' → countPendingDraftVisits returned 0 → no M-6 → row deleted at logout. Fix: countUnsyncedDraftVisits counts both 'pending' and 'failed' rows; getFailedDraftVisits added; D3 online path now surfaces failed drafts. BUG-D3-DT1-2 fix still requires re-verification (device test session 5 needed).
-**Last Updated:** 2026-03-28
+**Phase:** D3 device test session 5 complete (2026-03-29). BUG-D3-DT4-1 fix VERIFIED — M-6 dialog now fires correctly for unsynced visits; "Stay logged in" aborts logout correctly. NEW BUG: BUG-D3-DT5-1 (HIGH) — sync worker not uploading visits; visit stays 'pending' indefinitely even with active internet. Blocks BUG-D3-DT1-2 re-verification (synced-visit cross-session path untestable until fixed).
+**Last Updated:** 2026-03-29
 
 ---
 
@@ -24,15 +24,16 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder (2026-03-28). BUG-D3-DT4-1 FIXED — root cause: sync worker moved row to 'failed' → countPendingDraftVisits returned 0 → no M-6 → row deleted. Fix: countUnsyncedDraftVisits, getFailedDraftVisits, D3 online merge includes failed drafts.
+**Last Session:** Device Tester (2026-03-29). D3 session 5. BUG-D3-DT4-1 VERIFIED fixed. BUG-D3-DT5-1 NEW (HIGH) — sync worker not uploading visits even with active internet; blocks BUG-D3-DT1-2 re-verification.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D3 device test session 5 (Step 8)** | Verify BUG-D3-DT4-1 fix: M-6 must now appear when unsynced visits exist; BUG-D3-DT1-2 still needs re-verification |
-| 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
-| 3 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
-| 4 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
+| 1 | **Builder — fix BUG-D3-DT5-1 (Step 9)** | Sync worker not uploading visits; every visit stays 'pending' indefinitely — blocks cross-session persistence verification and correct M-6 behavior |
+| 2 | **D3 device test session 6 (Step 8)** | Re-verify BUG-D3-DT1-2 (cross-session persistence) and T4 after BUG-D3-DT5-1 fix |
+| 3 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
+| 4 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
+| 5 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
 | 4 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
 | 5 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 | 6 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
