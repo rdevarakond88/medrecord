@@ -27,6 +27,7 @@ import { markVisitSynced } from '../db/visits';
 import { apiFetch, ApiError, API_BASE_URL } from '../api/apiClient';
 import { pinnedFetch } from '../api/pinnedFetch';
 import { REFRESH_TOKEN_KEY } from '../auth/constants';
+import { syncLog } from './syncLogger';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -276,17 +277,17 @@ export async function runSyncWorker(
   // Read both from auth store at call time so fresh-login sessions get the
   // correct doctor ID even though useSyncWorker mounted before login completed.
   const { token, user } = useAuthStore.getState();
-  console.log('[runSyncWorker] called — hasToken:', !!token, 'hasUser:', !!user);
+  syncLog(`runSyncWorker called — hasToken:${!!token} hasUser:${!!user}`);
   if (!token || !user) {
-    console.log('[runSyncWorker] ABORT — no token or user in auth store');
+    syncLog('ABORT — no token or user in auth store');
     return;
   }
   const doctorId = user.id;
-  console.log('[runSyncWorker] doctorId:', doctorId);
+  syncLog(`doctorId:${doctorId}`);
 
   // ── Concurrency guard ──────────────────────────────────────────────────
   if (isSyncing) {
-    console.log('[runSyncWorker] SKIP — already syncing');
+    syncLog('SKIP — already syncing');
     return;
   }
   isSyncing = true;
@@ -327,7 +328,7 @@ export async function runSyncWorker(
         [doctorId, BATCH_SIZE],
       );
 
-      console.log('[runSyncWorker] drain query returned', rows.length, 'pending rows for doctorId:', doctorId);
+      syncLog(`drain: ${rows.length} pending rows for doctorId:${doctorId}`);
       if (rows.length === 0) break;
 
       // ── Defer 'record' (scan) entries — S3 upload is v2 (locked) ──────
@@ -368,12 +369,12 @@ export async function runSyncWorker(
       // ── POST /sync — with one JWT refresh retry on 401 ────────────────
       let results: SyncResult[];
 
-      console.log('[runSyncWorker] calling POST /sync with', operations.length, 'operations:', operations.map(o => ({ entity_type: o.entity_type, local_id: o.local_id, operation: o.operation })));
+      syncLog(`POST /sync — ${operations.length} ops: ${operations.map(o => o.entity_type).join(',')}`);
       try {
         results = await postSyncBatch(currentToken, operations);
-        console.log('[runSyncWorker] POST /sync succeeded — results:', JSON.stringify(results));
+        syncLog(`POST /sync OK — ${results.length} results: ${results.map(r => r.status).join(',')}`);
       } catch (err) {
-        console.log('[runSyncWorker] POST /sync error:', err instanceof Error ? err.message : String(err));
+        syncLog(`POST /sync ERR: ${err instanceof Error ? err.message : String(err)}`);
         if (err instanceof ApiError && err.status === 401) {
           // Session expired: attempt token refresh (D7-QA-H4 requirement).
           const newToken = await tryRefreshToken();
@@ -478,7 +479,7 @@ export async function runSyncWorker(
 
     }  // end while (drain loop)
 
-    console.log('[runSyncWorker] drain loop complete — all pending batches processed');
+    syncLog('drain loop complete');
 
     // ── Audit events flush (after all batches) ─────────────────────────
     // SW-M-1: always flush — flushAuditEvents returns immediately if there

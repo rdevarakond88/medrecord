@@ -19,6 +19,7 @@ import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { runSyncWorker } from './syncWorker';
+import { syncLog } from './syncLogger';
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;  // 5 minutes
 
@@ -57,15 +58,13 @@ export function useSyncWorker(): void {
     // ── Trigger 2: NetInfo subscription — detect connectivity restoration ──
     const netInfoUnsubscribe = NetInfo.addEventListener((state) => {
       const nowOnline = isOnline(state);
-      console.log(
-        '[useSyncWorker] NetInfo subscription — isConnected:', state.isConnected,
-        'isInternetReachable:', state.isInternetReachable,
-        'nowOnline:', nowOnline,
-        'wasOnline:', wasOnlineRef.current,
+      syncLog(
+        `T2 NetInfo — conn:${state.isConnected} reach:${state.isInternetReachable}` +
+        ` online:${nowOnline} was:${wasOnlineRef.current}`,
       );
       if (nowOnline && !wasOnlineRef.current) {
         // Transitioned from offline to online — drain the queue immediately.
-        console.log('[useSyncWorker] Trigger 2 (NetInfo): offline→online — running sync');
+        syncLog('T2 offline→online: running sync');
         runSyncWorker(dbRef.current);
       }
       wasOnlineRef.current = nowOnline;
@@ -76,13 +75,12 @@ export function useSyncWorker(): void {
       if (nextState !== 'active') return;
       // Check current connectivity before triggering.
       NetInfo.fetch().then((state) => {
-        console.log(
-          '[useSyncWorker] Trigger 1 (AppState active) — isConnected:', state.isConnected,
-          'isInternetReachable:', state.isInternetReachable,
-          'willSync:', isOnline(state),
+        syncLog(
+          `T1 AppState→active — conn:${state.isConnected} reach:${state.isInternetReachable}` +
+          ` willSync:${isOnline(state)}`,
         );
         if (isOnline(state)) {
-          console.log('[useSyncWorker] Trigger 1: running sync');
+          syncLog('T1: running sync');
           runSyncWorker(dbRef.current);
         }
       });
@@ -92,13 +90,12 @@ export function useSyncWorker(): void {
     // ── Trigger 3: 5-minute interval while online ─────────────────────────
     const intervalId = setInterval(() => {
       NetInfo.fetch().then((state) => {
-        console.log(
-          '[useSyncWorker] Trigger 3 (5-min interval) — isConnected:', state.isConnected,
-          'isInternetReachable:', state.isInternetReachable,
-          'willSync:', isOnline(state),
+        syncLog(
+          `T3 5min — conn:${state.isConnected} reach:${state.isInternetReachable}` +
+          ` willSync:${isOnline(state)}`,
         );
         if (isOnline(state)) {
-          console.log('[useSyncWorker] Trigger 3: running sync');
+          syncLog('T3: running sync');
           runSyncWorker(dbRef.current);
         }
       });
@@ -107,14 +104,13 @@ export function useSyncWorker(): void {
     // ── Initial run on mount — catches any pending entries from before the
     //    hook was mounted (e.g., a visit saved in a previous app session). ──
     NetInfo.fetch().then((state) => {
-      console.log(
-        '[useSyncWorker] Initial mount check — isConnected:', state.isConnected,
-        'isInternetReachable:', state.isInternetReachable,
-        'willSync:', isOnline(state),
+      syncLog(
+        `T0 mount — conn:${state.isConnected} reach:${state.isInternetReachable}` +
+        ` willSync:${isOnline(state)}`,
       );
       if (isOnline(state)) {
         wasOnlineRef.current = true;
-        console.log('[useSyncWorker] Initial mount: running sync');
+        syncLog('T0: running sync');
         runSyncWorker(dbRef.current);
       }
     });

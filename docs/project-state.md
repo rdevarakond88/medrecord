@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** BUG-D3-DT8-1 OPEN (2026-03-30) — Device Test Session 8 complete. BUG-D3-DT7-1 NOT VERIFIED on device — `isConnected !== false` fix insufficient. Sync worker still not completing on iOS after foreground. Four consecutive Builder sessions have not resolved sync on device. BUG-D3-DT1-2 (cross-session persistence) remains blocked. Next: Builder Agent session with new debug strategy — surface sync state visually on device screen (overlay/toast) rather than console logs, which are inaccessible via verbal device testing.
+**Phase:** BUG-D3-DT8-1 OPEN — Debug overlay added (2026-03-30). `SyncDebugPanel` now renders on D3 (pale yellow panel below banners) showing last 6 sync events from `useSyncStore.debugLog`. All console.log calls in `syncWorker.ts` + `useSyncWorker.ts` now also write to the store via `syncLog()` helper. Next: Device Test Session 9 — observe the panel during foreground/navigation to identify exactly where the trigger chain breaks.
 **Last Updated:** 2026-03-30
 
 ---
@@ -24,12 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester Agent (2026-03-30). D3 Session 8. BUG-D3-DT7-1 NOT VERIFIED — `isConnected !== false` fix insufficient on device. Sync worker still not completing after foreground. BUG-D3-DT1-2 (cross-session persistence) still blocked. BUG-D3-DT8-1 logged (HIGH). Four builder sessions have not resolved iOS sync. Critical gap: console logs not visible via verbal device testing — next Builder session must surface sync state visually on device.
+**Last Session:** Builder Agent (2026-03-30). BUG-D3-DT8-1 debug overlay built. Added `SyncDebugPanel` to D3 (pale yellow, below banners). Added `syncLogger.ts` (`syncLog()` helper). All `console.log` in `syncWorker.ts` + `useSyncWorker.ts` now also write to `useSyncStore.debugLog`. Panel shows last 6 events (most recent first) including trigger source (T0/T1/T2/T3), auth guard result, drain row count, API result. Ready for Device Test Session 9.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder Agent — BUG-D3-DT8-1** | Sync worker never runs on iOS — four fixes have failed. New approach: add visible debug overlay/toast to surface sync state on device; investigate what is actually blocking the trigger chain |
+| 1 | **Device Tester — D3 Session 9** | Load the new debug build in Expo Go; observe SyncDebugPanel during foreground/navigation cycle to identify where trigger chain breaks on iOS |
 | 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
 | 3 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
 | 4 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
