@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** BUG-D3-DT10-1 OPEN — Builder session required. Device test session 10 (2026-03-31) confirmed pinnedFetch transport fix: POST /sync now reaches the server (200 OK) for the first time. However server returns operation-level error (`POST /sync OK — 1 results: error`) for the visit. Sync worker consumes the entry without retrying, no [ERR] log. Visit hits 'failed', M-6 warning at logout, visit deleted — data loss unchanged. BUG-D3-DT9-1 partially fixed (transport layer resolved) but NOT closed — operation-level error is the new blocker. BUG-D3-DT1-2 still blocked.
+**Phase:** BUG-D3-DT10-1 FIXED (Builder 2026-03-31) — Root cause: D6's `enqueueOperation` payload used camelCase keys (`localId`, `patientId`, `doctorId`, `visitDate`) but server `visitPayloadSchema` expects snake_case (`local_id`, `patient_id`, `doctor_id`, `visit_date`). Also `patient_id` was `patientId` (local SQLite UUID) instead of `patientServerId` (server UUID). Fix: (1) corrected payload keys in D6 to snake_case, (2) added operation-level error [ERR] logging + retry/dead-letter handling in syncWorker. Device test session 11 required to verify end-to-end. BUG-D3-DT1-2 remains blocked — cannot verify until visit syncs.
 **Last Updated:** 2026-03-31
 
 ---
@@ -24,12 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester (2026-03-31) — D3 session 10. Transport fix confirmed: POST /sync reaches server (200 OK) for first time. New failure: server returns operation-level error (`POST /sync OK — 1 results: error`). Sync worker consumes entry without retry, no [ERR] log. Visit hits 'failed', deleted at logout. Data loss unchanged. BUG-D3-DT10-1 logged (HIGH). BUG-D3-DT9-1 partially fixed — transport layer resolved, not closed. BUG-D3-DT1-2 still blocked.
+**Last Session:** Builder (2026-03-31) — BUG-D3-DT10-1 fix. Root cause identified: D6 enqueue payload used camelCase keys rejected by server's Zod schema. Fixed to snake_case + patientServerId for patient_id. Added [ERR] logging and retry/dead-letter handling for operation-level errors in syncWorker. BUG-D3-DT9-1 considered fixed (transport + payload both corrected). BUG-D3-DT1-2 still blocked on successful sync.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder Agent — BUG-D3-DT10-1** | POST /sync returns 200 OK but operation-level error for visit. Builder must: (1) inspect server logs + POST /sync request/response body to identify why server rejects the operation, (2) add [ERR] logging in sync worker for operation-level errors, (3) fix root cause. Device test session 11 to follow. |
+| 1 | **Device Tester — D3 session 11** | Verify BUG-D3-DT10-1 fix: visit should sync end-to-end (POST /sync → success result → markVisitSynced). Then verify BUG-D3-DT1-2 (cross-session persistence). |
 | 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
 | 3 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
 | 4 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |

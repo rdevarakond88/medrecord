@@ -68,10 +68,10 @@ interface SyncBatchOperation {
 }
 
 interface SyncResult {
-  local_id:  string;
-  status:    'success' | 'conflict';
-  server_id: string;
-  message?:  string;
+  local_id:   string;
+  status:     'success' | 'conflict' | 'error';  // 'error' = server rejected this operation
+  server_id?: string;
+  message?:   string;
 }
 
 interface SyncBatchResponse {
@@ -483,6 +483,40 @@ export async function runSyncWorker(
         // 'conflict' means the entity already exists on the server — use its server_id.
         if (result.status === 'success' || result.status === 'conflict') {
           await applyResult(db, result, row.entity_type, row.id);
+        } else if (result.status === 'error') {
+          // Server rejected this operation (schema validation failure, IDOR check,
+          // or server-side exception). Log visibly so SyncDebugPanel surfaces it.
+          syncLog(`[ERR] operation-level error — ${row.entity_type} ${result.local_id}: ${result.message ?? 'unknown'}`);
+
+          // Increment attempts and retry up to max_attempts. After max_attempts,
+          // dead-letter so the entry does not loop forever.
+          const now = new Date().toISOString();
+          const newAttempts = row.attempts + 1;
+          if (newAttempts >= row.max_attempts) {
+            const errMsg = result.message ?? 'Operation-level error';
+            await db.runAsync(
+              `UPDATE sync_queue
+               SET status = 'failed', attempts = ?, last_attempt_at = ?, error_message = ?
+               WHERE id = ?`,
+              [newAttempts, now, errMsg, row.id],
+            );
+            // Mirror to visits_draft so M-6 warning fires at logout.
+            if (row.entity_type === 'visit') {
+              await db.runAsync(
+                `UPDATE visits_draft SET sync_status = 'failed', updated_at = ? WHERE local_id = ?`,
+                [now, row.entity_local_id],
+              );
+            }
+          } else {
+            // Reset to pending — will be retried on next sync trigger.
+            const errMsg = result.message ?? 'Operation-level error';
+            await db.runAsync(
+              `UPDATE sync_queue
+               SET status = 'pending', attempts = ?, last_attempt_at = ?, error_message = ?
+               WHERE id = ?`,
+              [newAttempts, now, errMsg, row.id],
+            );
+          }
         }
       }
 

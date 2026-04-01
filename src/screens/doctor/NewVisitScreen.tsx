@@ -325,20 +325,24 @@ export default function NewVisitScreen() {
         await logVisitCreated(db, user.id, patientId, visitLocalId);
 
         // ── 2. Enqueue for background sync ────────────────────────────────
+        // Payload uses snake_case to match the server's visitPayloadSchema in
+        // backend/src/routes/sync.ts. patient_id is the server UUID (patientServerId),
+        // not the local SQLite UUID — the server uses it as a FK to create the visit.
+        // chief_complaint and note_text must be undefined (not null) because the server
+        // schema uses z.string().optional(), which rejects null values.
         await enqueueOperation(db, {
           doctor_id:       user.id,
           entity_type:     'visit',
           entity_local_id: visitLocalId,
           operation:       'create',
           payload: {
-            localId:         visitLocalId,
-            doctorId:        user.id,
-            patientId,
-            patientServerId,
-            visitDate,
-            chiefComplaint:  trimmedComplaint,
-            noteText:        trimmedNote,
-            consentGranted:  freshConsentGranted,  // M-1: use re-read value
+            local_id:        visitLocalId,
+            doctor_id:       user.id,
+            patient_id:      patientServerId,  // server UUID — required by POST /sync schema
+            visit_date:      visitDate,
+            chief_complaint: trimmedComplaint ?? undefined,
+            note_text:       trimmedNote ?? undefined,
+            consent_granted: freshConsentGranted,  // M-1: use re-read value
           },
         });
       });
