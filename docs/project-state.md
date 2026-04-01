@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** BUG-D3-DT9-1 OPEN (HIGH — data loss). Device Test Session 9 (2026-03-30) used SyncDebugPanel to confirm that the iOS sync trigger chain IS working — AppState triggers fire, `runSyncWorker` is called, doctorId is correct. Root cause identified: **POST /sync and `createVisit` API calls fail on iOS Expo Go**. Visits hit max_attempts (5 failures), are dead-lettered as 'failed', and deleted at logout. M-6 warning confirmed at logout. Visit absent after re-login. Primary suspect: `pinnedFetch` incompatibility with Expo Go (noted in MEMORY.md — requires EAS custom build). Next: Builder Agent — investigate `pinnedFetch` behaviour on iOS Expo Go and fix BUG-D3-DT9-1.
-**Last Updated:** 2026-03-30
+**Phase:** BUG-D3-DT9-1 FIX DEPLOYED — awaiting device test session 10 to verify. Builder Agent session (2026-03-31) fixed the root cause: `syncWorker.ts` was dead-lettering visits after 5 *transient* failures (network errors, 5xx), consuming the max_attempts budget for failures that were not permanent. Fixed: transient errors (network failure / AbortError timeout / 5xx) now reset `sync_queue` entries to `'pending'` without incrementing `attempts`; only permanent 4xx failures consume the budget. `pinnedFetch` standard-fetch fallback now has a 30-second `AbortController` timeout to prevent indefinite hangs (Render.com cold-start risk). SyncDebugPanel upgraded: 12 lines (up from 6), `[ERR]` lines rendered in red, log buffer 50 (up from 20). `createVisit` in D6 was NOT failing — `useNetworkStatus` returns false on iOS (NetInfo null) so the call was never attempted; sync worker handles the upload. BUG-D3-DT1-2 (cross-session persistence) can only be verified after DT10 confirms sync succeeds.
+**Last Updated:** 2026-03-31
 
 ---
 
@@ -24,12 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester Agent (2026-03-30). Device Test Session 9 complete. SyncDebugPanel confirmed iOS sync trigger chain works (AppState triggers fire, runSyncWorker called, doctorId correct). Root cause of sync failure identified: POST /sync and createVisit API calls fail on iOS Expo Go — visits hit max_attempts (5 failures), dead-lettered as 'failed', deleted at logout. M-6 warning confirmed at logout. Visit absent after re-login (data loss). Primary suspect: `pinnedFetch` incompatibility with Expo Go. BUG-D3-DT9-1 logged (HIGH). BUG-D3-DT1-2 still blocked.
+**Last Session:** Builder Agent (2026-03-31). BUG-D3-DT9-1 fix deployed. Root cause: `syncWorker.ts` treated all non-401 errors (including transient network failures and 5xx) as attempt-incrementing — visits dead-lettered after 5 failures. Fixed: transient errors reset to 'pending' without incrementing `attempts`; only permanent 4xx errors consume the budget. `pinnedFetch` standard-fetch fallback now has 30s AbortController timeout. SyncDebugPanel upgraded (12 lines, [ERR] in red, 50-entry buffer). `createVisit` in D6 was not failing — `isOnline` is false on iOS (NetInfo null), so direct call is always skipped; sync worker is the only upload path on iOS.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder Agent — BUG-D3-DT9-1** | Investigate `pinnedFetch` behaviour on iOS Expo Go — all network calls (POST /sync, createVisit) fail silently; data loss on logout. Fix or bypass pinnedFetch for Expo Go dev environment. |
+| 1 | **Device Tester — D3 Session 10** | Verify BUG-D3-DT9-1 fix: create visit, observe sync panel (should show POST /sync OK), re-login and confirm visit persists. Also verify BUG-D3-DT1-2. |
 | 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
 | 3 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
 | 4 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |

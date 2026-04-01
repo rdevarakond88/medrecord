@@ -1447,8 +1447,9 @@ function SyncDebugPanel(): React.JSX.Element {
   const isSyncing  = useSyncStore((s) => s.isSyncing);
   const lastSyncAt = useSyncStore((s) => s.lastSyncAt);
 
-  // Show most recent lines first; cap at 6 so the panel stays compact.
-  const lines = [...debugLog].reverse().slice(0, 6);
+  // Show most recent lines first; cap at 12 to capture errors from earlier runs.
+  // Store keeps 50 entries (up from 20) so [ERR] lines are not pushed off.
+  const lines = [...debugLog].reverse().slice(0, 12);
 
   const statusText = isSyncing
     ? 'SYNCING...'
@@ -1465,7 +1466,14 @@ function SyncDebugPanel(): React.JSX.Element {
         <Text style={debugPanelStyles.line}>No events yet</Text>
       ) : (
         lines.map((line, i) => (
-          <Text key={i} style={debugPanelStyles.line} numberOfLines={1}>
+          <Text
+            key={i}
+            style={[
+              debugPanelStyles.line,
+              line.includes('[ERR]') && debugPanelStyles.errorLine,
+            ]}
+            numberOfLines={2}
+          >
             {line}
           </Text>
         ))
@@ -1493,5 +1501,9 @@ const debugPanelStyles = StyleSheet.create({
     color:       '#333',
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fontFamily: ('monospace' as any),
+  },
+  errorLine: {
+    color:      '#B71C1C',  // deep red — [ERR] lines stand out at a glance
+    fontWeight: '700',
   },
 });

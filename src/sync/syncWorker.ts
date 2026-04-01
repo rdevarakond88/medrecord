@@ -374,8 +374,17 @@ export async function runSyncWorker(
         results = await postSyncBatch(currentToken, operations);
         syncLog(`POST /sync OK — ${results.length} results: ${results.map(r => r.status).join(',')}`);
       } catch (err) {
-        syncLog(`POST /sync ERR: ${err instanceof Error ? err.message : String(err)}`);
-        if (err instanceof ApiError && err.status === 401) {
+        const isApiErr  = err instanceof ApiError;
+        const apiStatus = isApiErr ? (err as ApiError).status : 0;
+
+        // [ERR] prefix makes error lines visually distinct in the SyncDebugPanel.
+        if (isApiErr) {
+          syncLog(`[ERR] POST /sync HTTP ${apiStatus}: ${(err as ApiError).message} (${(err as ApiError).code})`);
+        } else {
+          syncLog(`[ERR] POST /sync network: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`);
+        }
+
+        if (isApiErr && apiStatus === 401) {
           // Session expired: attempt token refresh (D7-QA-H4 requirement).
           const newToken = await tryRefreshToken();
           if (!newToken) {
@@ -400,27 +409,26 @@ export async function runSyncWorker(
             );
             return;
           }
-        } else {
-          // Non-401 error (network failure, 5xx, etc.):
-          // Increment attempts for all in_progress entries.
-          // Entries that hit max_attempts are dead-lettered.
-          const now = new Date().toISOString();
+        } else if (isApiErr && apiStatus >= 400 && apiStatus < 500) {
+          // Permanent 4xx (non-401): the server rejected the payload (bad request,
+          // forbidden, validation failure). Increment attempts and dead-letter after
+          // max_attempts — these will not succeed on retry without code changes.
+          const now        = new Date().toISOString();
+          const errMessage = `HTTP ${apiStatus}: ${(err as ApiError).message}`;
           for (const row of syncRows) {
             const newAttempts = row.attempts + 1;
             if (newAttempts >= row.max_attempts) {
               await db.runAsync(
                 `UPDATE sync_queue
-                 SET status        = 'failed',
-                     attempts      = ?,
+                 SET status          = 'failed',
+                     attempts        = ?,
                      last_attempt_at = ?,
-                     error_message = ?
+                     error_message   = ?
                  WHERE id = ?`,
-                [newAttempts, now, err instanceof Error ? err.message : 'Unknown error', row.id],
+                [newAttempts, now, errMessage, row.id],
               );
-              // Mirror the 'failed' status to the entity so D3's getFailedDraftVisits()
-              // can surface it and countUnsyncedDraftVisits() warns the doctor at logout.
-              // Without this, visits_draft.sync_status stays 'pending' forever even though
-              // the sync_queue entry is dead-lettered and will never be retried.
+              // Mirror 'failed' to visits_draft so D3's getFailedDraftVisits() surfaces
+              // it and countUnsyncedDraftVisits() warns the doctor at logout (M-6).
               if (row.entity_type === 'visit') {
                 await db.runAsync(
                   `UPDATE visits_draft SET sync_status = 'failed', updated_at = ? WHERE local_id = ?`,
@@ -438,8 +446,26 @@ export async function runSyncWorker(
               );
             }
           }
-          // Non-fatal: continue to next loop iteration (may be nothing left).
+          // Continue drain loop — permanent failures dealt with; check for more.
           continue;
+        } else {
+          // Transient error: network failure (fetch throws / AbortError timeout) OR
+          // 5xx server error (e.g. Render.com free-tier cold-start, backend crash).
+          //
+          // Do NOT increment attempts. Transient failures must not consume the
+          // max_attempts budget — doing so dead-letters visits that would have
+          // synced successfully once the network or server recovered.
+          //
+          // Reset in_progress entries to 'pending'. The next sync trigger
+          // (AppState foreground, NetInfo restore, or 5-min interval) will retry.
+          const now = new Date().toISOString();
+          await db.runAsync(
+            `UPDATE sync_queue SET status = 'pending', last_attempt_at = ?
+             WHERE id IN (${batchIds})`,
+            [now, ...syncRows.map((r) => r.id)],
+          );
+          syncLog('[ERR] transient — reset to pending, aborting run');
+          return;
         }
       }
 

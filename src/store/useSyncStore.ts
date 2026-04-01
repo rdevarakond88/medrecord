@@ -37,7 +37,8 @@ export const useSyncStore = create<SyncState>((set) => ({
   setSyncing:     (isSyncing)   => set({ isSyncing }),
   setLastSyncAt:  (lastSyncAt)  => set({ lastSyncAt }),
   setFailedCount: (failedCount) => set({ failedCount }),
-  // Keep the last 20 log lines so the panel never grows unbounded.
+  // Keep the last 50 log lines — enough to capture 5+ failed sync runs
+  // (each run generates ~6-8 lines) without growing unbounded.
   addDebugLog: (line) =>
-    set((s) => ({ debugLog: [...s.debugLog.slice(-19), line] })),
+    set((s) => ({ debugLog: [...s.debugLog.slice(-49), line] })),
 }));

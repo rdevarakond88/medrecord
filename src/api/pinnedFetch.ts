@@ -68,18 +68,28 @@ export async function pinnedFetch(
   url: string,
   init: PinnedRequestInit = {},
 ): Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }> {
-  // Expo Go fallback — native module unavailable, use standard fetch (no cert pinning)
+  // Expo Go fallback — native module unavailable, use standard fetch (no cert pinning).
+  // 30-second AbortController timeout prevents the request from hanging indefinitely
+  // (e.g. Render.com free-tier cold-start). A timeout throws an AbortError, which
+  // the sync worker treats as a transient failure and resets to 'pending' for retry.
   if (!sslFetch) {
-    const res = await fetch(url, {
-      method:  init.method ?? 'GET',
-      headers: init.headers ?? {},
-      body:    init.body,
-    });
-    return {
-      ok:     res.ok,
-      status: res.status,
-      json:   () => res.json(),
-    };
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 30_000);
+    try {
+      const res = await fetch(url, {
+        method:  init.method ?? 'GET',
+        headers: init.headers ?? {},
+        body:    init.body,
+        signal:  controller.signal,
+      });
+      return {
+        ok:     res.ok,
+        status: res.status,
+        json:   () => res.json(),
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   const response = await (sslFetch as any)(url, {
