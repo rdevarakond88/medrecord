@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** BUG-D3-DT10-1 FIXED (Builder 2026-03-31) — Root cause: D6's `enqueueOperation` payload used camelCase keys (`localId`, `patientId`, `doctorId`, `visitDate`) but server `visitPayloadSchema` expects snake_case (`local_id`, `patient_id`, `doctor_id`, `visit_date`). Also `patient_id` was `patientId` (local SQLite UUID) instead of `patientServerId` (server UUID). Fix: (1) corrected payload keys in D6 to snake_case, (2) added operation-level error [ERR] logging + retry/dead-letter handling in syncWorker. Device test session 11 required to verify end-to-end. BUG-D3-DT1-2 remains blocked — cannot verify until visit syncs.
-**Last Updated:** 2026-03-31
+**Phase:** BUG-D3-DT11-1 OPEN (Device Tester 2026-04-01) — BUG-D3-DT10-1 fix introduced a regression: visit is saved to `visits_draft` but silently not enqueued into `sync_queue`. Drain shows 0 pending rows immediately after visit creation. No POST /sync fires. No error logged at save time. Likely cause: `patientServerId` is null/undefined for locally-seeded test patient — silent failure inside `enqueueOperation`. BUG-D3-DT10-1 cannot be verified (POST /sync never reached). BUG-D3-DT1-2 still blocked.
+**Last Updated:** 2026-04-01
 
 ---
 
@@ -24,18 +24,19 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder (2026-03-31) — BUG-D3-DT10-1 fix. Root cause identified: D6 enqueue payload used camelCase keys rejected by server's Zod schema. Fixed to snake_case + patientServerId for patient_id. Added [ERR] logging and retry/dead-letter handling for operation-level errors in syncWorker. BUG-D3-DT9-1 considered fixed (transport + payload both corrected). BUG-D3-DT1-2 still blocked on successful sync.
+**Last Session:** Device Tester (2026-04-01) — D3 session 11. BUG-D3-DT10-1 fix introduced regression: visit saves to visits_draft but sync_queue stays empty (drain: 0 rows, no POST /sync, no error logged). Likely patientServerId null for test patient causes silent enqueueOperation failure. BUG-D3-DT11-1 logged (HIGH). BUG-D3-DT10-1 and BUG-D3-DT1-2 still open.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Device Tester — D3 session 11** | Verify BUG-D3-DT10-1 fix: visit should sync end-to-end (POST /sync → success result → markVisitSynced). Then verify BUG-D3-DT1-2 (cross-session persistence). |
-| 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
-| 3 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
-| 4 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
-| 5 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
-| 6 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
-| 7 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
+| 1 | **Builder — fix BUG-D3-DT11-1** | Visit not enqueued into sync_queue after DT10-1 fix; add null-guard logging in enqueueOperation; verify patientServerId populated for test patient; must fix before any further device testing |
+| 2 | **Device Tester — D3 session 12** | Verify BUG-D3-DT11-1 fix; verify BUG-D3-DT10-1 end-to-end; verify BUG-D3-DT1-2 |
+| 3 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
+| 4 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
+| 5 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
+| 6 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
+| 7 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 8 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
 ---
 
