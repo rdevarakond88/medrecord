@@ -1,12 +1,12 @@
-# We Built an AI-Driven Dev Workflow for a Healthcare App — Then It Failed in a Way Nobody Expected
+# Built an AI-Driven Dev Workflow for a Healthcare App — Then It Failed Three Times in a Row
 
-**And the fix taught us more about agentic AI than six months of building did.**
+**Each failure was different. Each one taught us something the previous fix couldn't have caught.**
 
 ---
 
-I've been building MedRecord — an offline-first healthcare records app for semi-urban Indian clinics — using a fully agentic Claude Code workflow. No developer on a keyboard writing code. Just me, a structured multi-agent system, and Claude.
+I've been building MedRecord an offline-first healthcare records app for semi-urban Indian clinics — using a fully agentic Claude Code workflow. No developer on a keyboard writing code. Just me, a structured multi-agent system, and Claude.
 
-The workflow was sophisticated. Five specialised agents, each with defined roles, strict handoffs, and no agent allowed to do another's job:
+The workflow was sophisticated. Five specialized agents, each with defined roles, strict handoffs, and no agent allowed to do another's job:
 
 - **PM Agent** — validates product decisions before any code is written
 - **Builder Agent** — writes all code, no exceptions, no matter how small the change
@@ -24,145 +24,232 @@ The app wouldn't even bundle.
 
 ---
 
-## Problem One: The Native Module That Broke Expo Go
+## Failure One: The Tool That Nobody Confirmed Would Work
 
-The first error was `react-native-ssl-pinning` — a native module for certificate pinning, required because the app runs on shared clinic WiFi where MITM attacks are a real threat. The QA test plan had documented it:
+The first error was `react-native-ssl-pinning` — a security library that prevents someone on a shared WiFi network from intercepting the app's data. The QA test plan had actually mentioned it:
 
 > *"UE-6: cert pinning not testable in Expo Go — deferred to EAS custom dev client."*
 
-But the documentation of this edge case didn't prevent the import from crashing the bundle entirely. The app couldn't load in Expo Go at all. Every test, blocked.
+The note was there. But writing "deferred" in a document didn't stop the library from crashing the app when it tried to load. Expo Go — the tool we were using to test the app on a real phone — can't run this kind of native library. The app wouldn't start at all. Every single test was blocked before Test 1 could begin.
 
-The fix was a runtime fallback — if the native module isn't available, use standard `fetch`. One paragraph of code. But it exposed something important: **the QA agent had documented the risk but hadn't translated it into a pre-test infrastructure check.** "Deferred" got treated as "someone else's problem later" when it should have been "confirm this doesn't block you from starting."
+Think of it this way: imagine a delivery company writing in a report *"deliveries to fifth-floor apartments may require elevator access — to be confirmed later"* — and then sending a driver who can't use elevators without ever checking whether the building has one. The risk was documented. The check never happened.
 
-Fix: the app now loads in Expo Go. Testing can begin.
+**The fix:** Add a runtime fallback — if the native library isn't available, use the standard alternative. One short block of code. But what it really exposed was this: **documenting a risk and accounting for a risk are two different things.** "Deferred" got treated as "handled" when it should have been "blocked until confirmed."
+
+Fix applied. The app now loads. Testing can begin.
 
 ---
 
-## Problem Two: The Backend That Didn't Exist
+## Failure Two: The Backend That Had Never Been Built
 
-With the bundle fixed, I tried Test 1. Full OTP login flow. Enter a phone number, send OTP, verify, navigate to PatientSearch.
+With the bundle fixed, I tried Test 1. Full OTP login flow. Enter a phone number, tap Send OTP, enter the code, log in.
 
-I ran a DNS check on `api.medrecord.in`.
+I ran a check on the server the app was trying to reach — `api.medrecord.in`.
 
 ```
 socket.gaierror: [Errno -2] Name or service not known
 ```
 
-The domain doesn't exist. Not "server is down." Not "API is returning errors." The domain has never been registered. There is no backend. There never was.
+That means: the domain doesn't exist. Not "the server is slow." Not "the API is returning an error." The address has never been registered anywhere on the internet. There is no backend. There never was one.
 
-Ten of the thirteen runnable device tests require a live API. The other three test pure UI validation that fires before any network call.
+Ten of the thirteen runnable device tests require a live server. The QA agent had written a 25-test plan — 22 of which were completely impossible to run.
 
-The QA agent had written a 25-test plan — 22 of which are completely untestable.
+Here is the thing that makes this remarkable: **every agent in the workflow had done its job correctly.**
 
----
+The PM agent confirmed the flow solved a real problem for clinic staff. The Builder wrote clean, well-structured code. The Security agent checked that passwords weren't being stored carelessly, that patient data was handled with care. The QA agent found real bugs and wrote a rigorous test plan.
 
-## What Actually Failed
+But nobody in the entire chain had ever asked: *"Does the thing this code is calling actually exist?"*
 
-This wasn't a code bug. It was a **workflow assumption that was never made explicit**.
+The QA agent's verdict — "Ready for device testing" — was technically accurate. The frontend code was ready. The assumption hidden inside that verdict — that a live server would be there when testing started — was invisible. It was never stated, so it was never checked.
 
-The entire agent chain — PM → Builder → Security → QA — validated the frontend in isolation. Each agent did its job correctly within its defined scope. The PM agent confirmed the flow solved a real problem. The Builder wrote clean, secure code. The Security agent checked credentials, PII handling, and consent logic. The QA agent found real bugs and wrote rigorous tests.
+| Agent | What it checked | What it never asked |
+| --- | --- | --- |
+| PM Agent | Does this feature solve a real problem? | Is the infrastructure needed to test this even planned? |
+| Builder Agent | Is the code correct and well-structured? | Does the server this code calls actually exist? |
+| Security Agent | Are credentials and patient data handled safely? | Can we actually run this in a real environment? |
+| QA Agent | Are the edge cases covered? | Can any of these tests actually be run? |
 
-But nobody in the chain ever asked: **"Does the thing this code calls actually exist?"**
-
-The QA agent's verdict was technically accurate. The frontend code is ready for device testing. The assumption baked into that verdict — that there would be a backend to test against — was invisible. It was never a stated assumption, so it was never checked.
-
-Here's the honest breakdown of where each agent failed to catch it:
-
-| Agent | What it checked | What it missed |
-|---|---|---|
-| PM Agent | Does this flow solve a real problem? | Is the infrastructure needed to test this planned? |
-| Builder | Is the code correct? | Does the API this code calls actually exist? |
-| Security | Are credentials handled safely? | Can we exercise this in a real environment? |
-| QA | Are edge cases covered? | Can these tests actually be run? |
+**The fix:** A new Backend Agent was added to the workflow — a dedicated step responsible for building and deploying the server before any device testing begins. Backend deployment is now a formal, required step with a specific output: health check returns 200, test credentials are documented, and the project state file is updated to show the deployment is live. A screen cannot be tested on a real device until the backend pre-flight passes.
 
 ---
 
-## The Fixes
+## Failure Three: The Last-Mile Disconnect
 
-We made five structural changes to the workflow. Not workarounds — architectural changes that make it impossible for this class of failure to happen silently again.
+The backend was now built. Deployed to Render. Health check confirmed. Test credentials seeded. The Backend Agent had done everything right.
 
-### 1. QA Test Plans Now Require a Prerequisites Section
+We opened the next session to begin device testing. The mandatory pre-flight check ran — verify the backend URL in the project state, confirm the frontend is pointing to it.
 
-Every QA test plan must now open with:
+The frontend was still calling `api.medrecord.in`.
+
+The live backend was at `medrecord-api.onrender.com`.
+
+Two completely different addresses. The old one still didn't exist. One line of code — `const BASE_URL = 'https://api.medrecord.in/v1'` — had been written during early frontend development as a placeholder. When the backend was finally deployed months later in a separate agent session, nobody updated it. The Backend Agent knew where it had deployed the server. The frontend had its address written from a session that happened long before the backend existed. Neither agent was responsible for checking that these two things matched.
+
+If we had gone into device testing without catching this, here is what would have happened:
+
+- **D1 Login:** User enters a phone number, taps Send OTP. The app tries to reach the server. DNS lookup fails. The app shows a network error — the same error you'd see if your phone had no internet. The tester would check their WiFi, maybe restart the app. Nobody would think to check a line of code.
+- **D2, D3:** Both unreachable because login can't complete without a working server.
+- **D6 (New Visit):** This one is the most dangerous. The app is built offline-first, meaning it saves data locally before talking to the server. A new visit would appear to save successfully — it would show up on screen, no error. But the sync to the server would silently fail forever. The test would look like a PASS. The data would never reach the backend. A false green result is worse than a clear failure.
+
+The fix was one line of code. But the gap it points to is structural: **fixing one handoff problem created a new handoff boundary.** Before, the gap was between QA and device testing — nobody owned "does the backend exist?" After adding the Backend Agent, the gap moved to the seam between the Backend Agent completing its work and the frontend being reconnected to it. Two agents, two separate sessions, no bridge between them.
+
+---
+
+---
+
+## The Hardest Bug: Thirteen Sessions to Save One Visit
+
+> *This one deserves its own section. It took longer to resolve than all three infrastructure failures combined.*
+
+After the backend was live and device testing was unblocked, we moved on to D3 — the Patient Detail screen — and its connected screen D6, where doctors create new visit records.
+
+The test was simple: create a visit, log out, log back in, confirm the visit is still there.
+
+**It took thirteen device test sessions over two weeks to make that work.**
+
+Each session followed the same rhythm: a Builder Agent session to apply a fix, a Device Tester session to verify it. Each time, the fix worked — and then a new failure appeared underneath it.
+
+Here is the full chain, in order:
+
+**Session 9 — The network layer was broken.**
+Every API call from the app was going through a security library (`pinnedFetch`) that is incompatible with Expo Go. All sync attempts failed silently. Visits were saved locally, retried five times by the sync worker, marked as permanently failed, and deleted at logout. No error message visible to the user. Data gone.
+
+**Session 10 — The field names were wrong.**
+With the network layer fixed, POST /sync finally reached the server — and the server rejected it. The payload was using camelCase field names (`visitDate`, `chiefComplaint`). The server expected snake_case (`visit_date`, `chief_complaint`). One sync operation processed, one operation-level error returned, visit never marked as synced.
+
+**Session 11 — The visit was never even queued.**
+With the field names corrected, a new problem surfaced: the visit wasn't making it into the sync queue at all. The code that enqueues the visit for upload was sitting inside a database transaction. SQLite transactions in Expo block any reads or writes from outside — including from the sync worker — until the transaction closes. The enqueue call was inside the transaction. The sync worker couldn't see the row until the transaction committed, at which point the sync trigger had already run and found nothing.
+
+**Session 12 — The server rejected a boolean sent as a number.**
+With the enqueue fixed, the visit finally reached the server. The server returned: *"expected boolean, received number."* Visit rejected. Data loss again.
+
+This one is subtle enough to be worth explaining carefully.
+
+SQLite has no boolean data type. When you store `true` in SQLite, it becomes `1`. When you store `false`, it becomes `0`. When you read it back, you get an integer — not a boolean.
+
+The code had a safety net for this:
+
+```js
+freshPatient?.consent_granted ?? false
+```
+
+The `??` operator returns the right side if the left side is `null` or `undefined`. It never fires for `0` or `1` — those are valid values, not null. So the integer went straight into the sync payload. The server's schema validation, which expected a real JavaScript boolean (`true`/`false`), rejected the integer. Every visit, every time.
+
+**The fix — one line:**
+
+```js
+Boolean(freshPatient?.consent_granted ?? false)
+```
+
+`Boolean(0)` returns `false`. `Boolean(1)` returns `true`. The type mismatch disappears.
+
+Session 13: visit created, synced, doctor logged out, logged back in — **visit still there.**
+
+---
+
+### Why this one was so hard
+
+The three infrastructure failures earlier in this article were each a single visible gap. Someone could have caught them with a checklist question: *"Does the backend exist? Does the frontend URL match? Can this library run in Expo Go?"*
+
+This was different. **Each layer of the bug was invisible until the layer above it was fixed.** There was no way to see the field name mismatch until the network worked. No way to see the enqueue race until the field names were right. No way to see the boolean type error until the enqueue worked. Four independent failures, stacked, each one masking the next.
+
+And the final fix — `Boolean()` — is the kind of thing that looks obvious in hindsight and nearly impossible to anticipate. SQLite returning integers for boolean columns is documented behavior. The `??` operator not firing for `0` is correct JavaScript. Both are working exactly as designed. The bug only exists at the boundary where they meet. No agent in the workflow is assigned to look at that boundary.
+
+The lesson here is different from the infrastructure failures. Those were process gaps — things the workflow was supposed to do but didn't. This was a **compounding opacity problem**: the real failure was hidden three layers deep, and the only way to find it was to fix everything above it first.
+
+The only fix for that kind of problem is what we were already doing — structured device testing with a real device, one verified step at a time, every session logged with what worked and what didn't. It's slow. It's frustrating. It's the only way.
+
+---
+
+Looking at these failures together, the same thing is happening each time — just wearing a different disguise.
+
+**Pattern 1: A risk that was documented but never converted into a gate.**
+
+The ssl-pinning issue was written down. It sat in a test plan note as "deferred." Nothing in the workflow prevented the next step from starting without resolving it. Documentation is not the same as a checkpoint.
+
+**Pattern 2: An assumption that was invisible because it was never stated.**
+
+The backend assumption — "there will be a live server when we test this" — was baked into the QA agent's verdict without being written down anywhere. You cannot check an assumption you cannot see. The fix is not to make agents smarter. It is to turn invisible assumptions into required fields that must be filled in before any agent can declare "done."
+
+**Pattern 3: A correct fix that created a new gap at its own boundary.**
+
+Every time a new agent is added to close a gap, a new handoff is created. The new handoff is a new potential gap. In this case, the Backend Agent correctly deployed the server — but the act of adding a new agent with a new session boundary meant there was now a new seam between "backend knows where it lives" and "frontend knows where to find it." Gaps don't disappear. They move.
+
+---
+
+## The Fixes That Came From All Three
+
+We made six structural changes. Not workarounds. Changes that make it structurally harder for this class of failure to happen silently.
+
+**1. QA test plans now require a Prerequisites section.**
+
+Every QA test plan opens with a mandatory block:
 
 ```
 TESTING PREREQUISITES:
 - Backend URL: [live at <url> / local mock / NOT DEPLOYED]
 - Backend status: [reachable — confirmed via curl / UNREACHABLE — device testing blocked]
 - Test credentials: [how to obtain]
-- Test mobile number: [available / NOT AVAILABLE]
 - Status: [READY TO TEST / BLOCKED — reason]
 ```
 
-A screen cannot be marked "Ready for device testing" unless Status is `READY TO TEST`. If any prerequisite is unknown when QA runs, it must be explicitly marked `BLOCKED`. The assumption is no longer invisible — it is a required field.
+A screen cannot be marked "Ready for device testing" unless Status is `READY TO TEST`. If any prerequisite is unknown, the status must be `BLOCKED`. The assumption is no longer invisible — it is a required field.
 
-### 2. Device Testing is Now a Formal Agent Step
+**2. Device Testing is now a formal step with a mandatory pre-flight check.**
 
-The original workflow had eight steps: PM → Builder → Persona Critic → Builder (fixes) → Builder (data) → Security → QA → Commit. Device testing was a vague "next thing" after QA, not a defined step.
+The original workflow had no defined device testing step. It was a vague "next thing" after QA. It is now Step 8, with its own rules: run a live curl check against the backend, confirm test credentials exist, confirm the test phone number or OTP bypass is documented. If any check fails, declare testing blocked and stop. Do not proceed.
 
-It is now **Step 8**, with its own rules:
+**3. Backend Status is a permanent, visible field in the project state document.**
 
-- **Infrastructure pre-flight is mandatory before any network test.** Run a `curl` check. Confirm test credentials. Confirm test mobile number or OTP bypass. If any check fails, declare testing blocked and stop — do not proceed.
-- **Device Tester cannot fix code.** If a bug is found during testing, log it and continue. Fix it in a new Builder session after all tests are complete.
-- The workflow is now PM → Builder → Persona Critic → Builder (fixes) → Builder (data) → Security → QA → **Device Tester (pre-flight + test)** → Builder (fixes if needed) → Commit.
+Every session opens by reading the project state. That file now has a Backend Status section at the top — not buried in notes. It shows the deployment URL, whether it resolves, and what the next action is. Nobody can start a device testing session and discover mid-test that the backend doesn't exist or that the URL is wrong.
 
-### 3. PM Agent Now Owns Infrastructure Readiness
+**4. After backend deployment, reconnecting the frontend is an explicit required step.**
 
-The PM Agent's Moment 2 review (post-flow) now explicitly asks: *"Is the backend built and reachable? If not, device testing is blocked — state a plan for how it gets resolved before pilot."*
+When the Backend Agent completes, the project state is updated with a "Next action" entry: *Builder Agent must verify the frontend BASE\_URL in **`apiClient.ts`** matches the deployed backend URL.* This step is required before device testing can begin. The seam between "backend deployed" and "frontend connected" is now a named, owned step — not a gap between two agents.
 
-The PM agent's Moment 3 review (pre-launch) now has an infrastructure checklist: backend deployed, all screens device-tested against live backend (not mock), cert pinning validated in EAS build, test credentials for pilot clinic.
+**5. PM Agent now owns infrastructure readiness, not just product readiness.**
 
-This connects product readiness to infrastructure readiness. A flow is not "complete" if the backend doesn't exist.
+The PM Agent's post-flow review now explicitly asks: *"Is the backend built and reachable? If not, device testing is blocked — state a plan."* The pre-launch review now has an infrastructure checklist. A flow is not "complete" if the infrastructure needed to test it isn't in place.
 
-### 4. Backend Status is a First-Class Field in project-state.md
+**6. "Unclear" is a hard stop, not a preamble.**
 
-Every session opens by reading `docs/project-state.md`. That file now has a permanent `Backend Status` section — not buried in notes, not inferable from context, right at the top:
-
-```
-Backend Status
-- Deployment status: NOT DEPLOYED — domain does not resolve (confirmed 2026-03-17)
-- Test environment: None
-- Blocker for: D1 device testing (10 of 13 runnable tests)
-- Next action: Build and deploy backend
-```
-
-Nobody can start a device testing session and discover mid-test that the backend doesn't exist. The status is visible before the first test case.
-
-### 5. "Unclear" is Now a Hard Stop
-
-The AI's opening declaration rule was: "If you cannot identify which agent and which step applies, stop and ask." In practice, the AI would declare "Unclear" and then proceed anyway — interpreting the user's response to the first question as implicit permission.
-
-The rule is now explicit: **"Unclear" is a hard stop, not a declaration that lets you proceed.** When the AI names an action that belongs to an agent, it must ask "do you want me to proceed outside the workflow or start a [Agent] session?" and do nothing until the user explicitly responds. Implied permission is not permission.
+The AI had a rule: if you can't identify which agent and step applies, ask. In practice it would ask, then interpret the user's answer as permission to proceed. The rule is now explicit: asking is a pause, not a green light. The AI must wait for an explicit answer. Implied permission is not permission.
 
 ---
 
-## What This Taught Me About Agentic Workflows
+## What This Taught Me About Working With AI Agents
 
-**Agents execute within their defined scope. They don't see outside it.**
+**Agents are only as aware as their inputs.**
 
-The QA agent was given code to review. It reviewed the code. It didn't know — and wasn't asked — whether the infrastructure the code depends on exists. That's not a failure of the agent. It's a failure of the workflow to include infrastructure as a concern.
+An agent does what it is asked to do with the information it is given. The QA agent was given code. It reviewed the code thoroughly. It had no way of knowing the server that code called didn't exist — because it was never given that information and never asked to check. That is not an agent failure. It is a workflow design failure.
 
-**"Ready to proceed" is always relative to unstated assumptions.**
+**Every "done" is only done relative to its unstated assumptions.**
 
-Every agent verdict in this workflow said some version of "ready for the next step." But those verdicts were conditional on assumptions that were never made explicit. The QA agent's "ready for device testing" assumed a live backend. The fix isn't to make agents smarter — it's to make assumptions into explicit required fields.
+When an agent says "ready for the next step," that verdict is conditional on things that were never written down. The fix is not to make agents smarter. It is to surface the assumptions and turn them into required fields. If you cannot mark "READY TO TEST" without filling in the backend URL and confirming it resolves, the assumption can no longer stay invisible.
 
-**The gaps are between agents, not inside them.**
+**The gaps live between agents, not inside them.**
 
-Each agent in this workflow performed well within its scope. The failure happened in the handoff between QA and device testing — a gap that didn't belong to any agent and therefore belonged to none of them. Closing the gap required creating a new agent role (Device Tester) with explicit ownership of the infrastructure check.
+Every agent in this workflow performed well within its scope. The failures happened at the boundaries — between QA and testing, between backend deployment and frontend connection. Gaps don't sit inside any one agent's responsibility. That's exactly why they go unnoticed. Closing a gap requires either assigning explicit ownership to the boundary, or creating a new step whose only job is to verify the handoff was clean.
+
+**Fixing a gap moves it — it doesn't eliminate it.**
+
+This is the hardest one. When we added the Backend Agent to fix the "no backend" problem, we created a new seam. The new seam was between the Backend Agent's output (deployed server URL) and the frontend's hardcoded address. Adding structure creates boundaries, and boundaries are where things fall through. The answer is not to avoid adding structure. It is to treat every new boundary as a potential gap and assign someone to own the check.
 
 **An agentic workflow needs to be audited the same way code does.**
 
-We run Security Agent on every screen. We run QA Agent on every screen. We don't currently run anything that audits the workflow itself. This failure was a workflow bug, not a code bug. It didn't get caught because nobody was assigned to look for it.
+We run a Security Agent on every screen. We run a QA Agent on every screen. We don't run anything that audits the workflow itself. These three failures were all workflow bugs, not code bugs. They didn't get caught because no agent was assigned to look for them. That is the next thing to fix.
 
 ---
 
 ## Where We Are Now
 
-The workflow is updated. The D1 screen is correctly marked as **device testing blocked — backend not deployed**. The next step is building the backend, which will be done with the same agent discipline applied to the frontend.
+All three failures are resolved.
 
-The three tests that don't require a backend (pure UI validation) can still be run. The other ten tests are waiting.
+The backend is deployed and reachable. The frontend URL points to it. The pre-flight check passes. All 13 runnable D1 device tests are unblocked.
 
-And the next QA test plan that gets written will open with a Prerequisites section. The assumption will be a required field.
+The workflow has six structural fixes in place. Every future QA test plan opens with a Prerequisites section. Every device testing session starts with a pre-flight check. Every backend deployment ends with an explicit step to reconnect the frontend.
+
+The tests that couldn't be run can now be run. And the next time a new agent is added to close a gap, we will immediately ask: what new boundary does this create, and who owns the check at that boundary?
 
 ---
 
