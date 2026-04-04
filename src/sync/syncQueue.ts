@@ -38,6 +38,19 @@ export async function enqueueOperation(
   db: SQLite.SQLiteDatabase,
   entry: SyncQueueEntry,
 ): Promise<void> {
+  // Null-guard: required fields must be non-empty strings. Silent null/undefined
+  // values in SQLite bindings can produce rows the sync worker cannot match.
+  // BUG-D3-DT11-1: made explicit so a missing field throws rather than inserts silently.
+  if (!entry.doctor_id) {
+    throw new Error(`enqueueOperation: doctor_id is missing (got ${JSON.stringify(entry.doctor_id)})`);
+  }
+  if (!entry.entity_local_id) {
+    throw new Error(`enqueueOperation: entity_local_id is missing (got ${JSON.stringify(entry.entity_local_id)})`);
+  }
+  if (!entry.entity_type) {
+    throw new Error(`enqueueOperation: entity_type is missing (got ${JSON.stringify(entry.entity_type)})`);
+  }
+
   const id        = Crypto.randomUUID();
   const queuedAt  = new Date().toISOString();
 

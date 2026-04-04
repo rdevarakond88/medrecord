@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** BUG-D3-DT11-1 VERIFIED FIXED (Device Tester session 12, 2026-04-04). BUG-D3-DT12-1 NEW (HIGH) — POST /sync rejected by server with "expected boolean, received number"; a boolean field in the visit payload is sent as SQLite integer 0/1 instead of true/false; visit never syncs; data loss at logout. BUG-D3-DT10-1 NOT VERIFIED (new error surface). BUG-D3-DT1-2 still blocked. Builder session required.
+**Phase:** BUG-D3-DT12-1 FIXED (Builder 2026-04-04) — Boolean() coercion added to freshConsentGranted in NewVisitScreen.tsx before sync payload construction. BUG-D3-DT10-1 NOT VERIFIED (new error surface). BUG-D3-DT1-2 still blocked. Device Tester session 13 required to verify BUG-D3-DT12-1 fix + BUG-D3-DT10-1.
 **Last Updated:** 2026-04-04
 
 ---
@@ -24,13 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester (2026-04-04) — D3 session 12. BUG-D3-DT11-1 VERIFIED FIXED (enqueue: verify — pending rows: 1 confirmed on device). BUG-D3-DT12-1 NEW (HIGH): POST /sync rejected with "expected boolean, received number" — a boolean field in the visit payload is sent as SQLite integer. BUG-D3-DT10-1 NOT VERIFIED. BUG-D3-DT1-2 still blocked.
+**Last Session:** Builder (2026-04-04) — Fix BUG-D3-DT12-1. `consent_granted` in sync payload was sent as SQLite integer 0/1. Root cause: `freshPatient?.consent_granted` is stored as integer in SQLite; `?? false` fallback never fires for 0/1 values. Fix: `Boolean(freshPatient?.consent_granted ?? false)` in NewVisitScreen.tsx:307. One-line change. BUG-D3-DT10-1 and BUG-D3-DT1-2 still need device verification.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder — Fix BUG-D3-DT12-1** | POST /sync rejected "expected boolean, received number"; find boolean field(s) in visit payload sent as SQLite integer 0/1; add explicit Boolean() coercion before enqueueOperation |
-| 2 | **Device Tester — D3 session 13** | Verify BUG-D3-DT12-1 fix; verify BUG-D3-DT10-1 end-to-end; verify BUG-D3-DT1-2 |
+| 1 | **Device Tester — D3 session 13** | Verify BUG-D3-DT12-1 fix (Boolean coercion); verify BUG-D3-DT10-1 end-to-end; verify BUG-D3-DT1-2 |
 | 3 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
 | 4 | **Merge D6 + D7 + D2 to main** | All three clear now — do not wait on D3/D1 |
 | 5 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |

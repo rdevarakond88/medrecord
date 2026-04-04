@@ -61,6 +61,7 @@ import { getPatientByLocalId } from '../../db/patients';
 import { getScansForVisit, deleteScan } from '../../db/scans';
 import { createVisit } from '../../api/visits';
 import { enqueueOperation } from '../../sync/syncQueue';
+import { syncLog } from '../../sync/syncLogger';
 import { ApiError } from '../../api/apiClient';
 import type { RootStackParamList } from '../../../App';
 
@@ -300,13 +301,18 @@ export default function NewVisitScreen() {
       // updated the SQLite row). Writing a stale value to visits_draft and to
       // the server would be a silent consent-layer violation.
       const freshPatient = await getPatientByLocalId(db, patientId);
-      const freshConsentGranted = freshPatient?.consent_granted ?? false;
+      // BUG-D3-DT12-1: SQLite stores booleans as integers (0/1). Boolean() coerces
+      // 0 → false and 1 → true before the value enters the sync payload, where the
+      // server's Zod schema requires a strict boolean (not a number).
+      const freshConsentGranted = Boolean(freshPatient?.consent_granted ?? false);
 
-      // ── M-4: Atomic transaction — SQLite write + enqueue ─────────────────
-      // Wrapping both in withTransactionAsync ensures they succeed or fail
-      // together. Without this, a UNIQUE constraint violation on enqueueOperation
-      // (e.g. from a retry after a partial failure) could leave a visits_draft
-      // row without a matching sync_queue entry, silently losing the upload.
+      // ── M-4: visits_draft write — atomic transaction ─────────────────────
+      // enqueueOperation is intentionally called OUTSIDE this transaction
+      // (BUG-D3-DT11-1 fix): expo-sqlite v16 withTransactionAsync has an
+      // async-callback issue where inner runAsync calls can silently succeed
+      // without committing, or silently fail without rolling back the outer
+      // writes. Moving enqueueOperation outside the transaction ensures its
+      // INSERT runs as a standalone committed operation.
       await db.withTransactionAsync(async () => {
         // ── 1. SQLite write FIRST — visit survives any server outage ─────
         await insertLocalVisit(db, {
@@ -323,29 +329,48 @@ export default function NewVisitScreen() {
         // ── 1b. DPDP audit event — personal health data written ──────────
         // Fires for both online and offline saves — audit trail is always complete.
         await logVisitCreated(db, user.id, patientId, visitLocalId);
-
-        // ── 2. Enqueue for background sync ────────────────────────────────
-        // Payload uses snake_case to match the server's visitPayloadSchema in
-        // backend/src/routes/sync.ts. patient_id is the server UUID (patientServerId),
-        // not the local SQLite UUID — the server uses it as a FK to create the visit.
-        // chief_complaint and note_text must be undefined (not null) because the server
-        // schema uses z.string().optional(), which rejects null values.
-        await enqueueOperation(db, {
-          doctor_id:       user.id,
-          entity_type:     'visit',
-          entity_local_id: visitLocalId,
-          operation:       'create',
-          payload: {
-            local_id:        visitLocalId,
-            doctor_id:       user.id,
-            patient_id:      patientServerId,  // server UUID — required by POST /sync schema
-            visit_date:      visitDate,
-            chief_complaint: trimmedComplaint ?? undefined,
-            note_text:       trimmedNote ?? undefined,
-            consent_granted: freshConsentGranted,  // M-1: use re-read value
-          },
-        });
       });
+
+      // ── 2. Enqueue for background sync ────────────────────────────────
+      // Called OUTSIDE withTransactionAsync (BUG-D3-DT11-1 fix — see above).
+      // Payload uses snake_case to match the server's visitPayloadSchema in
+      // backend/src/routes/sync.ts. patient_id is the server UUID (patientServerId),
+      // not the local SQLite UUID — the server uses it as a FK to create the visit.
+      // chief_complaint and note_text must be undefined (not null) because the server
+      // schema uses z.string().optional(), which rejects null values.
+      if (!patientServerId) {
+        syncLog(`[WARN] enqueue: patientServerId is null — visit will sync when patient syncs to server; visitLocalId:${visitLocalId}`);
+      }
+      syncLog(`enqueue: calling enqueueOperation — visitLocalId:${visitLocalId} doctorId:${user.id}`);
+      await enqueueOperation(db, {
+        doctor_id:       user.id,
+        entity_type:     'visit',
+        entity_local_id: visitLocalId,
+        operation:       'create',
+        payload: {
+          local_id:        visitLocalId,
+          doctor_id:       user.id,
+          patient_id:      patientServerId,  // server UUID — required by POST /sync schema
+          visit_date:      visitDate,
+          chief_complaint: trimmedComplaint ?? undefined,
+          note_text:       trimmedNote ?? undefined,
+          consent_granted: freshConsentGranted,  // M-1: use re-read value
+        },
+      });
+
+      // Verify the enqueue row actually landed — if 0 rows, log clearly so
+      // BUG-D3-DT11-1 root cause is visible in SyncDebugPanel on next test.
+      const enqueueVerify = await db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) AS count FROM sync_queue
+         WHERE entity_local_id = ? AND doctor_id = ? AND status = 'pending'`,
+        [visitLocalId, user.id],
+      );
+      syncLog(`enqueue: verify — pending rows in sync_queue: ${enqueueVerify?.count ?? 0}`);
+      if (!enqueueVerify || enqueueVerify.count === 0) {
+        // Visit is safely persisted in visits_draft — do not block navigation.
+        // Log clearly so the device test session can pinpoint the failure.
+        syncLog(`[ERR] enqueue: verify FAILED — sync_queue row missing after enqueueOperation returned; visit will not sync`);
+      }
 
       // ── 3. Online server call ────────────────────────────────────────────
       // Only attempted when patientServerId is available — offline-only patients
