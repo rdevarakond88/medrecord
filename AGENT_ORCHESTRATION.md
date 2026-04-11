@@ -285,58 +285,6 @@ format specified in your agent file.
 
 ---
 
-### STEP 12 — Merge to Main
-
-**Who:** You, in a fresh Claude Code session (PM Agent owns this step)
-**When:** After PM Moment 2 post-flow review is complete and all screens in the PR are marked "clear to merge" in `docs/project-state.md`
-**Why:** The merge decision has already been made by the agents — this step verifies the evidence and executes the merge. No developer review required.
-
-**Prompt to paste:**
-```
-Read docs/project-state.md, agents/agent-pm.md.
-
-Run Step 12 — Merge to Main for PR #[number].
-```
-
-**What Claude will do:**
-1. Read `docs/project-state.md` — verify every screen in the PR is marked "clear to merge" with no open CRITICAL or HIGH debt
-2. Run `gh pr view [number]` — confirm what the PR contains matches project-state.md
-3. If all criteria pass → run `gh pr merge [number] --squash --delete-branch`
-4. Update `docs/project-state.md` — mark flow as merged, note the merge commit
-5. Commit and push the state update to `dev`
-
-**Merge is BLOCKED if any of the following are true:**
-- Any screen in the PR is NOT marked "clear to merge" in project-state.md
-- Any open CRITICAL or HIGH debt item for a screen in the PR is not closed
-- PR state is not OPEN
-
-**Output you expect:** Merge confirmed with commit hash, project-state.md updated.
-**Then:** Exit session. Start a new PM Agent session for the next flow.
-
----
-
-### Summary Table
-
-| Step | Agent | Runs | Fresh Session? |
-|---|---|---|---|
-| 1 | PM Agent | Once per flow | Yes |
-| 2 | Builder (mockup) | Every screen | Yes |
-| 3 | Persona Critic | Every screen | Yes |
-| 4 | Builder (fixes) | Every screen | Yes |
-| 5 | Builder (wire data) | Every screen | Yes |
-| 5b | Builder (contract sync check) | Every screen — mandatory after Step 5 | No (same session as Step 5) |
-| 6 | Security Agent | Every screen | Yes |
-| 7 | QA Agent | Every screen | Yes |
-| 8 | Device Tester (infra pre-flight + testing) | Every screen | Yes |
-| 9 | Builder (device-testing bug fixes) | Every screen if FAILs exist | Yes |
-| 10 | Commit + Push | Every screen | No (continue from 8 or 9) |
-| 11 | Backend Build Agent | Once per flow, after all screens complete | Yes |
-| — | PM Agent (Moment 2) | Once per flow | Yes |
-| 12 | PM Agent (Merge to Main) | Once per flow, after Moment 2 green light | Yes |
-| — | PM Agent (Moment 3) | Once before launch | Yes |
-
----
-
 ## One Rule to Never Break
 
 Each step is a separate Claude Code session.
