@@ -4,6 +4,7 @@
  */
 
 import { apiFetch, ApiError } from './apiClient';
+export { ApiError };
 
 export interface ApiPatient {
   id:              string;
@@ -14,6 +15,54 @@ export interface ApiPatient {
   consent_granted: boolean;
   last_visit_date: string | null;  // ISO date YYYY-MM-DD
 }
+
+// ─────────────────────────────────────────────────────────────
+// D5 — create a new patient
+// ─────────────────────────────────────────────────────────────
+
+export interface CreatePatientRequest {
+  localId:      string;
+  mobileNumber: string;
+  name:         string | null;
+  dateOfBirth:  string | null;  // ISO YYYY-MM-DD
+  gender:       string | null;
+}
+
+/**
+ * Create a new patient on the server.
+ *
+ * Always called AFTER insertLocalPatient() + enqueueOperation() — the local
+ * SQLite row is the safety net if the server call fails or the device goes
+ * offline before the response arrives.
+ *
+ * Throws ApiError on failure. The caller handles:
+ *   - 409 CONFLICT: patient already registered (race with another device)
+ *   - Other errors: ignore and rely on the sync worker
+ *
+ * NOTE: server MUST derive doctor identity from JWT claim, not request body.
+ * The doctor_id is intentionally not sent here — server should infer from token.
+ *
+ * POST /patients
+ */
+export async function createPatient(
+  req: CreatePatientRequest,
+  authToken: string,
+): Promise<{ patient: ApiPatient }> {
+  return apiFetch<{ patient: ApiPatient }>('/patients', authToken, {
+    method: 'POST',
+    body: JSON.stringify({
+      local_id:      req.localId,
+      mobile_number: req.mobileNumber,
+      name:          req.name,
+      date_of_birth: req.dateOfBirth,
+      gender:        req.gender,
+    }),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Lookup
+// ─────────────────────────────────────────────────────────────
 
 /**
  * Look up a patient by exact 10-digit mobile number.

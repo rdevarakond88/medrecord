@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — Step 4 (Builder fixes) complete. Next: Step 5 (Builder Agent — wire real data).
+**Phase:** D5 (New Patient Form) — Step 5 (Builder Agent — wire real data) complete. Next: Step 6 (Security Agent).
 **Last Updated:** 2026-04-11
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder — Step 4 (2026-04-11) — D5 mockup revised. MUST FIX applied: back-nav discard guard (Alert.alert on handleBackPress; live build note to use navigation.addListener + savingCompletedRef). SHOULD FIX applied: button label → "Save & Begin Visit", "add more later" note added, age calculation dynamic. Next: Step 5 (Builder Agent — wire real data).
+**Last Session:** Builder — Step 5 (2026-04-11) — D5 wired with real data. `src/screens/doctor/NewPatientFormScreen.tsx` created (replaces stub in App.tsx). `insertLocalPatient` + `setPatientServerId` added to `src/db/patients.ts`. `createPatient` added to `src/api/patients.ts`. Save flow: SQLite-first → sync queue → optimistic POST /patients → navigate to NewVisit. Back-nav discard guard via `navigation.addListener('beforeRemove')` + `savingCompletedRef`. 409 conflict handled via `lookupPatient` fallback. Contract sync check: all fields match; 409 patient_id workaround documented in api-contracts.md. Next: Step 6 (Security Agent).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
@@ -108,7 +108,7 @@ _Carry these into every build/mockup session for these screens._
 | D6 — New Visit | **DEVICE TESTING COMPLETE (2026-03-28, session 6). BUG-D6-DT5-1 fix verified. Zero bugs. Clear to merge to main. Security re-audit v3 (2026-04-11): CLEAR TO MERGE TO MAIN.** All CRITICAL/HIGH verified fixed. MEDIUM finding: debug syncLogger still active in production builds — must remove `src/sync/syncLogger.ts` and call sites before v1 launch. Items #49, #60 permanently deferred (simulation, v1 acceptable). Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-6.md`. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
-| D5 — New Patient Form | **Step 2 (mockup) complete (2026-04-11).** Static mockup `mockups/D5NewPatientForm.tsx` built — 3 states: empty, filled, offline. Aadhaar field deferred to v2 (see Decisions Made). Next: Step 3 (Persona Critic). | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
+| D5 — New Patient Form | **Steps 2–5 complete (2026-04-11).** Live screen `src/screens/doctor/NewPatientFormScreen.tsx` wired with offline-first save flow, back-nav discard guard, 409 conflict handling, date picker (iOS compact + Android dialog). Aadhaar field deferred to v2 (see Decisions Made). Next: Step 6 (Security Agent). | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |

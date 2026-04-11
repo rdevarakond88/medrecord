@@ -12,7 +12,7 @@
  *   PatientDetail  → D3 PatientDetailScreen
  *   NewVisit       → D6 NewVisitScreen
  *   DocumentScanner → D7 DocumentScannerScreen
- *   NewPatientForm → D5 stub (not yet built)
+ *   NewPatientForm → D5 NewPatientFormScreen
  */
 
 import React, { useState, useEffect } from 'react';
@@ -22,8 +22,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { initializeDatabase } from './src/db/schema';
 import LoginScreen from './src/screens/doctor/LoginScreen';
@@ -31,6 +30,7 @@ import PatientSearchScreen from './src/screens/doctor/PatientSearchScreen';
 import PatientDetailScreen from './src/screens/doctor/PatientDetailScreen';
 import NewVisitScreen from './src/screens/doctor/NewVisitScreen';
 import DocumentScannerScreen from './src/screens/doctor/DocumentScannerScreen';
+import NewPatientFormScreen from './src/screens/doctor/NewPatientFormScreen';
 import { useSyncWorker } from './src/sync/useSyncWorker';
 import { refreshAccessToken } from './src/api/auth';
 import { ApiError } from './src/api/apiClient';
@@ -38,29 +38,6 @@ import { REFRESH_TOKEN_KEY, USER_PROFILE_KEY } from './src/auth/constants';
 import { useAuthStore } from './src/store/useAuthStore';
 import type { AuthUser } from './src/store/useAuthStore';
 
-
-// ─── NewPatientForm stub ───────────────────────────────────────────────────
-// D5 is not built yet. Prevents a navigation crash when D2's "Add New Patient"
-// button fires. Replace with the real NewPatientFormScreen when D5 is built.
-function NewPatientFormScreen() {
-  const navigation = useNavigation<any>();
-  return (
-    <View style={stubStyles.container}>
-      <Text style={stubStyles.title}>New Patient Form</Text>
-      <Text style={stubStyles.sub}>D5 — not built yet</Text>
-      <TouchableOpacity style={stubStyles.btn} onPress={() => navigation.goBack()}>
-        <Text style={stubStyles.btnText}>← Back</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-const stubStyles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff', gap: 12 },
-  title:     { fontSize: 22, fontWeight: '700', color: '#333' },
-  sub:       { fontSize: 13, color: '#999' },
-  btn:       { marginTop: 8, backgroundColor: '#555', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 8 },
-  btnText:   { color: '#fff', fontSize: 15, fontWeight: '600' },
-});
 
 // ─── Navigation types ──────────────────────────────────────────────────────
 

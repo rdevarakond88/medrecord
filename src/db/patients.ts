@@ -174,6 +174,65 @@ export async function logLocalPatientAccess(
 }
 
 /**
+ * Insert a new locally-created patient into SQLite.
+ *
+ * Called by D5 (New Patient Form) when a doctor registers a patient who was
+ * not found via D2's lookup. server_id and synced_at start as null — the sync
+ * worker will populate them after a successful POST /patients.
+ *
+ * Uses INSERT OR IGNORE so a second tap or navigating back and re-saving
+ * does not throw on the UNIQUE(mobile_number) constraint. Returns the
+ * actual local_id that was written (or already existed).
+ */
+export async function insertLocalPatient(
+  db: SQLite.SQLiteDatabase,
+  patient: {
+    local_id:      string;
+    doctor_id:     string;
+    mobile_number: string;
+    name:          string | null;
+    date_of_birth: string | null;  // ISO YYYY-MM-DD
+    gender:        string | null;
+  },
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `INSERT OR IGNORE INTO patients
+       (local_id, doctor_id, server_id, mobile_number, name, date_of_birth, gender,
+        consent_granted, last_visit_date, synced_at, created_at, updated_at)
+     VALUES (?, ?, NULL, ?, ?, ?, ?, 0, NULL, NULL, ?, ?)`,
+    [
+      patient.local_id,
+      patient.doctor_id,
+      patient.mobile_number,
+      patient.name,
+      patient.date_of_birth,
+      patient.gender,
+      now,  // created_at
+      now,  // updated_at
+    ],
+  );
+}
+
+/**
+ * Update a locally-created patient row with its server-assigned UUID.
+ * Called by D5 after a successful POST /patients, so the sync worker does
+ * not re-upload a patient who is already on the server.
+ */
+export async function setPatientServerId(
+  db: SQLite.SQLiteDatabase,
+  localId:  string,
+  serverId: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `UPDATE patients SET server_id = ?, synced_at = ?, updated_at = ?
+     WHERE local_id = ?`,
+    [serverId, now, now, localId],
+  );
+}
+
+/**
  * Delete all locally cached patients belonging to the given doctor.
  * Called as part of the logout sequence (before clearAuth) to prevent
  * cross-doctor data leakage on shared clinic devices.
