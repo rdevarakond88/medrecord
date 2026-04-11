@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "MedRecord",
+    "slug": "medrecord",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "medrecord",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1A6DB5"
+      }
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-secure-store"
+    ]
+  }
+}

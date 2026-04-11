@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Gender {
+  male
+  female
+  other
+  prefer_not_to_say
+}
+
+enum VisitStatus {
+  open
+  submitted
+}
+
+enum RecordType {
+  scan
+  note
+  diagnosis
+  medication
+  lab_result
+}
+
+enum OcrStatus {
+  pending
+  success
+  failed
+  skipped
+}
+
+enum ConsentGrantedBy {
+  patient
+  proxy
+}
+
+enum ConsentScope {
+  read_all
+  read_from_date
+  read_new_only
+}
+
+// ─── Core models ─────────────────────────────────────────────────────────────
+
+model Clinic {
+  id        String    @id @default(uuid())
+  name      String    @db.VarChar(255)
+  address   String?
+  pincode   String?   @db.VarChar(6)
+  state     String?   @db.VarChar(100)
+  phone     String?   @db.VarChar(10)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  doctors  Doctor[]
+  visits   Visit[]
+  consents Consent[]
+
+  @@map("clinic")
+}
+
+model Doctor {
+  id                 String    @id @default(uuid())
+  name               String    @db.VarChar(255)
+  mobileNumber       String    @unique @db.VarChar(10) @map("mobile_number")
+  specialisation     String?   @db.VarChar(255)
+  registrationNumber String?   @db.VarChar(100) @map("registration_number")
+  clinicId           String?   @map("clinic_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+
+  clinic        Clinic?        @relation(fields: [clinicId], references: [id])
+  visits        Visit[]
+  records       Record[]
+  consents      Consent[]      @relation("DoctorConsents")
+  refreshTokens RefreshToken[]
+
+  @@map("doctor")
+}
+
+model Patient {
+  id              String    @id @default(uuid())
+  localId         String?   @map("local_id")
+  mobileNumber    String    @unique @db.VarChar(10) @map("mobile_number")
+  name            String?   @db.VarChar(255)
+  dateOfBirth     DateTime? @map("date_of_birth") @db.Date
+  gender          Gender?
+  aadhaarHash     String?   @db.VarChar(64) @map("aadhaar_hash")
+  profilePhotoUrl String?   @map("profile_photo_url")
+  createdBy       String?   @map("created_by") // doctor UUID — set from JWT, never from body
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  visits   Visit[]
+  consents Consent[]
+
+  @@map("patient")
+}
+
+model Visit {
+  id             String      @id @default(uuid())
+  localId        String?     @map("local_id")
+  patientId      String      @map("patient_id")
+  doctorId       String      @map("doctor_id")
+  clinicId       String?     @map("clinic_id")
+  visitDate      DateTime    @map("visit_date") @db.Date
+  chiefComplaint String?     @map("chief_complaint")
+  noteText       String?     @map("note_text")
+  status         VisitStatus @default(open)
+  consentGranted Boolean?    @map("consent_granted")
+  openedAt       DateTime?   @map("opened_at")
+  submittedAt    DateTime?   @map("submitted_at")
+  syncedAt       DateTime?   @map("synced_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+  deletedAt      DateTime?   @map("deleted_at")
+
+  patient Patient  @relation(fields: [patientId], references: [id])
+  doctor  Doctor   @relation(fields: [doctorId], references: [id])
+  clinic  Clinic?  @relation(fields: [clinicId], references: [id])
+  records Record[]
+
+  @@map("visit")
+}
+
+model Record {
+  id                 String     @id @default(uuid())
+  localId            String?    @map("local_id")
+  visitId            String     @map("visit_id")
+  createdById        String     @map("created_by")
+  type               RecordType
+  contentText        String?    @map("content_text")
+  imageUrl           String?    @map("image_url")
+  imageLocalPath     String?    @map("image_local_path")
+  ocrStatus          OcrStatus  @default(skipped) @map("ocr_status")
+  ocrRawOutput       String?    @map("ocr_raw_output")
+  isVisibleToPatient Boolean    @default(true) @map("is_visible_to_patient")
+  syncedAt           DateTime?  @map("synced_at")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+  deletedAt          DateTime?  @map("deleted_at")
+
+  visit     Visit  @relation(fields: [visitId], references: [id])
+  createdBy Doctor @relation(fields: [createdById], references: [id])
+
+  @@map("record")
+}
+
+model Consent {
+  id            String           @id @default(uuid())
+  patientId     String           @map("patient_id")
+  doctorId      String?          @map("doctor_id")
+  clinicId      String?          @map("clinic_id")
+  grantedAt     DateTime         @map("granted_at")
+  revokedAt     DateTime?        @map("revoked_at")
+  grantedBy     ConsentGrantedBy @map("granted_by")
+  scope         ConsentScope     @default(read_all)
+  scopeFromDate DateTime?        @map("scope_from_date") @db.Date
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  patient Patient  @relation(fields: [patientId], references: [id])
+  doctor  Doctor?  @relation("DoctorConsents", fields: [doctorId], references: [id])
+  clinic  Clinic?  @relation(fields: [clinicId], references: [id])
+
+  @@map("consent")
+}
+
+// ─── Auth models ─────────────────────────────────────────────────────────────
+
+model OtpRequest {
+  id           String    @id @default(uuid())
+  token        String    @unique // otp_token returned to client
+  mobileNumber String    @db.VarChar(10) @map("mobile_number")
+  otpHash      String    @map("otp_hash") // bcrypt hash
+  role         String    @db.VarChar(20)
+  expiresAt    DateTime  @map("expires_at")
+  attempts     Int       @default(0)
+  usedAt       DateTime? @map("used_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("otp_request")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  doctorId  String    @map("doctor_id")
+  tokenHash String    @unique @map("token_hash") // SHA-256 hash for fast lookup
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+
+  @@map("refresh_token")
+}
+
+// ─── Audit log ───────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  timestamp  DateTime @default(now())
+  event      String
+  actorId    String?  @map("actor_id")
+  actorRole  String?  @map("actor_role")
+  resourceId String?  @map("resource_id")
+  patientId  String?  @map("patient_id")
+  ipAddress  String?  @map("ip_address")
+  deviceId   String?  @map("device_id")
+  outcome    String   @default("success")
+  metadata   Json?
+
+  @@map("audit_log")
+}

@@ -52,6 +52,7 @@ After a complete flow is built and all screens are approved, you assess:
 - What would cause a doctor to abandon it mid-flow in real life?
 - What would cause low adoption at the clinic level?
 - Any regulatory or trust risks introduced?
+- **Is the backend built and reachable?** If not, device testing is blocked — flag this explicitly with a plan for how it gets resolved before pilot.
 
 ### Moment 3 — Pre-Launch Gate
 Before v1 is declared ready, you assess:
@@ -59,6 +60,7 @@ Before v1 is declared ready, you assess:
 - What is the highest risk thing that could go wrong in the field?
 - What would make a doctor uninstall this within the first week?
 - What belongs in v1.1 that we should not delay launch for?
+- **Infrastructure checklist:** Backend deployed and reachable? Test credentials exist? All screens device-tested against live backend (not mock)? Cert pinning validated in EAS build?
 
 ---
 
@@ -102,6 +104,11 @@ ADOPTION RISKS:
 REGULATORY OR TRUST RISKS:
 - [Risk] — [Suggested mitigation]
 
+INFRASTRUCTURE READINESS:
+- Backend: [deployed at <url> / NOT DEPLOYED]
+- Device testing status: [READY / BLOCKED — reason]
+- Plan to unblock (if blocked): [specific next step and owner]
+
 ONE THING MOST LIKELY TO CAUSE LOW ADOPTION:
 - [Single most important observation]
 ```
@@ -118,6 +125,38 @@ HIGHEST FIELD RISK:
 WOULD CAUSE UNINSTALL WITHIN WEEK 1:
 - [Issue]
 
+INFRASTRUCTURE CHECKLIST:
+- Backend deployed and reachable: Yes / No
+- All screens device-tested against live backend: Yes / No / Partial — [which screens pending]
+- Cert pinning validated in EAS build: Yes / No
+- Test credentials and onboarding flow for pilot clinic: Yes / No
+
 DEFER TO V1.1 (do not delay launch for these):
 - [Feature or fix]
 ```
+
+---
+
+## End-of-Session Protocol
+
+Before this session ends, always perform the following steps **without being asked**:
+
+1. **Save the PM review to `reviews/`** — Write the completed review to
+   `reviews/{ScreenID}-pm-review.md` (e.g. `reviews/D3-pm-review.md`).
+   If a review for this screen already exists, save as
+   `reviews/{ScreenID}-pm-review-v2.md` (increment version as needed).
+
+2. **Update `docs/project-state.md`** by:
+   - Moving completed items to Screens Built (not appending a new entry)
+   - Updating existing open questions (not adding duplicates)
+   - Adding new decisions to Decisions Made table only if genuinely new
+   - Updating Known Technical Debt by closing resolved items and adding new ones only if genuinely new
+
+   The file should always feel like one clean snapshot of current reality — not a log of everything that ever happened.
+
+3. **Commit and push to GitHub** — Stage all new and modified files, commit to the
+   `dev` branch using the project convention (e.g. `[D3] PM review complete`),
+   and push to `origin dev`.
+
+4. **Confirm the commit hash** — Output the short commit hash so it can be traced
+   in the repo history.

@@ -89,6 +89,8 @@ In the rare case server returns `conflict` (e.g., patient with that mobile alrea
 
 ## Image Sync
 
+> **NOTE: S3 upload is deferred for v1. Images are stored on device local storage only. The upload queue and presigned URL steps are skipped. OCR is also deferred as it depends on S3. Images remain fully viewable from local storage.**
+
 Images are the most bandwidth-intensive part of sync. Handle separately from metadata.
 
 ### Capture Flow (Offline)

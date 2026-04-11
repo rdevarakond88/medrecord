@@ -1,0 +1,124 @@
+/**
+ * useSyncWorker — React hook that mounts the sync worker triggers.
+ * Spec: reviews/sync-worker-pm-preflow.md — Trigger conditions
+ *
+ * Three triggers, all gated on isConnected + isInternetReachable:
+ *   1. App foreground (AppState → 'active')
+ *   2. Network connectivity restored (offline → online transition)
+ *   3. Every 5 minutes while online and app is open (setInterval)
+ *
+ * Mount this hook in one place only — inside the SQLiteProvider + provider
+ * tree so useSQLiteContext() resolves. App.tsx mounts it via SyncWorkerMount.
+ *
+ * Does not render any UI. Never navigates.
+ */
+
+import { useEffect, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
+import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
+import { useSQLiteContext } from 'expo-sqlite';
+
+import { runSyncWorker } from './syncWorker';
+import { syncLog } from './syncLogger';
+
+const SYNC_INTERVAL_MS = 5 * 60 * 1000;  // 5 minutes
+
+function isOnline(state: NetInfoState): boolean {
+  // On iOS (including Expo Go), NetInfo frequently returns both isConnected: null
+  // AND isInternetReachable: null before the OS reachability probe completes.
+  // Both checks use !== false (permissive) rather than === true (strict) so sync
+  // proceeds when connectivity state is unknown-but-not-explicitly-offline.
+  // If the device is actually offline the API calls will fail and retry via the
+  // normal attempt-increment path — this is safe and by design.
+  //
+  // DT6-1 fix:  isInternetReachable changed from === true to !== false.
+  // DT7-1 fix:  isConnected changed from === true to !== false (same reasoning —
+  //             isConnected: null on iOS after foreground was blocking all sync).
+  //
+  // Note: useNetworkStatus (D3 consent check, D6 online guard) intentionally stays
+  // conservative (=== true) for UI display — this permissiveness is sync-only.
+  return state.isConnected !== false && state.isInternetReachable !== false;
+}
+
+export function useSyncWorker(): void {
+  const db = useSQLiteContext();
+
+  // Stable ref so event listener callbacks always see the current db handle.
+  const dbRef = useRef(db);
+  dbRef.current = db;
+
+  // Track previous online state to detect the offline → online transition.
+  const wasOnlineRef = useRef(false);
+
+  // doctorId is intentionally NOT captured here — runSyncWorker reads it from
+  // useAuthStore at each call site. Capturing it once at mount would snapshot
+  // '' for fresh-login sessions (SyncWorkerMount renders before login completes).
+
+  useEffect(() => {
+    // ── Trigger 2: NetInfo subscription — detect connectivity restoration ──
+    const netInfoUnsubscribe = NetInfo.addEventListener((state) => {
+      const nowOnline = isOnline(state);
+      syncLog(
+        `T2 NetInfo — conn:${state.isConnected} reach:${state.isInternetReachable}` +
+        ` online:${nowOnline} was:${wasOnlineRef.current}`,
+      );
+      if (nowOnline && !wasOnlineRef.current) {
+        // Transitioned from offline to online — drain the queue immediately.
+        syncLog('T2 offline→online: running sync');
+        runSyncWorker(dbRef.current);
+      }
+      wasOnlineRef.current = nowOnline;
+    });
+
+    // ── Trigger 1: AppState — run when app comes to foreground ────────────
+    function handleAppStateChange(nextState: AppStateStatus) {
+      if (nextState !== 'active') return;
+      // Check current connectivity before triggering.
+      NetInfo.fetch().then((state) => {
+        syncLog(
+          `T1 AppState→active — conn:${state.isConnected} reach:${state.isInternetReachable}` +
+          ` willSync:${isOnline(state)}`,
+        );
+        if (isOnline(state)) {
+          syncLog('T1: running sync');
+          runSyncWorker(dbRef.current);
+        }
+      });
+    }
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // ── Trigger 3: 5-minute interval while online ─────────────────────────
+    const intervalId = setInterval(() => {
+      NetInfo.fetch().then((state) => {
+        syncLog(
+          `T3 5min — conn:${state.isConnected} reach:${state.isInternetReachable}` +
+          ` willSync:${isOnline(state)}`,
+        );
+        if (isOnline(state)) {
+          syncLog('T3: running sync');
+          runSyncWorker(dbRef.current);
+        }
+      });
+    }, SYNC_INTERVAL_MS);
+
+    // ── Initial run on mount — catches any pending entries from before the
+    //    hook was mounted (e.g., a visit saved in a previous app session). ──
+    NetInfo.fetch().then((state) => {
+      syncLog(
+        `T0 mount — conn:${state.isConnected} reach:${state.isInternetReachable}` +
+        ` willSync:${isOnline(state)}`,
+      );
+      if (isOnline(state)) {
+        wasOnlineRef.current = true;
+        syncLog('T0: running sync');
+        runSyncWorker(dbRef.current);
+      }
+    });
+
+    return () => {
+      netInfoUnsubscribe();
+      appStateSubscription.remove();
+      clearInterval(intervalId);
+    };
+  }, []);  // mount once — db ref updated via dbRef.current
+}

@@ -172,3 +172,26 @@ NICE TO HAVE:
 BALANCER VERDICT: [Ship as-is / Revise / Redesign]
 RATIONALE: [2–3 sentences]
 ```
+
+---
+
+## End-of-Session Protocol
+
+Before this session ends, always perform the following steps **without being asked**:
+
+1. **Save the critique to `reviews/`** — Write the completed critique to
+   `reviews/{ScreenID}-persona-critique.md` (e.g. `reviews/D3-persona-critique.md`).
+   If a critique for this screen already exists, save as
+   `reviews/{ScreenID}-persona-critique-v2.md` (increment version as needed).
+
+2. **Update `docs/project-state.md`** — Record:
+   - The overall score and verdict
+   - Any MUST FIX or SHOULD FIX items added to Known Technical Debt
+   - Any issues resolved (mark CLOSED with date)
+
+3. **Commit and push to GitHub** — Stage all new and modified files, commit to the
+   `dev` branch using the project convention (e.g. `[D3] Persona critique complete`),
+   and push to `origin dev`.
+
+4. **Confirm the commit hash** — Output the short commit hash so it can be traced
+   in the repo history.

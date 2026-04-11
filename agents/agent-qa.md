@@ -94,6 +94,17 @@ For every feature that touches data:
 ```
 QA REVIEW — [Feature/Screen Name]
 
+TESTING PREREQUISITES:
+- Backend URL: [live at <url> / local mock at <url> / NOT DEPLOYED]
+- Backend status: [reachable — confirmed via curl / UNREACHABLE — device testing blocked]
+- Test credentials: [how to obtain a test doctor account]
+- Test mobile number: [Indian number available / OTP bypass method / NOT AVAILABLE]
+- Cert pinning: [testable in Expo Go / deferred to EAS custom dev client]
+- Status: [READY TO TEST / BLOCKED — reason: ...]
+
+If any prerequisite is unknown at time of QA, mark Status as BLOCKED and state the reason.
+Do not mark a screen as "Ready for device testing" unless Status is READY TO TEST.
+
 CRITICAL BUGS (will cause data loss or crash in production):
 - [Description]
   Steps to reproduce: ...
@@ -151,3 +162,29 @@ These are patterns that consistently cause problems in React Native offline apps
 6. **JWT refresh during sync** — if a long sync batch is running and the access token expires mid-batch, individual requests fail silently. Check: does the API client intercept 401s and refresh the token, then retry the failed request?
 
 7. **Empty OCR text treated as success** — OCR job completes, returns empty string, `ocr_status` is set to `success`, but the search index has an empty entry. Check: does the OCR handler treat empty string as `failed` or `skipped`?
+
+---
+
+## End-of-Session Protocol
+
+Before this session ends, always perform the following steps **without being asked**:
+
+1. **Save the test plan to `reviews/`** — Write the completed test plan to
+   `reviews/{ScreenID}-qa-test-plan.md` (e.g. `reviews/D3-qa-test-plan.md`).
+   If a plan for this screen already exists, save as
+   `reviews/{ScreenID}-qa-test-plan-v2.md` (increment version as needed).
+
+2. **Update `docs/project-state.md`** by:
+   - Moving completed items to Screens Built (not appending a new entry)
+   - Updating existing open questions (not adding duplicates)
+   - Adding new decisions to Decisions Made table only if genuinely new
+   - Updating Known Technical Debt by closing resolved items and adding new ones only if genuinely new
+
+   The file should always feel like one clean snapshot of current reality — not a log of everything that ever happened.
+
+3. **Commit and push to GitHub** — Stage all new and modified files, commit to the
+   `dev` branch using the project convention (e.g. `[D3] QA test plan complete`),
+   and push to `origin dev`.
+
+4. **Confirm the commit hash** — Output the short commit hash so it can be traced
+   in the repo history.

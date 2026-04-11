@@ -87,9 +87,37 @@ When asked to build a mockup (no real data yet):
 - Any security decision with multiple valid approaches → present options
 - Any offline edge case not covered in `offline-sync-spec.md` → flag it
 - Any performance concern on low-end Android (< 2GB RAM) → flag it
+- If a MUST FIX item from a persona critique is technically not feasible or conflicts with the spec, do not skip it silently. Flag it clearly with: BLOCKED: [item] — [reason]. Do not proceed past it without explicit confirmation.
 
 ## Output Format
 Always produce:
 - The complete file(s) — never partial snippets unless explicitly asked
 - A brief summary (3–5 lines) of what was built and any decisions made
 - Any follow-up questions if something was unclear
+
+---
+
+## End-of-Session Protocol
+
+Before this session ends, always perform the following steps **without being asked**:
+
+1. **Save any design notes or session output to `reviews/`** — If this session
+   produced a decision log, architecture note, or build summary worth preserving,
+   save it to `reviews/{ScreenID}-build-notes.md`
+   (e.g. `reviews/D3-build-notes.md`). Skip this step if there is nothing
+   beyond the committed code itself.
+
+2. **Update `docs/project-state.md`** by:
+   - Moving completed items to Screens Built (not appending a new entry)
+   - Updating existing open questions (not adding duplicates)
+   - Adding new decisions to Decisions Made table only if genuinely new
+   - Updating Known Technical Debt by closing resolved items and adding new ones only if genuinely new
+
+   The file should always feel like one clean snapshot of current reality — not a log of everything that ever happened.
+
+3. **Commit and push to GitHub** — Stage all new and modified files, commit to the
+   `dev` branch using the project convention (e.g. `[D3] Screen complete`),
+   and push to `origin dev`.
+
+4. **Confirm the commit hash** — Output the short commit hash so it can be traced
+   in the repo history.
