@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** Merge PR open — PR #1 (dev → main) contains D1, D2, D3, D6, D7, Sync Worker — all clear to merge. Next: merge PR #1, then build D5 (New Patient Form) or D4 (Visit Detail).
+**Phase:** PR #1 merged to main (2026-04-11) — D1, D2, D3, D6, D7, Sync Worker all on main. Next: build D5 (New Patient Form) or D4 (Visit Detail).
 **Last Updated:** 2026-04-11
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** PM Agent (2026-04-11) — Merge session. PR #1 (dev → main) opened. Includes D1, D2, D3, D6, D7, Sync Worker — all clear to merge. D1 device testing confirmed complete (2026-03-19). project-state.md updated.
+**Last Session:** PM Agent (2026-04-11) — PR #1 merged to main. D1, D2, D3, D6, D7, Sync Worker all on main. Step 12 (Merge to Main) added to AGENT_ORCHESTRATION.md + agent-pm.md (Moment 2.5).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |

@@ -285,27 +285,6 @@ format specified in your agent file.
 
 ---
 
-## Summary Table
-
-| Step | Agent | Runs | Fresh Session? |
-|---|---|---|---|
-| 1 | PM Agent | Once per flow | Yes |
-| 2 | Builder (mockup) | Every screen | Yes |
-| 3 | Persona Critic | Every screen | Yes |
-| 4 | Builder (fixes) | Every screen | Yes |
-| 5 | Builder (wire data) | Every screen | Yes |
-| 5b | Builder (contract sync check) | Every screen — mandatory after Step 5 | No (same session as Step 5) |
-| 6 | Security Agent | Every screen | Yes |
-| 7 | QA Agent | Every screen | Yes |
-| 8 | Device Tester (infra pre-flight + testing) | Every screen | Yes |
-| 9 | Builder (device-testing bug fixes) | Every screen if FAILs exist | Yes |
-| 10 | Commit + Push | Every screen | No (continue from 8 or 9) |
-| 11 | Backend Build Agent | Once per flow, after all screens complete | Yes |
-| — | PM Agent (Moment 2) | Once per flow | Yes |
-| — | PM Agent (Moment 3) | Once before launch | Yes |
-
----
-
 ## One Rule to Never Break
 
 Each step is a separate Claude Code session.
