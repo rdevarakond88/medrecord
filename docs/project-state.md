@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — Step 3 (Persona Critique) complete. Next: Step 4 (Builder Agent — apply MUST FIX items from persona critique).
+**Phase:** D5 (New Patient Form) — Step 4 (Builder fixes) complete. Next: Step 5 (Builder Agent — wire real data).
 **Last Updated:** 2026-04-11
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Persona Critic — Step 3 (2026-04-11) — D5 persona critique complete. Score: 3.38/5. Verdict: Revise and re-evaluate. Key items: MUST FIX — back-nav discard guard (live build); SHOULD FIX — button label, post-save hint, "add more later" note, dynamic age calculation. Next: Step 4 (Builder Agent — apply MUST FIX from persona critique). Critique saved: `reviews/D5-persona-critique.md`.
+**Last Session:** Builder — Step 4 (2026-04-11) — D5 mockup revised. MUST FIX applied: back-nav discard guard (Alert.alert on handleBackPress; live build note to use navigation.addListener + savingCompletedRef). SHOULD FIX applied: button label → "Save & Begin Visit", "add more later" note added, age calculation dynamic. Next: Step 5 (Builder Agent — wire real data).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |

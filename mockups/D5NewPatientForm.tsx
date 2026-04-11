@@ -1,5 +1,5 @@
 /**
- * D5NewPatientForm.tsx — Static Mockup
+ * D5NewPatientForm.tsx — Static Mockup (Step 4 revised)
  *
  * Screen:   D5 — New Patient Form
  * Spec:     docs/ui-ux-spec.md → D5
@@ -12,6 +12,15 @@
  *
  * No real API calls. All data is static.
  * Toggle between states with the dev switcher at top of screen.
+ *
+ * Step 4 changes (persona critique MUST FIX + SHOULD FIX):
+ *   MUST FIX  — Back-nav discard guard: Alert.alert fires when back is
+ *               pressed with unsaved data. Live build: use
+ *               navigation.addListener('beforeRemove') + savingCompletedRef
+ *               (same pattern as D6 — see MEMORY.md Known Patterns).
+ *   SHOULD FIX — Button label → "Save & Begin Visit"
+ *   SHOULD FIX — "Add more later" note below form fields
+ *   SHOULD FIX — Age derived dynamically from DOB (no longer hardcoded)
  *
  * Aadhaar field deferred to v2 — when added, hash at form boundary
  * before any state write. Raw Aadhaar must never enter the call stack.
@@ -28,6 +37,7 @@ import {
   SafeAreaView,
   StatusBar,
   Platform,
+  Alert,
 } from 'react-native';
 
 // ─────────────────────────────────────────────────────────────
@@ -81,6 +91,26 @@ const STATIC: Record<ScreenState, {
     gender: 'male',
   },
 };
+
+// ─────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────
+
+/** Parse "DD/MM/YYYY" and return age in years, or null if invalid. */
+function calculateAge(dob: string): number | null {
+  const parts = dob.split('/');
+  if (parts.length !== 3) return null;
+  const [day, month, year] = parts.map(Number);
+  if (!day || !month || !year) return null;
+  const today = new Date();
+  const birth = new Date(year, month - 1, day);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age >= 0 ? age : null;
+}
 
 // ─────────────────────────────────────────────────────────────
 // Sub-components
@@ -173,8 +203,30 @@ export default function D5NewPatientForm() {
   const [screenState, setScreenState] = useState<ScreenState>('empty');
   const data = STATIC[screenState];
 
-  // In the live build these will be controlled state; here they're display-only.
   const isOffline = screenState === 'offline';
+
+  // Discard guard: any optional field filled counts as unsaved work.
+  // MUST FIX (persona critique) — live build: replace this with
+  // navigation.addListener('beforeRemove') + savingCompletedRef (D6 pattern).
+  const hasUnsavedChanges = data.name !== '' || data.dob !== '' || data.gender !== null;
+
+  function handleBackPress() {
+    if (hasUnsavedChanges) {
+      Alert.alert(
+        'Discard changes?',
+        'Patient details you entered will be lost.',
+        [
+          { text: 'Keep editing', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => { /* mock: navigation.goBack() */ },
+          },
+        ],
+      );
+    }
+    // else: navigate back — mock: no-op
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -186,6 +238,7 @@ export default function D5NewPatientForm() {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
+          onPress={handleBackPress}
           accessibilityLabel="Go back"
           accessibilityRole="button"
         >
@@ -240,9 +293,9 @@ export default function D5NewPatientForm() {
             </Text>
             <Text style={styles.calendarIcon}>📅</Text>
           </TouchableOpacity>
-          {/* Age derived from DOB shown inline when filled */}
-          {data.dob !== '' && (
-            <Text style={styles.fieldHint}>Age: 39 years</Text>
+          {/* Age derived dynamically from DOB — live build uses the same helper */}
+          {data.dob !== '' && calculateAge(data.dob) !== null && (
+            <Text style={styles.fieldHint}>Age: {calculateAge(data.dob)} years</Text>
           )}
         </View>
 
@@ -255,14 +308,19 @@ export default function D5NewPatientForm() {
           />
         </View>
 
+        {/* ── Add more later note ── */}
+        <Text style={styles.addMoreNote}>
+          Additional details (blood group, allergies, address) can be added from the patient profile.
+        </Text>
+
         {/* ── Submit button ── */}
         <TouchableOpacity
           style={styles.submitButton}
-          accessibilityLabel="Create patient and start visit"
+          accessibilityLabel="Save patient and begin visit"
           accessibilityRole="button"
         >
           <Text style={styles.submitButtonText}>
-            {isOffline ? 'Create Patient & Start Visit (Offline)' : 'Create Patient & Start Visit'}
+            {isOffline ? 'Save & Begin Visit (Offline)' : 'Save & Begin Visit'}
           </Text>
         </TouchableOpacity>
 
@@ -477,6 +535,14 @@ const styles = StyleSheet.create({
   genderBtnTextActive: {
     color: C.primaryBlue,
     fontWeight: '600',
+  },
+
+  // Add more later note
+  addMoreNote: {
+    fontSize: 13,
+    color: C.textSecondary,
+    marginBottom: 20,
+    lineHeight: 18,
   },
 
   // Submit button
