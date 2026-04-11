@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D3 device testing COMPLETE (Device Tester session 13, 2026-04-04) — BUG-D3-DT12-1 VERIFIED FIXED, BUG-D3-DT10-1 VERIFIED FIXED, BUG-D3-DT1-2 VERIFIED FIXED. Zero new bugs. D3 clear to merge to main. Next: D1 device testing (Step 8) + merge D6/D7/D2/D3 to main.
-**Last Updated:** 2026-04-04
+**Phase:** Merge PR open — PR #1 (dev → main) contains D1, D2, D3, D6, D7, Sync Worker — all clear to merge. Next: merge PR #1, then build D5 (New Patient Form) or D4 (Visit Detail).
+**Last Updated:** 2026-04-11
 
 ---
 
@@ -24,17 +24,16 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester (2026-04-04) — D3 session 13. BUG-D3-DT12-1 VERIFIED FIXED (Boolean coercion on consent_granted; POST /sync returns success). BUG-D3-DT10-1 VERIFIED FIXED (end-to-end sync completes; visit in server response). BUG-D3-DT1-2 VERIFIED FIXED (visit persists across logout + re-login). Zero new bugs. D3 device testing complete — clear to merge.
+**Last Session:** PM Agent (2026-04-11) — Merge session. PR #1 (dev → main) opened. Includes D1, D2, D3, D6, D7, Sync Worker — all clear to merge. D1 device testing confirmed complete (2026-03-19). project-state.md updated.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Merge D6 + D7 + D2 + D3 to main** | All four clear — D3 device testing complete as of 2026-04-04 |
-| 2 | **D1 device testing (Step 8)** | OTP auth unverified — pilot requires confirmed real-device auth |
-| 3 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
-| 4 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
-| 5 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
-| 6 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
+| 1 | **Merge PR #1 (dev → main)** | PR open at github.com/rdevarakond88/medrecord/pull/1 — review and merge |
+| 2 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
+| 3 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
+| 4 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 5 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
 ---
 
@@ -109,7 +108,7 @@ _Carry these into every build/mockup session for these screens._
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | Stub only (`Login` stub in App.tsx) | Tier 3. Must hash Aadhaar at form boundary — locked decision. |
-| D1 — Login / OTP | **Static mockup built. Persona Critic R2: 4.0/5 — PASSED (2026-03-16). Security audit v1+v2 complete — all HIGHs closed. QA complete (2026-03-16). QA M-1 + M-2 fixed (2026-03-16) — security re-check CLEAR. 1 MEDIUM bug remaining (M-3 — resend failure drops phase; deferred, confirm before fixing). Ready for device testing.** File: `src/screens/doctor/LoginScreen.tsx`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred (no Expo managed-workflow module). SF-3 (individual digit boxes) deferred to future polish. |
+| D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
