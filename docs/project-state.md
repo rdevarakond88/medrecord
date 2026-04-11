@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — Step 2 (mockup) complete. Next: Step 3 (Persona Critic).
+**Phase:** D5 (New Patient Form) — Step 3 (Persona Critique) complete. Next: Step 4 (Security Review — mockup).
 **Last Updated:** 2026-04-11
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — Step 2 (2026-04-11) — D5 mockup built. 3 states: empty, filled, offline. Aadhaar deferred to v2 (decision logged). Next: Persona Critic (Step 3).
+**Last Session:** Persona Critic — Step 3 (2026-04-11) — D5 persona critique complete. Score: 3.38/5. Verdict: Revise and re-evaluate. Key items: MUST FIX — back-nav discard guard (live build); SHOULD FIX — button label, post-save hint, "add more later" note, dynamic age calculation. Next: Step 4 (Security Review — mockup). Critique saved: `reviews/D5-persona-critique.md`.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
@@ -398,6 +398,21 @@ _Carry these into every build/mockup session for these screens._
 | **D1-QA-M-3:** Resend failure during `otp_entry` phase reverts UI to `phone_entry` — doctor loses OTP entry card even though the existing `otpToken` is still valid. | D1 | QA v2 M-3 | Track call origin; stay in `otp_entry` on resend failure and surface inline resend error. `LoginScreen.tsx:192–194`. |
 | **D1-SA-L-1:** Mock JWT `'mock-jwt-eyJhbGciOiJIUzI1NiJ9.mockpayload'` superficially resembles a real token (base64 header decodes to `{"alg":"HS256"}`). | D1 | Security audit L-1 | Replace with obviously fake placeholder: `'mock-token-not-real'`. |
 | **D1-SA-L-2:** Resend OTP and WhatsApp buttons lack explicit `disabled` prop during loading phase — implicit only via conditional render. | D1 | Security audit L-2 | Add `disabled={phase === 'loading'}` explicitly to both buttons for clarity. |
+
+### MUST FIX — D5 persona critique (apply before live build)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D5-PC-MF-1:** No back-navigation discard guard — tapping ← after typing a name silently discards data. | D5 | Persona critique — Sunita | Apply `navigation.addListener('beforeRemove')` + `savingCompletedRef` pattern (same as D6) in live build. |
+
+### SHOULD FIX — D5 persona critique (apply before live build)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D5-PC-SF-1:** Submit button label "Create Patient & Start Visit" is developer language — "Save & Begin Visit" is clearer. | D5 | Persona critique — Dr. Sinha | Update button label in mockup before live build. |
+| **D5-PC-SF-2:** No post-save affordance — user has no indication where they'll land after tapping the button. | D5 | Persona critique — Dr. Sinha | Add hint text below button: "You'll be taken directly to a new visit for this patient." (already in mockup — verify persists in live build). |
+| **D5-PC-SF-3:** No "add more later" note — no signal that additional details (blood group, allergies, address) can be added from the patient profile after save. | D5 | Persona critique — Dr. Nair, Sunita | Add informational line below form. |
+| **D5-PC-SF-4:** Age derived from DOB is hardcoded "39 years" in mockup — must be computed dynamically in live build. | D5 | Persona critique — Dr. Nair | Compute from DOB at render time in live build. |
 
 ---
 
