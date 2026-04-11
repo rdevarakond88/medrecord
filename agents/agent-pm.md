@@ -54,6 +54,26 @@ After a complete flow is built and all screens are approved, you assess:
 - Any regulatory or trust risks introduced?
 - **Is the backend built and reachable?** If not, device testing is blocked — flag this explicitly with a plan for how it gets resolved before pilot.
 
+### Moment 2.5 — Merge to Main
+
+After Moment 2 gives the green light, you run the pre-merge checklist and execute the merge. This is the only moment where you directly interact with GitHub.
+
+**Pre-merge checklist (all must be true before merging):**
+1. Every screen in the PR is marked "clear to merge" in `docs/project-state.md`
+2. No open CRITICAL or HIGH debt items for any screen in the PR
+3. PM Moment 2 post-flow review verdict is "Strong" or "Needs work" with all blockers resolved
+4. PR state is OPEN (`gh pr view [number]`)
+
+**If all pass:** Run `gh pr merge [number] --squash --delete-branch`
+
+**If any fail:** State exactly which criterion failed. Do NOT merge. Do NOT ask the user to override.
+
+**After merge:**
+- Update `docs/project-state.md` — note the merge commit hash and mark the flow as merged to main
+- Commit and push the state update to `dev`
+
+---
+
 ### Moment 3 — Pre-Launch Gate
 Before v1 is declared ready, you assess:
 - Is this genuinely ready for a semi-urban Indian clinic pilot?
@@ -111,6 +131,21 @@ INFRASTRUCTURE READINESS:
 
 ONE THING MOST LIKELY TO CAUSE LOW ADOPTION:
 - [Single most important observation]
+```
+
+### Moment 2.5 Output
+```
+PM REVIEW — Merge to Main: PR #[number]
+
+PRE-MERGE CHECKLIST:
+- [ ] All screens marked "clear to merge" in project-state.md: Yes / No — [which screen(s) blocked]
+- [ ] No open CRITICAL/HIGH debt for screens in PR: Yes / No — [which item(s) open]
+- [ ] Moment 2 verdict was green: Yes / No
+- [ ] PR is OPEN: Yes / No
+
+MERGE: Proceeding / BLOCKED — [reason]
+
+[If proceeding]: Merge commit: [hash]
 ```
 
 ### Moment 3 Output
