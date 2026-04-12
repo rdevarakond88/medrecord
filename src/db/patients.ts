@@ -102,7 +102,7 @@ export async function upsertPatientFromServer(
         consent_granted, last_visit_date, synced_at, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(mobile_number) DO UPDATE SET
-       doctor_id       = excluded.doctor_id,
+       doctor_id       = COALESCE(doctor_id, excluded.doctor_id),
        server_id       = excluded.server_id,
        name            = COALESCE(excluded.name, name),
        date_of_birth   = COALESCE(excluded.date_of_birth, date_of_birth),
@@ -154,13 +154,14 @@ export async function getPatientByLocalId(
  * Events are flushed to the server via POST /sync on reconnect.
  *
  * patient_id uses '*' sentinel for batch list events where no single patient
- * is the subject. Event-specific detail (count, query length) is in metadata.
- * NOTE: metadata must NOT include the actual digits typed — only the length.
+ * is the subject. For 'patient_created', pass entity_local_id in metadata —
+ * no PII (no name, no mobile number).
+ * NOTE: metadata must NOT include actual patient data — only IDs and lengths.
  */
 export async function logLocalPatientAccess(
   db: SQLite.SQLiteDatabase,
   doctorId: string,
-  eventType: 'recent_patients_viewed' | 'patient_searched',
+  eventType: 'recent_patients_viewed' | 'patient_searched' | 'patient_created',
   metadata: Record<string, unknown>,
 ): Promise<void> {
   const id  = Crypto.randomUUID();

@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — Step 6 (Security Agent) complete. BLOCKED — 4 HIGH findings. Next: Step 7 (Builder Agent — fix HIGH security findings).
+**Phase:** D5 (New Patient Form) — Step 7 (Builder Agent — fix HIGH security findings) complete. Next: Step 8 (QA Agent).
 **Last Updated:** 2026-04-11
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Security Agent — Step 6 (2026-04-11) — D5 security audit. Audit report: `reviews/D5-security-audit.md`. BLOCKED — 4 HIGH findings: H-1 mobile validation missing, H-2 name maxLength missing, H-3 no patient_created audit event (DPDP §8), H-4 upsertPatientFromServer overwrites doctor_id on 409 conflict. 2 MEDIUM: M-1 UNIQUE(mobile_number) not doctor-scoped (phantom localId on shared devices), M-2 getPatientByLocalId not doctor-scoped. Next: Step 7 (Builder Agent — fix H-1 through H-4).
+**Last Session:** Builder Agent — Step 7 (2026-04-11) — D5 HIGH security findings resolved. H-1: mobile validation guard added to `handleSave`. H-2: `maxLength={100}` added to name TextInput. H-3: `patient_created` audit event added after `insertLocalPatient` (DPDP §8). H-4: `upsertPatientFromServer` fixed to `COALESCE(doctor_id, excluded.doctor_id)` — no longer overwrites original owner on shared device. MEDIUM findings (M-1, M-2) tracked as open debt. Next: Step 8 (QA Agent).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |

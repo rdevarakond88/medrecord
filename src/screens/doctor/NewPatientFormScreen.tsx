@@ -53,6 +53,7 @@ import {
   insertLocalPatient,
   upsertPatientFromServer,
   setPatientServerId,
+  logLocalPatientAccess,
 } from '../../db/patients';
 import { enqueueOperation } from '../../sync/syncQueue';
 import { createPatient, lookupPatient, ApiError } from '../../api/patients';
@@ -259,6 +260,15 @@ export default function NewPatientFormScreen() {
     setIsSaving(true);
     setSaveError(null);
 
+    // H-1: Validate mobile before any write. Guards against empty string or
+    // malformed number arriving via deep link, test harness, or future nav changes.
+    if (!/^[6-9]\d{9}$/.test(mobile)) {
+      setSaveError('Invalid mobile number — cannot create patient.');
+      isSavingRef.current = false;
+      setIsSaving(false);
+      return;
+    }
+
     const localId = Crypto.randomUUID();
     const trimmedName = name.trim() || null;
     const dobISO = dob || null;
@@ -272,6 +282,12 @@ export default function NewPatientFormScreen() {
         name:          trimmedName,
         date_of_birth: dobISO,
         gender,
+      });
+
+      // H-3: Audit event for patient creation (DPDP §8). Log only the local
+      // entity ID — no PII (no name, no mobile number) in the audit record.
+      await logLocalPatientAccess(db, user.id, 'patient_created', {
+        entity_local_id: localId,
       });
 
       // ── Step 2: Enqueue for background sync ──────────────────────────
@@ -411,6 +427,7 @@ export default function NewPatientFormScreen() {
               placeholderTextColor={C.textDisabled}
               autoCapitalize="words"
               returnKeyType="done"
+              maxLength={100}
               accessibilityLabel="Patient name input"
             />
           </View>
