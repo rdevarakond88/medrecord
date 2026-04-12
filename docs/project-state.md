@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — Builder session (2026-04-12) complete. BUG-D5-DT1-1 + HP-6 fixed. Ready for Device Test Session 2 to verify fixes.
+**Phase:** D5 (New Patient Form) — DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). BUG-D5-DT1-1 + HP-6 both VERIFIED fixed. Zero open bugs. Clear to merge to main.
 **Last Updated:** 2026-04-12
 
 ---
@@ -24,17 +24,15 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder — (2026-04-12) — D5 bug fixes. BUG-D5-DT1-1 fixed: `isSavingRef.current` was never reset in the success path, causing the tap guard to block all subsequent saves on the same D5 mount. HP-6 fixed: `getRecentPatients()` now called via `useFocusEffect` in D2 so the recent list refreshes when D2 re-focuses after D5 patient creation. Commit: `3f15635`.
+**Last Session:** Device Tester — (2026-04-12) — D5 Device Test Session 2. BUG-D5-DT1-1 VERIFIED fixed (isSavingRef reset on success path confirmed working across 3 re-entries). HP-6 VERIFIED fixed (D5-created patients appear in D2 recent list via useFocusEffect). 5 PASS, 0 FAIL. Zero open bugs. D5 clear to merge to main.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D5 device test session 2** | Re-verify BUG-D5-DT1-1 + HP-6 fixes on device |
-| 2 | **Merge PR #1 (dev → main)** | PR open at github.com/rdevarakond88/medrecord/pull/1 — review and merge |
-| 3 | D5 device test session 2 | Re-verify BUG-D5-DT1-1 + HP-6 fixes after Builder session |
-| 3 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
-| 4 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
-| 5 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
+| 1 | **Merge PR #1 (dev → main)** | PR open at github.com/rdevarakond88/medrecord/pull/1 — D1, D2, D3, D5, D6, D7 all clear to merge |
+| 2 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
+| 3 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 4 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
 ---
 
@@ -109,7 +107,7 @@ _Carry these into every build/mockup session for these screens._
 | D6 — New Visit | **DEVICE TESTING COMPLETE (2026-03-28, session 6). BUG-D6-DT5-1 fix verified. Zero bugs. Clear to merge to main. Security re-audit v3 (2026-04-11): CLEAR TO MERGE TO MAIN.** All CRITICAL/HIGH verified fixed. MEDIUM finding: debug syncLogger still active in production builds — must remove `src/sync/syncLogger.ts` and call sites before v1 launch. Items #49, #60 permanently deferred (simulation, v1 acceptable). Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-6.md`. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
-| D5 — New Patient Form | **Steps 2–7 complete (2026-04-11). Step 8 QA complete (2026-04-11) — BLOCKED: 2 CRITICAL + 1 edge-case + 4 HIGH findings. See D5 QA test plan `reviews/D5-qa-test-plan.md`.** Live screen `src/screens/doctor/NewPatientFormScreen.tsx` wired with offline-first save flow, back-nav discard guard, 409 conflict handling, date picker (iOS compact + Android dialog). Aadhaar field deferred to v2 (see Decisions Made). Next: Step 9 (Builder Agent — fix QA findings: C1 INSERT OR IGNORE phantom localId, C2 phantom audit event, E1 missing transaction wrapper, H1 stuck isSaving, H2 no DOB clear, H3 no server call timeout, H4 sync queue 409 cleanup). | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
+| D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
