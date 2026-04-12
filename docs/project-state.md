@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — Step 5 (Builder Agent — wire real data) complete. Next: Step 6 (Security Agent).
+**Phase:** D5 (New Patient Form) — Step 6 (Security Agent) complete. BLOCKED — 4 HIGH findings. Next: Step 7 (Builder Agent — fix HIGH security findings).
 **Last Updated:** 2026-04-11
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder — Step 5 (2026-04-11) — D5 wired with real data. `src/screens/doctor/NewPatientFormScreen.tsx` created (replaces stub in App.tsx). `insertLocalPatient` + `setPatientServerId` added to `src/db/patients.ts`. `createPatient` added to `src/api/patients.ts`. Save flow: SQLite-first → sync queue → optimistic POST /patients → navigate to NewVisit. Back-nav discard guard via `navigation.addListener('beforeRemove')` + `savingCompletedRef`. 409 conflict handled via `lookupPatient` fallback. Contract sync check: all fields match; 409 patient_id workaround documented in api-contracts.md. Next: Step 6 (Security Agent).
+**Last Session:** Security Agent — Step 6 (2026-04-11) — D5 security audit. Audit report: `reviews/D5-security-audit.md`. BLOCKED — 4 HIGH findings: H-1 mobile validation missing, H-2 name maxLength missing, H-3 no patient_created audit event (DPDP §8), H-4 upsertPatientFromServer overwrites doctor_id on 409 conflict. 2 MEDIUM: M-1 UNIQUE(mobile_number) not doctor-scoped (phantom localId on shared devices), M-2 getPatientByLocalId not doctor-scoped. Next: Step 7 (Builder Agent — fix H-1 through H-4).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
@@ -108,7 +108,7 @@ _Carry these into every build/mockup session for these screens._
 | D6 — New Visit | **DEVICE TESTING COMPLETE (2026-03-28, session 6). BUG-D6-DT5-1 fix verified. Zero bugs. Clear to merge to main. Security re-audit v3 (2026-04-11): CLEAR TO MERGE TO MAIN.** All CRITICAL/HIGH verified fixed. MEDIUM finding: debug syncLogger still active in production builds — must remove `src/sync/syncLogger.ts` and call sites before v1 launch. Items #49, #60 permanently deferred (simulation, v1 acceptable). Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-6.md`. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
-| D5 — New Patient Form | **Steps 2–5 complete (2026-04-11).** Live screen `src/screens/doctor/NewPatientFormScreen.tsx` wired with offline-first save flow, back-nav discard guard, 409 conflict handling, date picker (iOS compact + Android dialog). Aadhaar field deferred to v2 (see Decisions Made). Next: Step 6 (Security Agent). | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
+| D5 — New Patient Form | **Steps 2–5 complete (2026-04-11). Step 6 Security Audit complete (2026-04-11) — BLOCKED: 4 HIGH findings. See Known Technical Debt — D5 security audit.** Live screen `src/screens/doctor/NewPatientFormScreen.tsx` wired with offline-first save flow, back-nav discard guard, 409 conflict handling, date picker (iOS compact + Android dialog). Aadhaar field deferred to v2 (see Decisions Made). Next: Step 7 (Builder Agent — fix HIGH security findings). | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
@@ -256,6 +256,22 @@ _Carry these into every build/mockup session for these screens._
 |---|---|---|---|
 | ~~**LOW-1:** `isSavingRef.current` never reset on success path — Save button permanently locked if `navigation.goBack()` fails to unmount the screen~~ | D6 | D6 security audit | **CLOSED** — `isSavingRef.current = false` reset immediately before `navigation.goBack()` on success path. |
 | ~~**LOW-2:** Visit date validation enforced only at picker layer, not at save time in `handleSave()` — future-dated visits possible via state manipulation~~ | D6 | D6 security audit | **CLOSED** — Guard added at top of `handleSave()`: `if (visitDate > todayISO())` sets `saveError` and returns early with ref/state reset. |
+
+### HIGH — D5 live screen security audit (2026-04-11) — MUST FIX before QA
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D5-H-1:** Mobile number not validated before save — `route.params?.prefillMobile ?? ''` is never checked against `/^[6-9]\d{9}$/` in `handleSave()`; empty or malformed mobile can be written to SQLite and POSTed to API | D5 | D5 security audit | Add guard at top of `handleSave`: `if (!/^[6-9]\d{9}$/.test(mobile)) { setSaveError(...); return; }` |
+| **D5-H-2:** Patient name `TextInput` has no `maxLength` — arbitrarily long strings stored in SQLite and sent to API | D5 | D5 security audit | Add `maxLength={100}` to name TextInput (`NewPatientFormScreen.tsx:406`). |
+| **D5-H-3:** No audit event logged for patient creation — DPDP Act §8 gap; audit trail shows search/view but not creation | D5 | D5 security audit | Call `logLocalPatientAccess(db, user.id, 'patient_created', { entity_local_id: localId })` after `insertLocalPatient`. Extend event type union in `patients.ts` to include `'patient_created'`. |
+| **D5-H-4:** `upsertPatientFromServer` overwrites `doctor_id` on 409 conflict — on a shared device, Doctor B's 409 resolution sets `doctor_id = excluded.doctor_id`, clobbering Doctor A's patient row ownership; Doctor A can no longer find their patient | D5 | D5 security audit | Change `db/patients.ts:105` to `doctor_id = COALESCE(doctor_id, excluded.doctor_id)`. |
+
+### MEDIUM — D5 live screen security audit (2026-04-11) — fix before v1 launch
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D5-M-1:** `UNIQUE(mobile_number)` constraint not doctor-scoped — on a shared device, `INSERT OR IGNORE` silently ignores Doctor B's patient if Doctor A already has the same mobile. `localId` generated in `handleSave` is never written to `patients`; D6 receives a phantom `patientId`; `setPatientServerId` updates 0 rows | D5 | D5 security audit | Change constraint to `UNIQUE(doctor_id, mobile_number)` — requires schema migration. After `insertLocalPatient`, verify row exists; if not, fetch existing row by mobile and reuse its `local_id`. |
+| **D5-M-2:** `getPatientByLocalId` not doctor-scoped — `SELECT * FROM patients WHERE local_id = ?` has no `doctor_id` filter; used in D3, D6. Theoretical cross-doctor read on shared device if UUID leaked | D5/D3/D6 | D5 security audit | Add `AND doctor_id = ?` to query; pass `user.id` in all callers (D3: `PatientDetailScreen.tsx:131`, D6: `NewVisitScreen.tsx:303`). |
 
 ### BLOCKED — D7 device testing
 
