@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — Step 7 (Builder Agent — fix HIGH security findings) complete. Next: Step 8 (QA Agent).
+**Phase:** D5 (New Patient Form) — Step 8 (QA Agent) complete. Next: Step 9 (Builder Agent — fix QA findings before device testing).
 **Last Updated:** 2026-04-11
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — Step 7 (2026-04-11) — D5 HIGH security findings resolved. H-1: mobile validation guard added to `handleSave`. H-2: `maxLength={100}` added to name TextInput. H-3: `patient_created` audit event added after `insertLocalPatient` (DPDP §8). H-4: `upsertPatientFromServer` fixed to `COALESCE(doctor_id, excluded.doctor_id)` — no longer overwrites original owner on shared device. MEDIUM findings (M-1, M-2) tracked as open debt. Next: Step 8 (QA Agent).
+**Last Session:** QA Agent — Step 8 (2026-04-11) — D5 QA test plan complete. 2 CRITICAL (C1: INSERT OR IGNORE phantom localId cascade; C2: phantom audit event), 1 critical edge case (E1: missing transaction wrapper around insertLocalPatient+enqueueOperation), 4 HIGH (H1: stuck isSaving state on back-nav; H2: no DOB clear button; H3: no server call timeout; H4: sync queue 'create' entry not cleared after 409 resolution), 4 MEDIUM, 6 edge cases. Test plan: `reviews/D5-qa-test-plan.md`. Builder must fix C1+C2+E1+H1+H2+H3+H4 before device testing begins. Next: Step 9 (Builder Agent — fix QA findings).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
@@ -108,7 +108,7 @@ _Carry these into every build/mockup session for these screens._
 | D6 — New Visit | **DEVICE TESTING COMPLETE (2026-03-28, session 6). BUG-D6-DT5-1 fix verified. Zero bugs. Clear to merge to main. Security re-audit v3 (2026-04-11): CLEAR TO MERGE TO MAIN.** All CRITICAL/HIGH verified fixed. MEDIUM finding: debug syncLogger still active in production builds — must remove `src/sync/syncLogger.ts` and call sites before v1 launch. Items #49, #60 permanently deferred (simulation, v1 acceptable). Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-6.md`. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
 | D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
-| D5 — New Patient Form | **Steps 2–5 complete (2026-04-11). Step 6 Security Audit complete (2026-04-11) — BLOCKED: 4 HIGH findings. See Known Technical Debt — D5 security audit.** Live screen `src/screens/doctor/NewPatientFormScreen.tsx` wired with offline-first save flow, back-nav discard guard, 409 conflict handling, date picker (iOS compact + Android dialog). Aadhaar field deferred to v2 (see Decisions Made). Next: Step 7 (Builder Agent — fix HIGH security findings). | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
+| D5 — New Patient Form | **Steps 2–7 complete (2026-04-11). Step 8 QA complete (2026-04-11) — BLOCKED: 2 CRITICAL + 1 edge-case + 4 HIGH findings. See D5 QA test plan `reviews/D5-qa-test-plan.md`.** Live screen `src/screens/doctor/NewPatientFormScreen.tsx` wired with offline-first save flow, back-nav discard guard, 409 conflict handling, date picker (iOS compact + Android dialog). Aadhaar field deferred to v2 (see Decisions Made). Next: Step 9 (Builder Agent — fix QA findings: C1 INSERT OR IGNORE phantom localId, C2 phantom audit event, E1 missing transaction wrapper, H1 stuck isSaving, H2 no DOB clear, H3 no server call timeout, H4 sync queue 409 cleanup). | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
 | D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
@@ -257,14 +257,31 @@ _Carry these into every build/mockup session for these screens._
 | ~~**LOW-1:** `isSavingRef.current` never reset on success path — Save button permanently locked if `navigation.goBack()` fails to unmount the screen~~ | D6 | D6 security audit | **CLOSED** — `isSavingRef.current = false` reset immediately before `navigation.goBack()` on success path. |
 | ~~**LOW-2:** Visit date validation enforced only at picker layer, not at save time in `handleSave()` — future-dated visits possible via state manipulation~~ | D6 | D6 security audit | **CLOSED** — Guard added at top of `handleSave()`: `if (visitDate > todayISO())` sets `saveError` and returns early with ref/state reset. |
 
-### HIGH — D5 live screen security audit (2026-04-11) — MUST FIX before QA
+### HIGH — D5 live screen security audit (2026-04-11) — all CLOSED
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D5-H-1:** Mobile number not validated before save — `route.params?.prefillMobile ?? ''` is never checked against `/^[6-9]\d{9}$/` in `handleSave()`; empty or malformed mobile can be written to SQLite and POSTed to API | D5 | D5 security audit | Add guard at top of `handleSave`: `if (!/^[6-9]\d{9}$/.test(mobile)) { setSaveError(...); return; }` |
-| **D5-H-2:** Patient name `TextInput` has no `maxLength` — arbitrarily long strings stored in SQLite and sent to API | D5 | D5 security audit | Add `maxLength={100}` to name TextInput (`NewPatientFormScreen.tsx:406`). |
-| **D5-H-3:** No audit event logged for patient creation — DPDP Act §8 gap; audit trail shows search/view but not creation | D5 | D5 security audit | Call `logLocalPatientAccess(db, user.id, 'patient_created', { entity_local_id: localId })` after `insertLocalPatient`. Extend event type union in `patients.ts` to include `'patient_created'`. |
-| **D5-H-4:** `upsertPatientFromServer` overwrites `doctor_id` on 409 conflict — on a shared device, Doctor B's 409 resolution sets `doctor_id = excluded.doctor_id`, clobbering Doctor A's patient row ownership; Doctor A can no longer find their patient | D5 | D5 security audit | Change `db/patients.ts:105` to `doctor_id = COALESCE(doctor_id, excluded.doctor_id)`. |
+| ~~**D5-H-1:** Mobile number not validated before save — `route.params?.prefillMobile ?? ''` is never checked against `/^[6-9]\d{9}$/` in `handleSave()`; empty or malformed mobile can be written to SQLite and POSTed to API~~ | D5 | D5 security audit | **CLOSED 2026-04-11** — guard added at top of `handleSave` (commit 1109cab). |
+| ~~**D5-H-2:** Patient name `TextInput` has no `maxLength` — arbitrarily long strings stored in SQLite and sent to API~~ | D5 | D5 security audit | **CLOSED 2026-04-11** — `maxLength={100}` added (commit 1109cab). |
+| ~~**D5-H-3:** No audit event logged for patient creation — DPDP Act §8 gap~~ | D5 | D5 security audit | **CLOSED 2026-04-11** — `logLocalPatientAccess(..., 'patient_created', ...)` added (commit 1109cab). |
+| ~~**D5-H-4:** `upsertPatientFromServer` overwrites `doctor_id` on 409 conflict~~ | D5 | D5 security audit | **CLOSED 2026-04-11** — `COALESCE(doctor_id, excluded.doctor_id)` (commit 1109cab). |
+
+### CRITICAL — D5 QA findings (2026-04-11) — MUST FIX before device testing
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D5-QA-C1:** `INSERT OR IGNORE` in `insertLocalPatient` silently ignores duplicate mobile — generated `localId` is never written to DB; `enqueueOperation`, `logLocalPatientAccess`, and D6 `patientId` all use phantom `localId`. Silent data corruption. | D5 | D5 QA test plan | Fix: `insertLocalPatient` must return the actual `local_id` written; if INSERT was a no-op, fetch and reuse the existing row's `local_id`. See also D5-M-1. |
+| **D5-QA-C2:** `patient_created` audit event fires unconditionally after `insertLocalPatient` — if INSERT was ignored, logs a false creation event for a phantom `entity_local_id`. | D5 | D5 QA test plan | Fix: verify patient row exists after `insertLocalPatient` before calling `logLocalPatientAccess`. |
+| **D5-QA-E1 (critical edge):** `insertLocalPatient`, `logLocalPatientAccess`, and `enqueueOperation` are three sequential awaits with no `db.withTransactionAsync()` wrapper — if app is killed between steps, patient row exists in SQLite without a sync queue entry; patient never uploaded. | D5 | D5 QA test plan | Fix: wrap all three calls in `db.withTransactionAsync()`. Pattern established in D6 MEDIUM-4. |
+
+### HIGH — D5 QA findings (2026-04-11) — fix before device testing
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D5-QA-H1:** `setIsSaving(true)` called in `handleSave` but never reset on success path before `navigation.navigate()`. If doctor presses back from D6, D5 shows a stuck ActivityIndicator and disabled Save button with no recovery. | D5 | D5 QA test plan | Fix: call `setIsSaving(false)` just before `savingCompletedRef.current = true` on the success path. |
+| **D5-QA-H2:** No DOB "Clear" option — once a date is selected, it cannot be reset to blank. Doctor who accidentally selects a wrong DOB must discard the entire form. | D5 | D5 QA test plan | Fix: render a "Clear" or × button next to the date field when `dob !== ''`; calls `setDob('')`. |
+| **D5-QA-H3:** `createPatient()` (online path) has no timeout — hangs 30–60+ seconds on 2G/EDGE connections. Patient is already saved locally (safe), but UX is broken. | D5 | D5 QA test plan | Fix: `Promise.race([createPatient(...), timeoutAfter(10_000)])` — on timeout, proceed with `serverPatientId = null`. |
+| **D5-QA-H4:** Sync queue 'create' entry not cleared after successful 409 resolution — sync worker will re-POST /patients and may dead-letter the entry after max_attempts. | D5 | D5 QA test plan | Fix: after 409 resolution with a valid server_id, mark the pending sync_queue entry as `status='success'`. Or teach sync worker to treat 409 on 'create' as idempotent success. |
 
 ### MEDIUM — D5 live screen security audit (2026-04-11) — fix before v1 launch
 
