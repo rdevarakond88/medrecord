@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — Step 10 (Device Test Session 1) complete. 2 bugs found — Builder session required. BUG-D5-DT1-1 (HIGH): duplicate mobile causes silent Save failure (C1 fix `wasInserted=false` path not navigating). HP-6 (MEDIUM): D5-created patients absent from D2 recent list.
-**Last Updated:** 2026-04-11
+**Phase:** D5 (New Patient Form) — Builder session (2026-04-12) complete. BUG-D5-DT1-1 + HP-6 fixed. Ready for Device Test Session 2 to verify fixes.
+**Last Updated:** 2026-04-12
 
 ---
 
@@ -24,12 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — Step 10 (2026-04-11) — D5 device test session 1. 15 items PASS, 2 FAIL, 2 SKIP. BUG-D5-DT1-1 (HIGH): duplicate mobile silent Save failure — `insertLocalPatient` returns `{ localId, wasInserted }` but `wasInserted=false` path does not navigate; button visually unchanged with no error. HP-6 (MEDIUM): `getRecentPatients()` does not surface D5-created patients in D2 recent list. Session doc: `reviews/D5-device-test-session.md`.
+**Last Session:** Builder — (2026-04-12) — D5 bug fixes. BUG-D5-DT1-1 fixed: `isSavingRef.current` was never reset in the success path, causing the tap guard to block all subsequent saves on the same D5 mount. HP-6 fixed: `getRecentPatients()` now called via `useFocusEffect` in D2 so the recent list refreshes when D2 re-focuses after D5 patient creation. Commit: `3f15635`.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder Agent — D5 bug fixes** | BUG-D5-DT1-1 (HIGH) + HP-6 (MEDIUM) — must fix before merge |
+| 1 | **D5 device test session 2** | Re-verify BUG-D5-DT1-1 + HP-6 fixes on device |
 | 2 | **Merge PR #1 (dev → main)** | PR open at github.com/rdevarakond88/medrecord/pull/1 — review and merge |
 | 3 | D5 device test session 2 | Re-verify BUG-D5-DT1-1 + HP-6 fixes after Builder session |
 | 3 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
