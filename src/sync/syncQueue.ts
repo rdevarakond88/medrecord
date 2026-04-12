@@ -71,6 +71,25 @@ export async function enqueueOperation(
 }
 
 /**
+ * Mark a pending sync_queue entry as 'success' so the sync worker skips it.
+ *
+ * Called by D5 after a 409 response on POST /patients: the server already has
+ * the patient (another device registered them first), so the 'create' entry in
+ * the queue is redundant and would dead-letter at max_attempts without this.
+ */
+export async function markSyncEntrySuccess(
+  db: SQLite.SQLiteDatabase,
+  entityLocalId: string,
+  entityType: SyncEntityType,
+): Promise<void> {
+  await db.runAsync(
+    `UPDATE sync_queue SET status = 'success'
+     WHERE entity_local_id = ? AND entity_type = ? AND status = 'pending'`,
+    [entityLocalId, entityType],
+  );
+}
+
+/**
  * Delete all sync queue entries for the given doctor from SQLite.
  * Called during logout to prevent cross-doctor data leakage on shared devices.
  * Requires the doctor_id column added by the CRITICAL-2 security fix.

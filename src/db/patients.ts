@@ -181,9 +181,11 @@ export async function logLocalPatientAccess(
  * not found via D2's lookup. server_id and synced_at start as null — the sync
  * worker will populate them after a successful POST /patients.
  *
- * Uses INSERT OR IGNORE so a second tap or navigating back and re-saving
- * does not throw on the UNIQUE(mobile_number) constraint. Returns the
- * actual local_id that was written (or already existed).
+ * Uses INSERT OR IGNORE to handle the race condition where the same mobile
+ * number already exists in the local DB (e.g. shared device, prior session,
+ * or a logout that didn't complete). Returns the actual local_id in the DB
+ * and whether a new row was written — callers must use the returned localId,
+ * not the proposed one, and must only audit+enqueue when wasInserted is true.
  */
 export async function insertLocalPatient(
   db: SQLite.SQLiteDatabase,
@@ -195,9 +197,9 @@ export async function insertLocalPatient(
     date_of_birth: string | null;  // ISO YYYY-MM-DD
     gender:        string | null;
   },
-): Promise<void> {
+): Promise<{ localId: string; wasInserted: boolean }> {
   const now = new Date().toISOString();
-  await db.runAsync(
+  const result = await db.runAsync(
     `INSERT OR IGNORE INTO patients
        (local_id, doctor_id, server_id, mobile_number, name, date_of_birth, gender,
         consent_granted, last_visit_date, synced_at, created_at, updated_at)
@@ -213,6 +215,21 @@ export async function insertLocalPatient(
       now,  // updated_at
     ],
   );
+
+  if (result.changes > 0) {
+    return { localId: patient.local_id, wasInserted: true };
+  }
+
+  // INSERT was a no-op — the mobile_number already exists. Look up the existing
+  // row to get the real local_id so downstream callers use the correct ID.
+  const existing = await db.getFirstAsync<{ local_id: string }>(
+    `SELECT local_id FROM patients WHERE mobile_number = ?`,
+    [patient.mobile_number],
+  );
+  return {
+    localId: existing?.local_id ?? patient.local_id,
+    wasInserted: false,
+  };
 }
 
 /**

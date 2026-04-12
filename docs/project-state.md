@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — Step 8 (QA Agent) complete. Next: Step 9 (Builder Agent — fix QA findings before device testing).
+**Phase:** D5 (New Patient Form) — Step 9 (Builder — QA fixes) complete. Next: Step 10 (Device Tester).
 **Last Updated:** 2026-04-11
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** QA Agent — Step 8 (2026-04-11) — D5 QA test plan complete. 2 CRITICAL (C1: INSERT OR IGNORE phantom localId cascade; C2: phantom audit event), 1 critical edge case (E1: missing transaction wrapper around insertLocalPatient+enqueueOperation), 4 HIGH (H1: stuck isSaving state on back-nav; H2: no DOB clear button; H3: no server call timeout; H4: sync queue 'create' entry not cleared after 409 resolution), 4 MEDIUM, 6 edge cases. Test plan: `reviews/D5-qa-test-plan.md`. Builder must fix C1+C2+E1+H1+H2+H3+H4 before device testing begins. Next: Step 9 (Builder Agent — fix QA findings).
+**Last Session:** Builder Agent — Step 9 (2026-04-11) — D5 QA fixes applied. All C1+C2+E1+H1+H2+H3+H4 fixed: `insertLocalPatient` now returns `{ localId, wasInserted }` (C1+C2); atomic transaction wrapper around SQLite Steps 1+2 (E1); `setIsSaving(false)` before navigate (H1); DOB Clear button (H2); `Promise.race` 10s timeout on `createPatient` (H3); `markSyncEntrySuccess` after 409 resolution (H4). `markSyncEntrySuccess` added to `syncQueue.ts`. Next: Step 10 (Device Tester — D5 device test session using `reviews/D5-qa-test-plan.md`).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |

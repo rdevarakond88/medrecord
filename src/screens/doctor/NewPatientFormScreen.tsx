@@ -55,7 +55,7 @@ import {
   setPatientServerId,
   logLocalPatientAccess,
 } from '../../db/patients';
-import { enqueueOperation } from '../../sync/syncQueue';
+import { enqueueOperation, markSyncEntrySuccess } from '../../sync/syncQueue';
 import { createPatient, lookupPatient, ApiError } from '../../api/patients';
 import type { RootStackParamList } from '../../../App';
 
@@ -114,6 +114,17 @@ function calcAge(iso: string): number | null {
     age--;
   }
   return age >= 0 && age < 150 ? age : null;
+}
+
+/**
+ * Returns a Promise that rejects after `ms` milliseconds.
+ * Used with Promise.race() to give the optimistic server call a hard deadline —
+ * H3: prevents indefinite spinner on 2G/EDGE (common in rural Indian clinics).
+ */
+function timeoutAfter(ms: number): Promise<never> {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('timeout')), ms),
+  );
 }
 
 /** 150 years ago — oldest plausible date of birth for the date picker minimum. */
@@ -260,7 +271,7 @@ export default function NewPatientFormScreen() {
     setIsSaving(true);
     setSaveError(null);
 
-    // H-1: Validate mobile before any write. Guards against empty string or
+    // Validate mobile before any write. Guards against empty string or
     // malformed number arriving via deep link, test harness, or future nav changes.
     if (!/^[6-9]\d{9}$/.test(mobile)) {
       setSaveError('Invalid mobile number — cannot create patient.');
@@ -269,40 +280,56 @@ export default function NewPatientFormScreen() {
       return;
     }
 
-    const localId = Crypto.randomUUID();
+    const proposedLocalId = Crypto.randomUUID();
     const trimmedName = name.trim() || null;
     const dobISO = dob || null;
 
+    // Captured inside the transaction callback and read on the outside.
+    let actualLocalId = proposedLocalId;
+    let wasInserted   = false;
+
     try {
-      // ── Step 1: Write to local SQLite (offline-first) ────────────────
-      await insertLocalPatient(db, {
-        local_id:      localId,
-        doctor_id:     user.id,
-        mobile_number: mobile,
-        name:          trimmedName,
-        date_of_birth: dobISO,
-        gender,
-      });
-
-      // H-3: Audit event for patient creation (DPDP §8). Log only the local
-      // entity ID — no PII (no name, no mobile number) in the audit record.
-      await logLocalPatientAccess(db, user.id, 'patient_created', {
-        entity_local_id: localId,
-      });
-
-      // ── Step 2: Enqueue for background sync ──────────────────────────
-      await enqueueOperation(db, {
-        doctor_id:       user.id,
-        entity_type:     'patient',
-        entity_local_id: localId,
-        operation:       'create',
-        payload: {
-          local_id:      localId,
+      // ── Steps 1+2: Atomic SQLite writes (E1 fix — transaction wrapper) ──
+      // insertLocalPatient + logLocalPatientAccess + enqueueOperation must all
+      // succeed or all fail. Without a transaction, an app-kill between steps
+      // leaves a patient row with no sync queue entry (patient never uploaded).
+      await db.withTransactionAsync(async () => {
+        const insertResult = await insertLocalPatient(db, {
+          local_id:      proposedLocalId,
+          doctor_id:     user.id,
           mobile_number: mobile,
           name:          trimmedName,
           date_of_birth: dobISO,
           gender,
-        },
+        });
+
+        // C1+C2 fix: use the DB's actual local_id (may differ from proposedLocalId
+        // if INSERT was a no-op because the mobile already existed). Only audit and
+        // enqueue if a new row was written — a phantom audit event for a patient that
+        // was never inserted would corrupt the DPDP audit log.
+        actualLocalId = insertResult.localId;
+        wasInserted   = insertResult.wasInserted;
+
+        if (wasInserted) {
+          // Audit event for patient creation (DPDP §8). Log only the local entity
+          // ID — no PII (no name, no mobile number) in the audit record.
+          await logLocalPatientAccess(db, user.id, 'patient_created', {
+            entity_local_id: actualLocalId,
+          });
+          await enqueueOperation(db, {
+            doctor_id:       user.id,
+            entity_type:     'patient',
+            entity_local_id: actualLocalId,
+            operation:       'create',
+            payload: {
+              local_id:      actualLocalId,
+              mobile_number: mobile,
+              name:          trimmedName,
+              date_of_birth: dobISO,
+              gender,
+            },
+          });
+        }
       });
 
       // ── Step 3: Optimistic server call (online only) ─────────────────
@@ -310,18 +337,24 @@ export default function NewPatientFormScreen() {
 
       if (isOnline) {
         try {
-          const res = await createPatient(
-            {
-              localId,
-              mobileNumber: mobile,
-              name:         trimmedName,
-              dateOfBirth:  dobISO,
-              gender,
-            },
-            token,
-          );
+          // H3 fix: 10-second timeout prevents an indefinite spinner on 2G/EDGE.
+          // On timeout the error falls through to the catch → serverPatientId = null,
+          // and the sync worker retries on reconnect.
+          const res = await Promise.race([
+            createPatient(
+              {
+                localId:      actualLocalId,
+                mobileNumber: mobile,
+                name:         trimmedName,
+                dateOfBirth:  dobISO,
+                gender,
+              },
+              token,
+            ),
+            timeoutAfter(10_000),
+          ]);
           // 201: patient created on server — update local row with server_id
-          await setPatientServerId(db, localId, res.patient.id);
+          await setPatientServerId(db, actualLocalId, res.patient.id);
           serverPatientId = res.patient.id;
         } catch (apiErr) {
           if (apiErr instanceof ApiError && apiErr.status === 409) {
@@ -341,21 +374,31 @@ export default function NewPatientFormScreen() {
                   last_visit_date: existing.last_visit_date,
                 });
                 serverPatientId = existing.id;
+                // H4 fix: mark the pending 'create' queue entry as success so the
+                // sync worker doesn't re-attempt a POST that will get another 409
+                // and eventually dead-letter at max_attempts.
+                if (wasInserted) {
+                  await markSyncEntrySuccess(db, actualLocalId, 'patient');
+                }
               }
             } catch {
               // Lookup also failed — proceed with null server ID.
               // The sync worker will resolve the conflict on the next run.
             }
           }
-          // All other errors: silently continue. The local row + sync queue
-          // are the source of truth. The sync worker will retry.
+          // All other errors (including timeout): silently continue. The local row
+          // + sync queue are the source of truth. The sync worker will retry.
         }
       }
 
       // ── Step 4: Navigate to New Visit ────────────────────────────────
+      // H1 fix: reset isSaving BEFORE marking save complete. If the doctor
+      // navigates back from D6, D5 is restored from the stack with isSaving=false,
+      // so the Save button is pressable again rather than stuck showing a spinner.
+      setIsSaving(false);
       savingCompletedRef.current = true;
       navigation.navigate('NewVisit', {
-        patientId:       localId,
+        patientId:       actualLocalId,
         patientServerId: serverPatientId,
         patientName:     trimmedName ?? '',
         patientMobile:   mobile,
@@ -450,6 +493,17 @@ export default function NewPatientFormScreen() {
               </Text>
               <Text style={styles.calendarIcon} accessible={false}>📅</Text>
             </TouchableOpacity>
+            {/* H2 fix: allow the doctor to undo an accidentally selected date */}
+            {dob !== '' && (
+              <TouchableOpacity
+                onPress={() => setDob('')}
+                style={styles.dobClearButton}
+                accessibilityLabel="Clear date of birth"
+                accessibilityRole="button"
+              >
+                <Text style={styles.dobClearText}>Clear</Text>
+              </TouchableOpacity>
+            )}
             {/* iOS: inline compact picker displayed directly below the field */}
             {Platform.OS === 'ios' && showDatePicker && (
               <View style={styles.inlineDatePicker}>
@@ -702,6 +756,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: C.primaryBlue,
     fontWeight: '600',
+  },
+  dobClearButton: {
+    alignSelf: 'flex-end',
+    marginTop: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  dobClearText: {
+    fontSize: 13,
+    color: C.textSecondary,
+    textDecorationLine: 'underline',
   },
 
   // Gender toggle
