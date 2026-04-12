@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — PM pre-flight complete (2026-04-12). Next: Step 2 (Builder mockup).
+**Phase:** D4 (Visit Detail) — Step 2 (Builder mockup) complete (2026-04-12). Next: Step 3 (Persona Critic).
 **Last Updated:** 2026-04-12
 
 ---
@@ -24,12 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** PM Agent — (2026-04-12) — D4 PM pre-flight complete. Review: `reviews/D4-pm-review.md`. PROCEED: Yes. Two build constraints carried forward: (1) consent gate on chief_complaint must be explicit in Builder prompt; (2) scan section non-blocking with stub to D8.
+**Last Session:** Builder Agent — (2026-04-12) — D4 Step 2 mockup complete. File: `mockups/D4VisitDetailScreen.tsx`. Four variants: OwnOpenWithRecords, OwnSubmitted, OtherDoctorConsentGranted, OtherDoctorNoConsent. All PM constraints applied (consent gate, content order, scan stub, DPDP audit stub).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D4 (Visit Detail) — Step 2: Builder mockup** | PM pre-flight done; Builder next |
+| 1 | **D4 (Visit Detail) — Step 3: Persona Critic** | Mockup built; Persona Critic next |
 | 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 | 3 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
