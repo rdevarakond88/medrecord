@@ -135,6 +135,10 @@ Create a new patient record (first visit flow).
 
 // Response 409 (mobile already registered)
 { "error": { "code": "CONFLICT", "patient_id": "uuid" } }
+// NOTE: The client does not parse patient_id from the 409 error body directly —
+// the current ApiError class does not carry extra error fields beyond code/message/status.
+// On a 409, D5 falls back to GET /patients/lookup to retrieve the existing server ID.
+// Backend: ensure /patients/lookup is accessible immediately after a 409 (no eventual consistency lag).
 ```
 
 ### GET /patients/:id

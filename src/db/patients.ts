@@ -102,7 +102,7 @@ export async function upsertPatientFromServer(
         consent_granted, last_visit_date, synced_at, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(mobile_number) DO UPDATE SET
-       doctor_id       = excluded.doctor_id,
+       doctor_id       = COALESCE(doctor_id, excluded.doctor_id),
        server_id       = excluded.server_id,
        name            = COALESCE(excluded.name, name),
        date_of_birth   = COALESCE(excluded.date_of_birth, date_of_birth),
@@ -154,13 +154,14 @@ export async function getPatientByLocalId(
  * Events are flushed to the server via POST /sync on reconnect.
  *
  * patient_id uses '*' sentinel for batch list events where no single patient
- * is the subject. Event-specific detail (count, query length) is in metadata.
- * NOTE: metadata must NOT include the actual digits typed — only the length.
+ * is the subject. For 'patient_created', pass entity_local_id in metadata —
+ * no PII (no name, no mobile number).
+ * NOTE: metadata must NOT include actual patient data — only IDs and lengths.
  */
 export async function logLocalPatientAccess(
   db: SQLite.SQLiteDatabase,
   doctorId: string,
-  eventType: 'recent_patients_viewed' | 'patient_searched',
+  eventType: 'recent_patients_viewed' | 'patient_searched' | 'patient_created',
   metadata: Record<string, unknown>,
 ): Promise<void> {
   const id  = Crypto.randomUUID();
@@ -170,6 +171,82 @@ export async function logLocalPatientAccess(
        (id, event_type, doctor_id, patient_id, metadata, created_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [id, eventType, doctorId, '*', JSON.stringify(metadata), now],
+  );
+}
+
+/**
+ * Insert a new locally-created patient into SQLite.
+ *
+ * Called by D5 (New Patient Form) when a doctor registers a patient who was
+ * not found via D2's lookup. server_id and synced_at start as null — the sync
+ * worker will populate them after a successful POST /patients.
+ *
+ * Uses INSERT OR IGNORE to handle the race condition where the same mobile
+ * number already exists in the local DB (e.g. shared device, prior session,
+ * or a logout that didn't complete). Returns the actual local_id in the DB
+ * and whether a new row was written — callers must use the returned localId,
+ * not the proposed one, and must only audit+enqueue when wasInserted is true.
+ */
+export async function insertLocalPatient(
+  db: SQLite.SQLiteDatabase,
+  patient: {
+    local_id:      string;
+    doctor_id:     string;
+    mobile_number: string;
+    name:          string | null;
+    date_of_birth: string | null;  // ISO YYYY-MM-DD
+    gender:        string | null;
+  },
+): Promise<{ localId: string; wasInserted: boolean }> {
+  const now = new Date().toISOString();
+  const result = await db.runAsync(
+    `INSERT OR IGNORE INTO patients
+       (local_id, doctor_id, server_id, mobile_number, name, date_of_birth, gender,
+        consent_granted, last_visit_date, synced_at, created_at, updated_at)
+     VALUES (?, ?, NULL, ?, ?, ?, ?, 0, NULL, NULL, ?, ?)`,
+    [
+      patient.local_id,
+      patient.doctor_id,
+      patient.mobile_number,
+      patient.name,
+      patient.date_of_birth,
+      patient.gender,
+      now,  // created_at
+      now,  // updated_at
+    ],
+  );
+
+  if (result.changes > 0) {
+    return { localId: patient.local_id, wasInserted: true };
+  }
+
+  // INSERT was a no-op — the mobile_number already exists. Look up the existing
+  // row to get the real local_id so downstream callers use the correct ID.
+  const existing = await db.getFirstAsync<{ local_id: string }>(
+    `SELECT local_id FROM patients WHERE mobile_number = ?`,
+    [patient.mobile_number],
+  );
+  return {
+    localId: existing?.local_id ?? patient.local_id,
+    wasInserted: false,
+  };
+}
+
+/**
+ * Update a locally-created patient row with its server-assigned UUID.
+ * Called by D5 after a successful POST /patients, so the sync worker does
+ * not re-upload a patient who is already on the server.
+ */
+export async function setPatientServerId(
+  db: SQLite.SQLiteDatabase,
+  localId:  string,
+  serverId: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `UPDATE patients SET server_id = ?, synced_at = ?, updated_at = ?
+     WHERE local_id = ?`,
+    [serverId, now, now, localId],
   );
 }
 
