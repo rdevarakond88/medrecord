@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — Step 9 (Builder — QA fixes) complete. Next: Step 10 (Device Tester).
+**Phase:** D5 (New Patient Form) — Step 10 (Device Test Session 1) complete. 2 bugs found — Builder session required. BUG-D5-DT1-1 (HIGH): duplicate mobile causes silent Save failure (C1 fix `wasInserted=false` path not navigating). HP-6 (MEDIUM): D5-created patients absent from D2 recent list.
 **Last Updated:** 2026-04-11
 
 ---
@@ -24,13 +24,14 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — Step 9 (2026-04-11) — D5 QA fixes applied. All C1+C2+E1+H1+H2+H3+H4 fixed: `insertLocalPatient` now returns `{ localId, wasInserted }` (C1+C2); atomic transaction wrapper around SQLite Steps 1+2 (E1); `setIsSaving(false)` before navigate (H1); DOB Clear button (H2); `Promise.race` 10s timeout on `createPatient` (H3); `markSyncEntrySuccess` after 409 resolution (H4). `markSyncEntrySuccess` added to `syncQueue.ts`. Next: Step 10 (Device Tester — D5 device test session using `reviews/D5-qa-test-plan.md`).
+**Last Session:** Device Tester — Step 10 (2026-04-11) — D5 device test session 1. 15 items PASS, 2 FAIL, 2 SKIP. BUG-D5-DT1-1 (HIGH): duplicate mobile silent Save failure — `insertLocalPatient` returns `{ localId, wasInserted }` but `wasInserted=false` path does not navigate; button visually unchanged with no error. HP-6 (MEDIUM): `getRecentPatients()` does not surface D5-created patients in D2 recent list. Session doc: `reviews/D5-device-test-session.md`.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Merge PR #1 (dev → main)** | PR open at github.com/rdevarakond88/medrecord/pull/1 — review and merge |
-| 2 | D5 (New Patient Form) — build Steps 2–10 | New patients break the flow without it |
+| 1 | **Builder Agent — D5 bug fixes** | BUG-D5-DT1-1 (HIGH) + HP-6 (MEDIUM) — must fix before merge |
+| 2 | **Merge PR #1 (dev → main)** | PR open at github.com/rdevarakond88/medrecord/pull/1 — review and merge |
+| 3 | D5 device test session 2 | Re-verify BUG-D5-DT1-1 + HP-6 fixes after Builder session |
 | 3 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
 | 4 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 | 5 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
