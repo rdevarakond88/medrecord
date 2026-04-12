@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Step 3 (Persona Critique) complete (2026-04-12). Next: Step 4 (Builder fixes — MUST FIX items).
+**Phase:** D4 (Visit Detail) — Step 4 (Builder fixes) complete (2026-04-12). Next: Step 5 (wire real data).
 **Last Updated:** 2026-04-12
 
 ---
@@ -24,12 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Persona Critic Agent — (2026-04-12) — D4 Step 3 persona critique complete. Score: 3.53/5. Verdict: Revise and re-evaluate. Report: `reviews/D4-persona-critique.md`. Two MUST FIX items: (1) consent gate incomplete — notes and scan OCR visible without consent, spec gap to resolve; (2) "Submit Visit" label — rename to "Finish Visit". Three SHOULD FIX items: patient name absent from meta card; three equal-weight bottom buttons (finish action should be visually distinct); no note edit/delete while visit open.
+**Last Session:** Builder Agent — (2026-04-12) — D4 Step 4 (Builder fixes) complete. All MUST FIX and SHOULD FIX items from persona critique applied to `mockups/D4VisitDetailScreen.tsx`. Consent gate spec gap resolved: consent-layer-spec table "View records by other doctors: ❌ without consent" confirms ALL records (notes + scan OCR) must be gated, not just chief_complaint. Changes: (1) consent gate extended to notes text and scan OCR; (2) "Submit Visit" → "Finish Visit"; (3) patient name added to meta card; (4) bottom bar restructured — add-buttons row 1, full-width Finish Visit row 2; (5) long-press edit/delete on note cards (open visits only).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D4 (Visit Detail) — Step 4: Builder fixes (MUST FIX + SHOULD FIX)** | Persona critique complete; Builder applies fixes |
+| 1 | **D4 (Visit Detail) — Step 5: Builder wire real data** | Mockup approved after critique fixes |
 | 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 | 3 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
