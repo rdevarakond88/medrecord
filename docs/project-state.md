@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). BUG-D5-DT1-1 + HP-6 both VERIFIED fixed. Zero open bugs. Clear to merge to main.
+**Phase:** D5 MERGED TO MAIN (2026-04-12, PR #2). D1, D2, D3, D5, D6, D7 all on main. Next: D4 (Visit Detail) — Steps 2–10.
 **Last Updated:** 2026-04-12
 
 ---
@@ -24,15 +24,14 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — (2026-04-12) — D5 Device Test Session 2. BUG-D5-DT1-1 VERIFIED fixed (isSavingRef reset on success path confirmed working across 3 re-entries). HP-6 VERIFIED fixed (D5-created patients appear in D2 recent list via useFocusEffect). 5 PASS, 0 FAIL. Zero open bugs. D5 clear to merge to main.
+**Last Session:** PM Agent — (2026-04-12) — Merged PR #2 (dev → main). D5 New Patient Form merged (merge commit 3b2698c). D1, D2, D3, D5, D6, D7 all on main. dev synced with main.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Merge PR #1 (dev → main)** | PR open at github.com/rdevarakond88/medrecord/pull/1 — D1, D2, D3, D5, D6, D7 all clear to merge |
-| 2 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
-| 3 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
-| 4 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
+| 1 | **D4 (Visit Detail) — PM pre-flight → Steps 2–10** | Unlocks D3 history list value; highest user value |
+| 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 3 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
 ---
 
