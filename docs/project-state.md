@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Step 2 (Builder mockup) complete (2026-04-12). Next: Step 3 (Persona Critic).
+**Phase:** D4 (Visit Detail) — Step 3 (Persona Critique) complete (2026-04-12). Next: Step 4 (Builder fixes — MUST FIX items).
 **Last Updated:** 2026-04-12
 
 ---
@@ -24,12 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — (2026-04-12) — D4 Step 2 mockup complete. File: `mockups/D4VisitDetailScreen.tsx`. Four variants: OwnOpenWithRecords, OwnSubmitted, OtherDoctorConsentGranted, OtherDoctorNoConsent. All PM constraints applied (consent gate, content order, scan stub, DPDP audit stub).
+**Last Session:** Persona Critic Agent — (2026-04-12) — D4 Step 3 persona critique complete. Score: 3.53/5. Verdict: Revise and re-evaluate. Report: `reviews/D4-persona-critique.md`. Two MUST FIX items: (1) consent gate incomplete — notes and scan OCR visible without consent, spec gap to resolve; (2) "Submit Visit" label — rename to "Finish Visit". Three SHOULD FIX items: patient name absent from meta card; three equal-weight bottom buttons (finish action should be visually distinct); no note edit/delete while visit open.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D4 (Visit Detail) — Step 3: Persona Critic** | Mockup built; Persona Critic next |
+| 1 | **D4 (Visit Detail) — Step 4: Builder fixes (MUST FIX + SHOULD FIX)** | Persona critique complete; Builder applies fixes |
 | 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 | 3 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
@@ -104,7 +104,7 @@ _Carry these into every build/mockup session for these screens._
 | Screen | Status | Notes |
 |---|---|---|
 | D6 — New Visit | **DEVICE TESTING COMPLETE (2026-03-28, session 6). BUG-D6-DT5-1 fix verified. Zero bugs. Clear to merge to main. Security re-audit v3 (2026-04-11): CLEAR TO MERGE TO MAIN.** All CRITICAL/HIGH verified fixed. MEDIUM finding: debug syncLogger still active in production builds — must remove `src/sync/syncLogger.ts` and call sites before v1 launch. Items #49, #60 permanently deferred (simulation, v1 acceptable). Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-6.md`. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
-| D4 — Visit Detail | **PM pre-flight complete (2026-04-12). Step 2 (Builder mockup) next.** | Tier 3. Required before "View Full Visit" button in D3 can be wired. Build constraints: consent gate on chief_complaint (must be explicit — not implicit from D3); scan section non-blocking async render with stub to D8. Review: `reviews/D4-pm-review.md`. |
+| D4 — Visit Detail | **Persona critique complete (2026-04-12). Score: 3.53/5. Verdict: Revise and re-evaluate. Step 4 (Builder fixes) next.** MUST FIX: consent gate incomplete (notes+OCR visible without consent — spec gap); "Submit Visit" → "Finish Visit". SHOULD FIX: patient name in meta card; finish button visually distinct from add buttons; note edit/delete on open visits. Report: `reviews/D4-persona-critique.md`. | Tier 3. Required before "View Full Visit" button in D3 can be wired. Build constraints: consent gate on chief_complaint (must be explicit — not implicit from D3); scan section non-blocking async render with stub to D8. Review: `reviews/D4-pm-review.md`. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
