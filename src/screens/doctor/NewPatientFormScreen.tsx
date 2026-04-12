@@ -395,6 +395,11 @@ export default function NewPatientFormScreen() {
       // H1 fix: reset isSaving BEFORE marking save complete. If the doctor
       // navigates back from D6, D5 is restored from the stack with isSaving=false,
       // so the Save button is pressable again rather than stuck showing a spinner.
+      // BUG-D5-DT1-1 fix: also reset isSavingRef here — the success path never
+      // reset it, so returning to D5 from D6 left the ref stuck at true, causing
+      // the duplicate-mobile path (wasInserted=false) to bail silently on the
+      // next tap.
+      isSavingRef.current = false;
       setIsSaving(false);
       savingCompletedRef.current = true;
       navigation.navigate('NewVisit', {

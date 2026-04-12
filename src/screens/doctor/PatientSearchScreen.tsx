@@ -41,7 +41,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { useSQLiteContext } from 'expo-sqlite';
 
@@ -104,21 +104,26 @@ export default function PatientSearchScreen() {
     }
   }, [token, user, navigation]);
 
-  // ── Load recent patients once on mount ────────────────────
+  // ── Load recent patients on focus (not just mount) ────────
+  // HP-6 fix: using useFocusEffect so the list refreshes whenever D2 comes back
+  // into focus — e.g. after D5 creates a new patient and the doctor navigates back.
+  // A mount-only useEffect misses the re-focus case because D2 stays mounted on
+  // the stack while the doctor is on D5/D6.
   // H-3: write audit event after every read — PII returned even offline must be logged.
-  // queryLength not included here because this is a list view, not a targeted lookup.
-  useEffect(() => {
-    if (!token || !user) return;
-    getRecentPatients(db, user.id).then((patients) => {
-      setRecentPatients(patients);
-      if (patients.length > 0) {
-        // Fire-and-forget: audit write failure must not block the UI.
-        logLocalPatientAccess(db, user.id, 'recent_patients_viewed', {
-          count: patients.length,
-        }).catch(() => {/* non-fatal */});
-      }
-    });
-  }, [db, token, user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!token || !user) return;
+      getRecentPatients(db, user.id).then((patients) => {
+        setRecentPatients(patients);
+        if (patients.length > 0) {
+          // Fire-and-forget: audit write failure must not block the UI.
+          logLocalPatientAccess(db, user.id, 'recent_patients_viewed', {
+            count: patients.length,
+          }).catch(() => {/* non-fatal */});
+        }
+      });
+    }, [db, token, user]),
+  );
 
   // ── SQLite search on every query change ──────────────────
   // Fires immediately from 3 digits to give instant local feedback.
