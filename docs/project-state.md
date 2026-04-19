@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Builder QA fixes complete (2026-04-19). C1+H1+H2+H3+H4+M1 closed. Ready for device testing.
+**Phase:** D4 (Visit Detail) — Device testing BLOCKED (2026-04-19). Backend health check timed out (Render.com cold-start / down). No test cases run. Retry when backend is confirmed up.
 **Last Updated:** 2026-04-19
 
 ---
@@ -24,12 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — (2026-04-19) — D4 QA fixes complete. C1+H1+H2+H3+H4 closed (all MUST FIX before device testing). M1 also closed (trivial 1-line fix). M2/M3/M4 remain open (MEDIUM, fix before v1 launch). Security audit + prior Builder security fixes: all closed. D4 is now clear for device testing.
+**Last Session:** Device Tester — (2026-04-19) — D4 device testing BLOCKED. Backend health check (`curl https://medrecord-api.onrender.com/v1/health`) timed out after 60s (HTTP 000, exit 28). Render.com free tier likely hibernated or down. Zero test cases run. No bugs found or logged. Retry: confirm backend health check returns 200 before starting any test cases.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D4 (Visit Detail) — Step 9: Device Testing** | All blocking QA fixes applied (2026-04-19) — ready for device test. |
+| 1 | **D4 (Visit Detail) — Step 9: Device Testing** | Retry — confirm `curl https://medrecord-api.onrender.com/v1/health` returns 200 first. Backend was down 2026-04-19. |
 | 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 | 3 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
