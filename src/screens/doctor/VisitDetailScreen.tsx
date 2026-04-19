@@ -68,7 +68,7 @@ import {
 } from '../../db/records';
 import { getPatientByServerId } from '../../db/patients';
 import { logVisitViewed, updateVisitStatus } from '../../db/visits';
-import { enqueueOperation } from '../../sync/syncQueue';
+import { enqueueOperation, markSyncEntrySuccess } from '../../sync/syncQueue';
 
 // ─── Navigation types ──────────────────────────────────────────────────────
 
@@ -107,8 +107,9 @@ export default function VisitDetailScreen() {
   const [consentGrantedLive,  setConsentGrantedLive]  = useState(consentGranted);
   // D4-SA-H2: session expiry banner
   const [sessionExpired,      setSessionExpired]      = useState(false);
-  const isSavingRef  = useRef(false);  // synchronous tap guard — prevents double-submit
-  const viewLoggedRef = useRef(false); // D4-SA-M2: fire logVisitViewed once per mount
+  const isSavingRef   = useRef(false);  // synchronous tap guard — prevents double-submit on note saves
+  const isFinishingRef = useRef(false); // D4-QA-H4: synchronous tap guard for Finish Visit
+  const viewLoggedRef  = useRef(false); // D4-SA-M2: fire logVisitViewed once per mount
 
   // ── Records data load ─────────────────────────────────────────
   // ALL hooks must be declared before any conditional return (D3-H-3 pattern).
@@ -146,29 +147,36 @@ export default function VisitDetailScreen() {
       // Other server fetch failures — fall through to SQLite cache silently.
     }
 
-    // Always read from SQLite — includes locally-created pending notes
-    const cached = await getCachedRecords(db, visitServerId, user.id);
-    setRecords(cached);
+    // D4-QA-H2: wrap all SQLite reads in try/finally so setIsLoading(false) always
+    // runs — a low-storage I/O error from getCachedRecords must not leave an infinite spinner.
+    try {
+      // Always read from SQLite — includes locally-created pending notes
+      const cached = await getCachedRecords(db, visitServerId, user.id);
+      setRecords(cached);
 
-    // D4-SA-H1: re-read consent from SQLite to catch revocations that happened
-    // while D4 was open (nav param is the initial signal only, not the live gate)
-    const freshPatient = await getPatientByServerId(db, patientServerId, user.id);
-    if (freshPatient !== null) {
-      setConsentGrantedLive(freshPatient.consent_granted);
-    }
+      // D4-SA-H1: re-read consent from SQLite to catch revocations that happened
+      // while D4 was open (nav param is the initial signal only, not the live gate)
+      const freshPatient = await getPatientByServerId(db, patientServerId, user.id);
+      if (freshPatient !== null) {
+        setConsentGrantedLive(freshPatient.consent_granted);
+      }
 
-    setIsLoading(false);
-
-    // DPDP Act 2023 §8 — log that this doctor viewed the visit records (once per mount)
-    if (!viewLoggedRef.current) {
-      viewLoggedRef.current = true;
-      logVisitViewed(db, user.id, patientServerId, visitServerId).catch(() => {});
+      // DPDP Act 2023 §8 — log that this doctor viewed the visit records (once per mount)
+      if (!viewLoggedRef.current) {
+        viewLoggedRef.current = true;
+        logVisitViewed(db, user.id, patientServerId, visitServerId).catch(() => {});
+      }
+    } finally {
+      setIsLoading(false);
     }
   }, [token, user, isOnline, visitServerId, db, patientServerId, navigation]);
 
+  // D4-QA-H1: depend on loadRecords (not []) — isOnline starts false by design (D2-H-5),
+  // so the effect must re-fire when isOnline transitions to true on mount. loadRecords
+  // is recreated by useCallback when isOnline changes, which triggers this effect.
   useEffect(() => {
     void loadRecords();
-  }, []);  // load once on mount; loadRecords is stable for the lifetime of this screen
+  }, [loadRecords]);
 
   // ── Save note handler ─────────────────────────────────────────
   const handleSaveNote = useCallback(async (text: string) => {
@@ -207,16 +215,26 @@ export default function VisitDetailScreen() {
         try {
           const result = await createNote(localId, visitServerId, text, token);
           await markRecordSynced(db, localId, result.record.id);
+          // D4-QA-C1: mark sync_queue entry 'success' so the sync worker does not
+          // re-POST this note. Without this, the worker re-sends it and the server
+          // creates a duplicate note if it does not deduplicate on local_id.
+          await markSyncEntrySuccess(db, localId, 'record');
         } catch {
           // Online call failed — note stays pending; sync worker will retry
         }
       }
     } finally {
-      // Refresh display from SQLite (includes the newly-written note)
-      const updated = await getCachedRecords(db, visitServerId, user.id);
-      setRecords(updated);
+      // D4-QA-H3: reset tap guard BEFORE the SQLite refresh. If getCachedRecords
+      // throws (e.g. low-storage I/O error), the guard must not stay locked — the
+      // note was already written, and "+ Note" must remain tappable.
       isSavingRef.current = false;
       setIsSaving(false);
+      try {
+        const updated = await getCachedRecords(db, visitServerId, user.id);
+        setRecords(updated);
+      } catch {
+        // SQLite read failure — display is stale but tap guard is cleared
+      }
     }
   }, [token, user, db, visitServerId, isOnline]);
 
@@ -251,6 +269,10 @@ export default function VisitDetailScreen() {
   // ── Finish visit handler ──────────────────────────────────────
   const handleFinishVisit = useCallback(() => {
     if (!token || !user) return;
+    // D4-QA-H4: synchronous ref guard — prevents rapid double-tap from opening
+    // two Alert dialogs and firing two PATCH /visits/:id calls before isFinishing
+    // state has had a chance to re-render.
+    if (isFinishingRef.current) return;
 
     if (!isOnline) {
       Alert.alert(
@@ -269,6 +291,7 @@ export default function VisitDetailScreen() {
           text: 'Finish',
           style: 'destructive',
           onPress: async () => {
+            isFinishingRef.current = true;
             setIsFinishing(true);
             try {
               await finishVisit(visitServerId, token);
@@ -286,6 +309,7 @@ export default function VisitDetailScreen() {
                 'Please check your connection and try again.',
               );
             } finally {
+              isFinishingRef.current = false;
               setIsFinishing(false);
             }
           },
@@ -358,7 +382,7 @@ export default function VisitDetailScreen() {
               )}
               <Text style={styles.clinicName}>{clinicName}</Text>
 
-              {!isOwnVisit && !consentGranted && (
+              {!isOwnVisit && !consentGrantedLive && (
                 <View style={styles.consentBanner} accessibilityLabel="No consent granted">
                   <Text style={styles.consentBannerText}>
                     Patient consent not granted — clinical content from this visit is hidden.

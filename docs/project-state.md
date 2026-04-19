@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — QA complete (2026-04-19). 1 CRITICAL + 4 HIGH findings. Blocked for device testing — Builder fixes required.
+**Phase:** D4 (Visit Detail) — Builder QA fixes complete (2026-04-19). C1+H1+H2+H3+H4+M1 closed. Ready for device testing.
 **Last Updated:** 2026-04-19
 
 ---
@@ -24,12 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** QA Agent — (2026-04-19) — D4 QA test plan complete. BLOCKED: 1 CRITICAL (D4-QA-C1: sync_queue not cleared after direct createNote — duplicate note risk), 4 HIGH (isOnline initial state causes skipped server fetch; infinite spinner if getCachedRecords throws; tap guard stuck if finally throws; no synchronous tap guard on Finish Visit). 4 MEDIUM debt items added. Test plan: `reviews/D4-qa-test-plan.md`. Builder Agent session required to fix C1+H1-H4 before device testing.
+**Last Session:** Builder Agent — (2026-04-19) — D4 QA fixes complete. C1+H1+H2+H3+H4 closed (all MUST FIX before device testing). M1 also closed (trivial 1-line fix). M2/M3/M4 remain open (MEDIUM, fix before v1 launch). Security audit + prior Builder security fixes: all closed. D4 is now clear for device testing.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D4 (Visit Detail) — Step 8: Builder Agent (QA fixes)** | QA complete (2026-04-19) — 1 CRITICAL + 4 HIGH. See D4-QA-* findings below. |
+| 1 | **D4 (Visit Detail) — Step 9: Device Testing** | All blocking QA fixes applied (2026-04-19) — ready for device test. |
 | 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 | 3 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
@@ -104,7 +104,7 @@ _Carry these into every build/mockup session for these screens._
 | Screen | Status | Notes |
 |---|---|---|
 | D6 — New Visit | **DEVICE TESTING COMPLETE (2026-03-28, session 6). BUG-D6-DT5-1 fix verified. Zero bugs. Clear to merge to main. Security re-audit v3 (2026-04-11): CLEAR TO MERGE TO MAIN.** All CRITICAL/HIGH verified fixed. MEDIUM finding: debug syncLogger still active in production builds — must remove `src/sync/syncLogger.ts` and call sites before v1 launch. Items #49, #60 permanently deferred (simulation, v1 acceptable). Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-6.md`. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
-| D4 — Visit Detail | **QA complete (2026-04-19). BLOCKED — 1 CRITICAL + 4 HIGH findings require Builder fixes before device testing.** See D4-QA-C1 (sync_queue not cleared on direct createNote), D4-QA-H1 (isOnline always false on mount), D4-QA-H2 (infinite spinner on getCachedRecords throw), D4-QA-H3 (tap guard stuck on finally throw), D4-QA-H4 (no synchronous Finish Visit tap guard). QA test plan: `reviews/D4-qa-test-plan.md`. Security audit + Builder security fixes: all closed (2026-04-19). Live screen: `src/screens/doctor/VisitDetailScreen.tsx`. | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
+| D4 — Visit Detail | **Builder QA fixes complete (2026-04-19). C1+H1+H2+H3+H4+M1 closed. Ready for device testing.** MEDIUM debt: M2 (upsertRecordsFromServer missing transaction), M3 (soft-deleted note reappear), M4 (record_count not updated after finish) — fix before v1 launch. QA test plan: `reviews/D4-qa-test-plan.md`. Security audit: all closed (2026-04-19). Live screen: `src/screens/doctor/VisitDetailScreen.tsx`. | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
@@ -130,22 +130,22 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D4-QA-C1:** `handleSaveNote` calls `createNote` (online) + `markRecordSynced` but never marks the `sync_queue` entry `status='success'`. Sync worker re-POSTs the note; if server doesn't deduplicate on `local_id`, doctor sees note twice. Same gap as D6-CRITICAL (sync worker session). Fix: after `markRecordSynced` succeeds, run `UPDATE sync_queue SET status='success' WHERE entity_local_id = ? AND entity_type = 'record'`. | D4 | D4 QA test plan | MUST FIX — `VisitDetailScreen.tsx:206-212` |
+| ~~**D4-QA-C1:** `handleSaveNote` calls `createNote` (online) + `markRecordSynced` but never marks the `sync_queue` entry `status='success'`. Sync worker re-POSTs the note; if server doesn't deduplicate on `local_id`, doctor sees note twice.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — `markSyncEntrySuccess(db, localId, 'record')` called after `markRecordSynced` succeeds in `handleSaveNote`. |
 
 ### HIGH — D4 QA test plan (2026-04-19) — MUST FIX before device testing
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D4-QA-H1:** `isOnline` initial state is `false` (by design — D2 H-5 fix). `useEffect([], [])` fires with initial `isOnline=false` → `loadRecords` always skips the server fetch on first open. Doctor sees stale/empty SQLite cache even on full connectivity. Fix: change `useEffect(() => { void loadRecords(); }, [])` to `useEffect(() => { void loadRecords(); }, [loadRecords])` so re-fires when `isOnline` changes to true. | D4 | D4 QA test plan | MUST FIX — `VisitDetailScreen.tsx:169-172` |
-| **D4-QA-H2:** `loadRecords` calls `setIsLoading(false)` only after `getCachedRecords`. If `getCachedRecords` throws (low-storage SQLite I/O error), `setIsLoading(false)` never runs → infinite spinner. Fix: wrap SQLite read in try/finally. | D4 | D4 QA test plan | MUST FIX — `VisitDetailScreen.tsx:116-167` |
-| **D4-QA-H3:** `handleSaveNote` `finally` block calls `getCachedRecords` before resetting `isSavingRef.current = false` and `setIsSaving(false)`. If `getCachedRecords` throws, tap guard stays true and `+ Note` is permanently disabled. Fix: reset tap guard first in finally, then try to refresh records separately. | D4 | D4 QA test plan | MUST FIX — `VisitDetailScreen.tsx:214-220` |
-| **D4-QA-H4:** `handleFinishVisit` uses React state `isFinishing` (async) not a `useRef` (synchronous) for the tap guard. Rapid double-tap before state re-renders can open two Alert dialogs and fire two PATCH /visits/:id calls. Fix: add `isFinishingRef = useRef(false)` and check/set synchronously at top of `handleFinishVisit`. | D4 | D4 QA test plan | MUST FIX — `VisitDetailScreen.tsx:252-295` |
+| ~~**D4-QA-H1:** `isOnline` initial state is `false` (by design — D2 H-5 fix). `useEffect([], [])` fires with initial `isOnline=false` → `loadRecords` always skips the server fetch on first open.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — `useEffect` dependency changed from `[]` to `[loadRecords]`; effect re-fires when `isOnline` transitions to true. |
+| ~~**D4-QA-H2:** `loadRecords` calls `setIsLoading(false)` only after `getCachedRecords`. If `getCachedRecords` throws, `setIsLoading(false)` never runs → infinite spinner.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — SQLite read block wrapped in `try/finally`; `setIsLoading(false)` in `finally`. |
+| ~~**D4-QA-H3:** `handleSaveNote` `finally` block calls `getCachedRecords` before resetting tap guard. If `getCachedRecords` throws, `isSavingRef` stays true and `+ Note` is permanently disabled.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — tap guard reset first in `finally`; SQLite refresh in nested `try/catch`. |
+| ~~**D4-QA-H4:** `handleFinishVisit` uses React state `isFinishing` (async) for tap guard — rapid double-tap can open two Alert dialogs and fire two PATCH calls.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — `isFinishingRef = useRef(false)` added; checked synchronously before Alert; set/reset around the `onPress` async block. |
 
 ### MEDIUM — D4 QA test plan (2026-04-19) — fix before v1 launch
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D4-QA-M1:** Consent banner in meta card (line 361) reads stale `consentGranted` nav param, not `consentGrantedLive`. If consent changes while D4 is open, `showClinicalContent` updates correctly but the banner does not. Fix: change `!consentGranted` to `!consentGrantedLive` on line 361. | D4 | D4 QA test plan | `VisitDetailScreen.tsx:361` |
+| ~~**D4-QA-M1:** Consent banner in meta card reads stale `consentGranted` nav param, not `consentGrantedLive`.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — `!consentGranted` → `!consentGrantedLive`. |
 | **D4-QA-M2:** `upsertRecordsFromServer` iterates records with `for...of` and runs one `db.runAsync` per row without a transaction wrapper. App killed mid-loop leaves visit_records partially updated. Self-healing on next server fetch. Fix: wrap loop in `db.withTransactionAsync()`. | D4 | D4 QA test plan | `src/db/records.ts:78-94` |
 | **D4-QA-M3:** Soft-deleted pending note reappears after next server refresh — `upsertRecordsFromServer` conflict clause `WHERE sync_status != 'pending'` allows overwriting `sync_status='deleted'` rows. Existing debt documented in `records.ts:183`. Fix deferred pending DELETE /records/:id backend implementation. | D4 | D4 QA test plan (existing debt) | `src/db/records.ts:183` |
 | **D4-QA-M4:** `handleFinishVisit` does not update `visits.record_count` after PATCH succeeds. D3 visit list shows pre-finish record count until next full `getPatientVisits` fetch. | D4 | D4 QA test plan | `VisitDetailScreen.tsx:274-276` |
