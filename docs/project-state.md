@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Step 6 (Security Agent) complete (2026-04-19). Next: Step 7 (QA Agent) after Builder fixes C1+H1+H2.
+**Phase:** D4 (Visit Detail) — Builder security fixes complete (2026-04-19). Next: Step 7 (QA Agent).
 **Last Updated:** 2026-04-19
 
 ---
@@ -24,15 +24,14 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — (2026-04-19) — D4 Step 5 (wire real data) + Step 5b (contract sync) complete. Live screen `src/screens/doctor/VisitDetailScreen.tsx` built. New modules: `src/api/records.ts`, `src/db/records.ts`. Schema: `status` column added to `visits` table; `visit_records` table added. Data flow: `LocalVisit.status` propagated through all visit functions; `upsertVisitsFromServer` updated; `adaptApiVisit` in D3 updated. D3 `onViewFullVisit` wired to navigate to `VisitDetail` for synced visits. Logout: `clearDoctorRecords` added. Sync worker: note records now synced via POST /sync (not deferred like scan records); `markRecordSynced` called on success. Step 5b contract gaps documented: `status` field in GET /patients/:id/visits response; PATCH /records/:id (note edit — not yet backend-implemented); DELETE /records/:id (note delete — not yet backend-implemented). Known D4 MEDIUM debt: note edits are local-only until PATCH /records/:id is implemented; soft-deleted notes may reappear after server refresh. Add Scan in D4 is stub (requires D7 rework for server visit IDs). View Scan is stub pending D8 build.
+**Last Session:** Builder Agent — (2026-04-19) — D4 security fixes: C1+H1+H2+M1+M2+M3+L1 all closed. D4 ready for QA Agent (Step 7). Live screen `src/screens/doctor/VisitDetailScreen.tsx` built. New modules: `src/api/records.ts`, `src/db/records.ts`. Schema: `status` column added to `visits` table; `visit_records` table added. Data flow: `LocalVisit.status` propagated through all visit functions; `upsertVisitsFromServer` updated; `adaptApiVisit` in D3 updated. D3 `onViewFullVisit` wired to navigate to `VisitDetail` for synced visits. Logout: `clearDoctorRecords` added. Sync worker: note records now synced via POST /sync (not deferred like scan records); `markRecordSynced` called on success. Step 5b contract gaps documented: `status` field in GET /patients/:id/visits response; PATCH /records/:id (note edit — not yet backend-implemented); DELETE /records/:id (note delete — not yet backend-implemented). Known D4 MEDIUM debt: note edits are local-only until PATCH /records/:id is implemented; soft-deleted notes may reappear after server refresh. Add Scan in D4 is stub (requires D7 rework for server visit IDs). View Scan is stub pending D8 build.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D4 (Visit Detail) — Builder: fix C1+H1+H2 from security audit** | BLOCKED — 3 findings must be fixed before QA |
-| 2 | D4 (Visit Detail) — Step 7: QA Agent | After Builder fixes are complete |
-| 3 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
-| 4 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
+| 1 | **D4 (Visit Detail) — Step 7: QA Agent** | Builder C1+H1+H2+M1+M2+M3+L1 all fixed (2026-04-19) |
+| 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 3 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
 ---
 
@@ -105,7 +104,7 @@ _Carry these into every build/mockup session for these screens._
 | Screen | Status | Notes |
 |---|---|---|
 | D6 — New Visit | **DEVICE TESTING COMPLETE (2026-03-28, session 6). BUG-D6-DT5-1 fix verified. Zero bugs. Clear to merge to main. Security re-audit v3 (2026-04-11): CLEAR TO MERGE TO MAIN.** All CRITICAL/HIGH verified fixed. MEDIUM finding: debug syncLogger still active in production builds — must remove `src/sync/syncLogger.ts` and call sites before v1 launch. Items #49, #60 permanently deferred (simulation, v1 acceptable). Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-6.md`. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
-| D4 — Visit Detail | **Security audit complete (2026-04-19) — BLOCKED: 1 CRITICAL + 2 HIGH findings. Builder fixes required before QA. Report: `reviews/D4-security-audit.md`.** Live screen: `src/screens/doctor/VisitDetailScreen.tsx`. New: `src/api/records.ts`, `src/db/records.ts`. Navigated from D3 via `VisitDetail` route (synced visits only). Consent gate: chief_complaint + notes + scan OCR all hidden when !consentGranted. Note add: SQLite → enqueueOperation → POST /records (online). Finish Visit: PATCH /visits/:id (online only). Known MEDIUM debt: note edit local-only; soft-deleted notes may reappear after server refresh; Add Scan stub; View Scan stub. Build constraints: consent gate on chief_complaint (explicit — not implicit from D3); scan section non-blocking async render with stub to D8. Report: `reviews/D4-pm-review.md`, `reviews/D4-persona-critique.md`. | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
+| D4 — Visit Detail | **Security audit complete + Builder fixes complete (2026-04-19). All C1+H1+H2+M1+M2+M3+L1 closed. Ready for QA Agent (Step 7).** Live screen: `src/screens/doctor/VisitDetailScreen.tsx`. New: `src/api/records.ts`, `src/db/records.ts`, `getPatientByServerId` in `src/db/patients.ts`. Navigated from D3 via `VisitDetail` route (synced visits only). Consent gate: chief_complaint + notes + scan OCR all hidden when !consentGranted (live SQLite re-read on load). Note add: SQLite → enqueueOperation (atomic transaction) → POST /records (online). Finish Visit: PATCH /visits/:id (online only). Known MEDIUM debt: note edit local-only; soft-deleted notes may reappear after server refresh; Add Scan stub; View Scan stub. Build constraints: consent gate on chief_complaint (explicit — not implicit from D3); scan section non-blocking async render with stub to D8. Report: `reviews/D4-pm-review.md`, `reviews/D4-persona-critique.md`, `reviews/D4-security-audit.md`. | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
@@ -131,28 +130,28 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D4-SA-C1:** `insertLocalNote` + `enqueueOperation` in `handleSaveNote` are two sequential `await` calls with no `db.withTransactionAsync()` wrapper. App killed between writes leaves note in `visit_records` with no `sync_queue` entry — clinical note silently never uploaded to server. | D4 | D4 security audit | Fix: wrap both calls in `db.withTransactionAsync()`. Same pattern as D6-MEDIUM-4. |
+| ~~**D4-SA-C1:** `insertLocalNote` + `enqueueOperation` in `handleSaveNote` are two sequential `await` calls with no `db.withTransactionAsync()` wrapper. App killed between writes leaves note in `visit_records` with no `sync_queue` entry — clinical note silently never uploaded to server.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — both calls wrapped in `db.withTransactionAsync()`. Same pattern as D6-MEDIUM-4. |
 
 ### HIGH — D4 live screen security audit (2026-04-19) — MUST FIX before QA
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D4-SA-H1:** `showClinicalContent = isOwnVisit \|\| consentGranted` derived entirely from stale nav params — never re-verified from server or SQLite within D4. If consent is revoked while doctor is on D4, clinical content (chief complaint, notes, OCR text) remains visible. | D4 | D4 security audit | Fix: re-read `consent_granted` from SQLite via `getPatientByLocalId()` after records load; store in component state; use for `showClinicalContent` instead of nav param. Pattern: D3-H-1/D3-H-2. |
-| **D4-SA-H2:** 401 (session expiry) silently swallowed in both `loadRecords` (line 131) and `handleFinishVisit` (line 248) catch blocks. Doctor is unaware their session expired; stale cached records displayed; Finish Visit fails with misleading "connection" message. | D4 | D4 security audit | Fix: check `err instanceof ApiError && err.status === 401` in both catch blocks → set session-expired banner + `navigation.replace('Login')`. D2 pattern is the reference. |
+| ~~**D4-SA-H1:** `showClinicalContent = isOwnVisit \|\| consentGranted` derived entirely from stale nav params — never re-verified from server or SQLite within D4.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `consentGrantedLive` state added; `getPatientByServerId()` called in `loadRecords` after records load to re-read SQLite value; `showClinicalContent` uses live state. `getPatientByServerId(db, serverId, doctorId)` added to `src/db/patients.ts`. |
+| ~~**D4-SA-H2:** 401 (session expiry) silently swallowed in both `loadRecords` and `handleFinishVisit` catch blocks.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `ApiError` imported; 401 check in both catch blocks → `setSessionExpired(true)` + 2s redirect to Login; `SessionExpiredBanner` shown in JSX. D2/D3 pattern. |
 
 ### MEDIUM — D4 live screen security audit (2026-04-19) — fix before v1 launch
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D4-SA-M1:** Note `TextInput` (new note and inline edit) has no `maxLength` — arbitrarily large text stored in SQLite and POSTed to server. | D4 | D4 security audit | Add `maxLength={5000}` to both TextInput elements (`InlineNoteInput` and `NoteRecordRow` edit mode). |
-| **D4-SA-M2:** `logVisitViewed` fires on every mount with no session guard — generates multiple `visit_viewed` audit events per clinical encounter. Same pattern as D3-M-2. | D4 | D4 security audit | Add `viewLoggedRef = useRef(false)` to fire once per D4 mount lifetime; reset on unmount. |
-| **D4-SA-M3:** Patient full name (`patientName` nav param) rendered at 17pt bold with no `numberOfLines` guard and no PII dimming — visible to bystanders in shared clinic spaces. | D4 | D4 security audit | Add `numberOfLines={1}` + `ellipsizeMode="tail"`. Track name-dimming for v1 launch. |
+| ~~**D4-SA-M1:** Note `TextInput` (new note and inline edit) has no `maxLength`.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `maxLength={5000}` added to both `InlineNoteInput` and `NoteRecordRow` edit `TextInput`. |
+| ~~**D4-SA-M2:** `logVisitViewed` fires on every mount with no session guard.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `viewLoggedRef = useRef(false)` added; fires once per D4 mount lifetime. |
+| ~~**D4-SA-M3:** Patient full name rendered at 17pt bold with no `numberOfLines` guard.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `numberOfLines={1}` + `ellipsizeMode="tail"` added. Name-dimming tracked for v1 launch. |
 
 ### LOW — D4 live screen security audit (2026-04-19)
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D4-SA-L1:** `updateLocalNoteText` and `deleteLocalRecord` use `WHERE id = ?` with no `doctor_id` scope — pattern deviation from all other queries in the records module. | D4 | D4 security audit | Add `AND doctor_id = ?` to both WHERE clauses; thread `doctorId` from callers. |
+| ~~**D4-SA-L1:** `updateLocalNoteText` and `deleteLocalRecord` use `WHERE id = ?` with no `doctor_id` scope.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `AND doctor_id = ?` added to both WHERE clauses in `src/db/records.ts`; `doctorId` threaded from `handleEditNote` and `handleDeleteNote` callers. |
 
 ### CRITICAL — Must fix before merging D2 to main
 

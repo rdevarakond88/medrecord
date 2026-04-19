@@ -55,6 +55,7 @@ import { Colors } from '../../constants/theme';
 import { formatDateForDisplay, formatTimestamp } from '../../utils/formatters';
 import { useNetworkStatus } from '../../utils/useNetworkStatus';
 import { useAuthStore } from '../../store/useAuthStore';
+import { ApiError } from '../../api/apiClient';
 import { getVisitRecords, createNote, finishVisit } from '../../api/records';
 import {
   LocalRecord,
@@ -65,6 +66,7 @@ import {
   updateLocalNoteText,
   deleteLocalRecord,
 } from '../../db/records';
+import { getPatientByServerId } from '../../db/patients';
 import { logVisitViewed, updateVisitStatus } from '../../db/visits';
 import { enqueueOperation } from '../../sync/syncQueue';
 
@@ -95,13 +97,18 @@ export default function VisitDetailScreen() {
   } = route.params;
 
   // ── Component state ────────────────────────────────────────────
-  const [records,        setRecords]        = useState<LocalRecord[]>([]);
-  const [isLoading,      setIsLoading]      = useState(true);
-  const [visitStatus,    setVisitStatus]    = useState<'open' | 'submitted'>(initialStatus);
-  const [showNoteInput,  setShowNoteInput]  = useState(false);
-  const [isSaving,       setIsSaving]       = useState(false);
-  const [isFinishing,    setIsFinishing]    = useState(false);
-  const isSavingRef = useRef(false);  // synchronous tap guard — prevents double-submit
+  const [records,             setRecords]             = useState<LocalRecord[]>([]);
+  const [isLoading,           setIsLoading]           = useState(true);
+  const [visitStatus,         setVisitStatus]         = useState<'open' | 'submitted'>(initialStatus);
+  const [showNoteInput,       setShowNoteInput]        = useState(false);
+  const [isSaving,            setIsSaving]            = useState(false);
+  const [isFinishing,         setIsFinishing]         = useState(false);
+  // D4-SA-H1: live consent — re-read from SQLite after records load; not nav param alone
+  const [consentGrantedLive,  setConsentGrantedLive]  = useState(consentGranted);
+  // D4-SA-H2: session expiry banner
+  const [sessionExpired,      setSessionExpired]      = useState(false);
+  const isSavingRef  = useRef(false);  // synchronous tap guard — prevents double-submit
+  const viewLoggedRef = useRef(false); // D4-SA-M2: fire logVisitViewed once per mount
 
   // ── Records data load ─────────────────────────────────────────
   // ALL hooks must be declared before any conditional return (D3-H-3 pattern).
@@ -128,19 +135,36 @@ export default function VisitDetailScreen() {
           })),
         );
       }
-    } catch {
-      // Server fetch failed — fall through to SQLite cache silently.
-      // The cache may be empty if this is the first offline load.
+    } catch (err) {
+      // D4-SA-H2: 401 means session expired — show banner and redirect to Login
+      if (err instanceof ApiError && err.status === 401) {
+        setSessionExpired(true);
+        setTimeout(() => navigation.replace('Login'), 2000);
+        setIsLoading(false);
+        return;
+      }
+      // Other server fetch failures — fall through to SQLite cache silently.
     }
 
     // Always read from SQLite — includes locally-created pending notes
     const cached = await getCachedRecords(db, visitServerId, user.id);
     setRecords(cached);
+
+    // D4-SA-H1: re-read consent from SQLite to catch revocations that happened
+    // while D4 was open (nav param is the initial signal only, not the live gate)
+    const freshPatient = await getPatientByServerId(db, patientServerId, user.id);
+    if (freshPatient !== null) {
+      setConsentGrantedLive(freshPatient.consent_granted);
+    }
+
     setIsLoading(false);
 
-    // DPDP Act 2023 §8 — log that this doctor viewed the visit records
-    logVisitViewed(db, user.id, patientServerId, visitServerId).catch(() => {});
-  }, [token, user, isOnline, visitServerId, db, patientServerId]);
+    // DPDP Act 2023 §8 — log that this doctor viewed the visit records (once per mount)
+    if (!viewLoggedRef.current) {
+      viewLoggedRef.current = true;
+      logVisitViewed(db, user.id, patientServerId, visitServerId).catch(() => {});
+    }
+  }, [token, user, isOnline, visitServerId, db, patientServerId, navigation]);
 
   useEffect(() => {
     void loadRecords();
@@ -157,21 +181,25 @@ export default function VisitDetailScreen() {
     const localId = Crypto.randomUUID();
 
     try {
-      // 1. SQLite write first — note is never lost even if network call fails
-      await insertLocalNote(db, visitServerId, user.id, text, localId, user.name);
+      // D4-SA-C1: both SQLite writes are atomic — if app is killed between them,
+      // neither write commits; the note is never left without a sync queue entry.
+      await db.withTransactionAsync(async () => {
+        // 1. SQLite write first — note is never lost even if network call fails
+        await insertLocalNote(db, visitServerId, user.id, text, localId, user.name);
 
-      // 2. Enqueue for background sync (covers the offline case where sync worker
-      //    will pick up the note when connectivity is restored)
-      await enqueueOperation(db, {
-        doctor_id:       user.id,
-        entity_type:     'record',
-        entity_local_id: localId,
-        operation:       'create',
-        payload: {
-          type:         'note',
-          visit_id:     visitServerId,
-          content_text: text,
-        },
+        // 2. Enqueue for background sync (covers the offline case where sync worker
+        //    will pick up the note when connectivity is restored)
+        await enqueueOperation(db, {
+          doctor_id:       user.id,
+          entity_type:     'record',
+          entity_local_id: localId,
+          operation:       'create',
+          payload: {
+            type:         'note',
+            visit_id:     visitServerId,
+            content_text: text,
+          },
+        });
       });
 
       // 3. If online, POST immediately and mark as synced (avoids sync worker delay)
@@ -194,7 +222,7 @@ export default function VisitDetailScreen() {
 
   // ── Edit note handler (local-only for v1) ─────────────────────
   const handleEditNote = useCallback(async (recordId: string, newText: string) => {
-    await updateLocalNoteText(db, recordId, newText);
+    await updateLocalNoteText(db, recordId, newText, user?.id ?? '');
     const updated = await getCachedRecords(db, visitServerId, user?.id ?? '');
     setRecords(updated);
   }, [db, visitServerId, user]);
@@ -211,7 +239,7 @@ export default function VisitDetailScreen() {
           style: 'destructive',
           onPress: async () => {
             // Soft-delete locally — server is append-only (data model decision)
-            await deleteLocalRecord(db, recordId);
+            await deleteLocalRecord(db, recordId, user?.id ?? '');
             const updated = await getCachedRecords(db, visitServerId, user?.id ?? '');
             setRecords(updated);
           },
@@ -246,7 +274,13 @@ export default function VisitDetailScreen() {
               await finishVisit(visitServerId, token);
               await updateVisitStatus(db, visitServerId, 'submitted');
               setVisitStatus('submitted');
-            } catch {
+            } catch (err) {
+              // D4-SA-H2: session expiry must redirect to Login, not show a generic error
+              if (err instanceof ApiError && err.status === 401) {
+                setSessionExpired(true);
+                setTimeout(() => navigation.replace('Login'), 2000);
+                return;
+              }
               Alert.alert(
                 'Could not finish visit',
                 'Please check your connection and try again.',
@@ -270,9 +304,9 @@ export default function VisitDetailScreen() {
   const scanRecords       = records.filter((r) => r.type === 'scan');
   const displayDate       = formatDateForDisplay(visitDate) ?? visitDate;
   const isOpen            = visitStatus === 'open';
-  // D4-H-1: consent gate — controls visibility of clinical content from other doctors.
+  // D4-SA-H1: consent gate uses live SQLite value, not stale nav param.
   // Per consent-layer-spec.md: "View records by other doctors: ❌ without consent"
-  const showClinicalContent = isOwnVisit || consentGranted;
+  const showClinicalContent = isOwnVisit || consentGrantedLive;
   // canEditNotes: note edit/delete affordance only on own open visits
   const canEditNotes = isOwnVisit && isOpen;
 
@@ -292,6 +326,9 @@ export default function VisitDetailScreen() {
         <Text style={styles.headerTitle}>Visit Detail</Text>
         <View style={styles.headerRight} />
       </View>
+
+      {/* D4-SA-H2: session expired — shown on 401; auto-redirects in 2s */}
+      {sessionExpired && <SessionExpiredBanner />}
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -315,7 +352,7 @@ export default function VisitDetailScreen() {
                 <StatusBadge status={visitStatus} />
               </View>
 
-              <Text style={styles.patientName}>{patientName}</Text>
+              <Text style={styles.patientName} numberOfLines={1} ellipsizeMode="tail">{patientName}</Text>
               {isOwnVisit && (
                 <Text style={styles.doctorName}>{user.name}</Text>
               )}
@@ -484,6 +521,16 @@ export default function VisitDetailScreen() {
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
+function SessionExpiredBanner() {
+  return (
+    <View style={styles.sessionExpiredBanner} accessibilityRole="alert">
+      <Text style={styles.sessionExpiredText}>
+        Your session has expired. Redirecting to login…
+      </Text>
+    </View>
+  );
+}
+
 function StatusBadge({ status }: { status: 'open' | 'submitted' }) {
   const isOpen = status === 'open';
   return (
@@ -611,6 +658,7 @@ function NoteRecordRow({
             onChangeText={setEditText}
             multiline
             autoFocus
+            maxLength={5000}
             accessibilityLabel="Edit note text"
           />
           <View style={styles.inlineNoteActions}>
@@ -699,6 +747,7 @@ function InlineNoteInput({
         onChangeText={setText}
         multiline
         autoFocus
+        maxLength={5000}
         accessibilityLabel="Add note text input"
       />
       <View style={styles.inlineNoteActions}>
@@ -1166,5 +1215,20 @@ const styles = StyleSheet.create({
   },
   finishVisitButtonTextDisabled: {
     color: '#94A3B8',
+  },
+
+  // Session expired banner (D4-SA-H2)
+  sessionExpiredBanner: {
+    backgroundColor:   '#FEE2E2',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FCA5A5',
+    paddingHorizontal: 16,
+    paddingVertical:   10,
+  },
+  sessionExpiredText: {
+    fontSize:   14,
+    color:      '#DC2626',
+    fontWeight: '500',
+    textAlign:  'center',
   },
 });

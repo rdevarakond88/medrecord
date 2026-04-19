@@ -156,14 +156,15 @@ export async function updateLocalNoteText(
   db: SQLite.SQLiteDatabase,
   recordId: string,
   newText: string,
+  doctorId: string,
 ): Promise<void> {
   const now = new Date().toISOString();
   await db.runAsync(
     `UPDATE visit_records
      SET content_text = ?,
          cached_at    = ?
-     WHERE id = ?`,
-    [newText, now, recordId],
+     WHERE id = ? AND doctor_id = ?`,
+    [newText, now, recordId, doctorId],
   );
 }
 
@@ -183,14 +184,15 @@ export async function updateLocalNoteText(
 export async function deleteLocalRecord(
   db: SQLite.SQLiteDatabase,
   recordId: string,
+  doctorId: string,
 ): Promise<void> {
   const now = new Date().toISOString();
   await db.runAsync(
     `UPDATE visit_records
      SET sync_status = 'deleted',
          cached_at   = ?
-     WHERE id = ?`,
-    [now, recordId],
+     WHERE id = ? AND doctor_id = ?`,
+    [now, recordId, doctorId],
   );
 }
 
