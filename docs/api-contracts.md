@@ -180,7 +180,11 @@ requirement D3-H-2 — avoids a separate consent API call on every D3 load).
       "visit_date": "2024-01-15",
       "chief_complaint": "Fever and cough",   // always present for the authenticated doctor's own visits
       "clinic_name": "Sharma Clinic",
-      "record_count": 2
+      "record_count": 2,
+      "status": "open"   // NOTE (D4): "open" | "submitted" — required by D4 (Visit Detail) to show
+                         // the correct bottom bar and enable/disable Finish Visit. Backend MUST return
+                         // this field for every visit in both lists. Default 'open' for newly created
+                         // visits; 'submitted' after PATCH /visits/:id { status: 'submitted' }.
     }
   ],
   "other_doctor_visits": [
@@ -189,7 +193,8 @@ requirement D3-H-2 — avoids a separate consent API call on every D3 load).
       "visit_date": "2024-01-10",
       "chief_complaint": null,    // MUST be null/absent at SQL layer when consent_granted=false (D3-H-1)
       "clinic_name": "City Clinic",
-      "record_count": 1
+      "record_count": 1,
+      "status": "submitted"       // NOTE (D4): same field required for other-doctor visits
     }
   ],
   "consent_granted": true,        // authoritative consent state for this doctor–patient pair
@@ -201,6 +206,8 @@ requirement D3-H-2 — avoids a separate consent API call on every D3 load).
 - `my_visits`: visits created by the authenticated doctor for this patient. Always returned with full data.
 - `other_doctor_visits`: visits created by any other doctor. `chief_complaint` is excluded at the
   database query layer when `consent_granted=false`. When `consent_granted=true`, `chief_complaint` is included.
+- `status` field added for D4 (Step 5b). The frontend caches it in `visits.status` and uses it to
+  determine whether the bottom action bar (Add Note / Finish Visit) is shown.
 - Visits are returned newest first within each list.
 - No cursor pagination — D3 loads the full history in one call for v1.
 
@@ -251,17 +258,24 @@ Update visit (chief complaint, status). Only the opening doctor can update.
 
 ### GET /visits/:id/records
 All records in a visit.
+
+**Security constraints:**
+- SECURITY: Server MUST validate that the requesting doctor either owns the visit or has active
+  consent for the patient. Return 403 CONSENT_REQUIRED if neither condition is met.
+- `content_text` for scan records should be withheld (null) when consent is absent — same rule as
+  `chief_complaint` suppression in GET /patients/:id/visits. Enforce at the query layer.
+
 ```json
 // Response 200
 {
   "records": [
     {
       "id": "uuid",
-      "type": "scan",
-      "content_text": "Tab. Paracetamol 500mg...",  // null if OCR failed/skipped
-      "image_url": "https://s3.../...",
-      "image_thumbnail_url": "https://s3.../...thumb",
-      "ocr_status": "success",
+      "type": "scan",                              // "note" | "scan"
+      "content_text": "Tab. Paracetamol 500mg...", // null if OCR failed/skipped; null for redacted content
+      "image_url": "https://s3.../...",            // null — S3 image storage deferred to v2
+      "image_thumbnail_url": "https://s3.../...thumb",  // null — deferred to v2
+      "ocr_status": "success",                     // null for note records
       "created_by": { "id": "uuid", "name": "Dr. Sharma" },
       "created_at": "2024-01-15T10:45:00Z"
     }
@@ -269,18 +283,34 @@ All records in a visit.
 }
 ```
 
+**Note for note-type records:**
+- `type`: `"note"`
+- `content_text`: the note text (always present)
+- `image_url`, `image_thumbnail_url`: null (notes have no image)
+- `ocr_status`: null (not applicable to notes)
+
 ### POST /records
 Create a new record (note or initiate scan upload).
+
+**SECURITY:** Server MUST verify that the authenticated doctor owns the visit (or is the doctor
+who created it) before accepting a new record. Reject with 403 if not the visit owner.
+Additionally, the server MUST verify the visit `status` is `"open"` — reject with 409 if
+the visit is already `"submitted"`.
+
+**Idempotency:** `local_id` MUST be deduplicated server-side. If a record with the same
+`local_id` already exists, return 201 with the existing record (do not create a duplicate).
+This prevents double-writes on network retry.
+
 ```json
-// Request — typed note
+// Request — typed note (D4)
 {
-  "local_id": "uuid",
+  "local_id": "uuid",      // client-generated UUID; server deduplicates on this field
   "visit_id": "uuid",
   "type": "note",
   "content_text": "Patient reports fever for 3 days, 101°F"
 }
 
-// Request — scan (image uploaded separately via presigned URL)
+// Request — scan (image uploaded separately via presigned URL; S3 deferred to v2)
 {
   "local_id": "uuid",
   "visit_id": "uuid",
@@ -290,6 +320,49 @@ Create a new record (note or initiate scan upload).
 
 // Response 201
 { "record": { ...full record object... } }
+```
+
+### PATCH /records/:id
+Update an existing record (note text edit).
+
+**NOTE (D4 — not yet implemented server-side for v1):**
+The frontend soft-stores note edits locally only. This endpoint is required for v2 to
+sync edits to the server. Backend developer: implement this endpoint before D4 device testing.
+
+**SECURITY:** Server MUST verify that the requesting doctor created this record (same doctor
+who originally posted it). Only own records may be edited — never another doctor's records.
+The visit must also be in `status="open"` — submitted visits are locked.
+
+```json
+// Request
+{
+  "content_text": "Updated note text…"   // only applicable to type="note" records
+}
+
+// Response 200
+{ "record": { ...updated record object... } }
+
+// Response 403 if not the record creator
+// Response 409 if visit is already submitted
+```
+
+### DELETE /records/:id
+Delete (permanently) a record.
+
+**NOTE (D4 — not implemented in v1):**
+The server data model is append-only for v1. The frontend uses a local soft-delete
+(`sync_status='deleted'` in visit_records) so the record is hidden on the device.
+This endpoint is required for v2 if true deletion is needed for compliance reasons.
+Until then, "deleted" records remain on the server.
+
+**SECURITY:** Server MUST verify the requesting doctor created this record. The visit
+must be in `status="open"`.
+
+```json
+// Response 204 No Content
+
+// Response 403 if not the record creator
+// Response 409 if visit is already submitted
 ```
 
 ### GET /records/upload-url

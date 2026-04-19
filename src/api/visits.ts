@@ -15,10 +15,11 @@ import { apiFetch } from './apiClient';
 
 export interface ApiVisit {
   id:              string;
-  visit_date:      string;         // server-assigned UTC ISO — never client-generated (QA E-6)
-  chief_complaint: string | null;  // null for otherDoctorVisits when consent absent
+  visit_date:      string;                // server-assigned UTC ISO — never client-generated (QA E-6)
+  chief_complaint: string | null;         // null for otherDoctorVisits when consent absent
   clinic_name:     string;
   record_count:    number;
+  status:          'open' | 'submitted';  // visit lifecycle state — added for D4 navigation
 }
 
 export interface ApiVisitsResponse {

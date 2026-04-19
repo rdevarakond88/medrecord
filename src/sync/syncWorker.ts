@@ -24,6 +24,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSyncStore } from '../store/useSyncStore';
 import { markVisitSynced } from '../db/visits';
+import { markRecordSynced } from '../db/records';
 import { apiFetch, ApiError, API_BASE_URL } from '../api/apiClient';
 import { pinnedFetch } from '../api/pinnedFetch';
 import { REFRESH_TOKEN_KEY } from '../auth/constants';
@@ -188,6 +189,10 @@ async function applyResult(
       `UPDATE patients SET server_id = ?, synced_at = ? WHERE local_id = ?`,
       [result.server_id, now, result.local_id],
     );
+  } else if (entityType === 'record' && result.server_id) {
+    // Update visit_records: replace local UUID with server-assigned ID.
+    // markRecordSynced is idempotent — safe to call multiple times.
+    await markRecordSynced(db, result.local_id, result.server_id);
   }
   // consent: no additional local state to update beyond id_mapping + queue status.
 
@@ -331,22 +336,33 @@ export async function runSyncWorker(
       syncLog(`drain: ${rows.length} pending rows for doctorId:${doctorId}`);
       if (rows.length === 0) break;
 
-      // ── Defer 'record' (scan) entries — S3 upload is v2 (locked) ──────
-      const recordRows  = rows.filter((r) => r.entity_type === 'record');
-      const syncRows    = rows.filter((r) => r.entity_type !== 'record');
+      // ── Defer scan record entries — S3 upload is v2 (locked) ─────────
+      // Note records (payload.type === 'note') are synced via POST /sync.
+      // Scan records require S3 image upload and remain deferred until v2.
+      function isScanRecord(r: SyncQueueRow): boolean {
+        try {
+          const payload = JSON.parse(r.payload) as { type?: string };
+          return r.entity_type === 'record' && payload.type !== 'note';
+        } catch {
+          return r.entity_type === 'record';  // malformed payload — defer to be safe
+        }
+      }
 
-      if (recordRows.length > 0) {
-        const deferredIds = recordRows.map(() => '?').join(',');
+      const scanRows = rows.filter(isScanRecord);
+      const syncRows = rows.filter((r) => !isScanRecord(r));
+
+      if (scanRows.length > 0) {
+        const deferredIds = scanRows.map(() => '?').join(',');
         await db.runAsync(
           `UPDATE sync_queue
            SET status        = 'deferred',
                error_message = 'S3 image upload deferred to v2'
            WHERE id IN (${deferredIds})`,
-          recordRows.map((r) => r.id),
+          scanRows.map((r) => r.id),
         );
       }
 
-      // Nothing left to sync in this batch after deferring record entries.
+      // Nothing left to sync in this batch after deferring scan entries.
       if (syncRows.length === 0) continue;
 
       // Mark batch as in_progress so a crash mid-batch is detectable.

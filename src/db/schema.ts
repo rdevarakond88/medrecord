@@ -88,11 +88,35 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
       chief_complaint    TEXT,
       clinic_name        TEXT NOT NULL DEFAULT '',
       record_count       INTEGER NOT NULL DEFAULT 0,
+      status             TEXT NOT NULL DEFAULT 'submitted',  -- 'open' | 'submitted'
       is_own_visit         INTEGER NOT NULL DEFAULT 0,  -- 1=current doctor created it
       cached_by_doctor_id  TEXT NOT NULL DEFAULT '',    -- H-2: doctor who cached this row
       synced_at            TEXT NOT NULL,
       created_at           TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- Visit records cache — populated from GET /visits/:id/records (D4).
+    -- Stores both server-fetched ('synced') and locally-created notes ('pending').
+    -- sync_status='deleted' marks soft-deleted records (server is append-only).
+    -- doctor_id is NOT NULL — every row is auth-scoped; cleared on logout.
+    CREATE TABLE IF NOT EXISTS visit_records (
+      id               TEXT PRIMARY KEY,
+      local_id         TEXT,              -- client UUID for pending records; null for server-cached
+      visit_id         TEXT NOT NULL,     -- server visit ID
+      doctor_id        TEXT NOT NULL,     -- auth-scoped: cached_by or created_by
+      type             TEXT NOT NULL,     -- 'note' | 'scan'
+      content_text     TEXT,              -- note text or OCR text; null if not available
+      ocr_status       TEXT,              -- null for notes; 'success'|'pending'|'failed'|'skipped' for scans
+      created_by_name  TEXT,              -- display name of creator
+      created_at       TEXT NOT NULL,     -- ISO timestamp from server (or local create time)
+      sync_status      TEXT NOT NULL DEFAULT 'synced',  -- 'synced' | 'pending' | 'failed' | 'deleted'
+      cached_at        TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_visit_records_visit
+      ON visit_records (visit_id, created_at ASC);
+    CREATE INDEX IF NOT EXISTS idx_visit_records_doctor
+      ON visit_records (doctor_id);
 
     CREATE INDEX IF NOT EXISTS idx_visits_patient
       ON visits (patient_server_id, visit_date DESC);
@@ -228,6 +252,17 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
   try {
     await db.execAsync(
       `ALTER TABLE sync_queue ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 5;`,
+    );
+  } catch {
+    // Column already exists — safe to ignore.
+  }
+
+  // Migration: add status column to visits for D4 (Visit Detail).
+  // Default 'submitted' is safe — existing rows are server-cached visits which
+  // are assumed submitted. The server will return the correct status on next fetch.
+  try {
+    await db.execAsync(
+      `ALTER TABLE visits ADD COLUMN status TEXT NOT NULL DEFAULT 'submitted';`,
     );
   } catch {
     // Column already exists — safe to ignore.

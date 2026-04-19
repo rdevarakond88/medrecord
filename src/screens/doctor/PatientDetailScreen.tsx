@@ -502,11 +502,22 @@ export default function PatientDetailScreen() {
                         )
                 }
                 onViewFullVisit={
-                  item.grayed
+                  // D4 is only navigable for server-synced visits with a patient server ID.
+                  // Draft visits (sync_status='draft') have no server records to fetch.
+                  item.grayed || item.visit.sync_status === 'draft' || !patientServerId
                     ? undefined
                     : () => {
-                        // TODO: navigate to D4 (Visit Detail) when built.
-                        // navigation.navigate('VisitDetail', { visitServerId: item.visit.server_id });
+                        navigation.navigate('VisitDetail', {
+                          visitServerId:   item.visit.server_id,
+                          visitDate:       item.visit.visit_date,
+                          visitStatus:     item.visit.status,
+                          chiefComplaint:  item.visit.chief_complaint,
+                          clinicName:      item.visit.clinic_name,
+                          isOwnVisit:      item.visit.is_own_visit,
+                          consentGranted:  consentGranted,
+                          patientServerId: patientServerId,
+                          patientName:     patient?.name ?? 'Patient',
+                        });
                       }
                 }
               />
@@ -562,7 +573,7 @@ export default function PatientDetailScreen() {
 // ─────────────────────────────────────────────────────────────
 
 function adaptApiVisit(
-  v: { id: string; visit_date: string; chief_complaint: string | null; clinic_name: string; record_count: number },
+  v: { id: string; visit_date: string; chief_complaint: string | null; clinic_name: string; record_count: number; status: 'open' | 'submitted' },
   isOwn: boolean = false,
 ): LocalVisit {
   return {
@@ -572,6 +583,7 @@ function adaptApiVisit(
     chief_complaint:     v.chief_complaint,
     clinic_name:         v.clinic_name,
     record_count:        v.record_count,
+    status:              v.status,
     is_own_visit:        isOwn,
     cached_by_doctor_id: '',    // not used for display; populated in DB via upsertVisitsFromServer
     synced_at:           new Date().toISOString(),

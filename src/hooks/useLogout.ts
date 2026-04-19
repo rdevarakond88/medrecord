@@ -12,6 +12,7 @@
  *      await clearDoctorVisits(db, doctorId)         — visits cache cleared (D3-H-3)
  *      await clearDoctorScanRecords(db, doctorId)    — scans table cleared (D7 CRITICAL-1 fix)
  *      await clearDoctorScans(doctorId)              — scan image files deleted (D7 PM REQ 1)
+ *      await clearDoctorRecords(db, doctorId)        — visit_records cache cleared (D4)
  *   3. queryClient.clear()                            — React Query cache cleared
  *   4. clearAuth()                                    — in-memory state cleared last
  *
@@ -34,6 +35,7 @@ import {
   countUnsyncedDraftVisits,
 } from '../db/visits';
 import { clearDoctorScans, clearDoctorScanRecords } from '../db/scans';
+import { clearDoctorRecords } from '../db/records';
 import { clearDoctorSyncQueue } from '../sync/syncQueue';
 
 export function useLogout(): () => Promise<void> {
@@ -90,6 +92,7 @@ export function useLogout(): () => Promise<void> {
       await clearDoctorDraftVisits(db, doctorId);     // D6: locally-created draft visits cleared
       await clearDoctorScanRecords(db, doctorId);     // D7 CRITICAL-1 fix: scans table rows cleared
       await clearDoctorScans(doctorId);               // D7 PM REQ 1: doctor-scoped scan images deleted
+      await clearDoctorRecords(db, doctorId);         // D4: visit_records cache cleared
       await clearDoctorSyncQueue(db, doctorId);       // sync queue cleared on logout
     }
 

@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Step 4 (Builder fixes) complete (2026-04-12). Next: Step 5 (wire real data).
-**Last Updated:** 2026-04-12
+**Phase:** D4 (Visit Detail) — Step 5 (wire real data) complete (2026-04-19). Next: Step 6 (Security Agent).
+**Last Updated:** 2026-04-19
 
 ---
 
@@ -24,12 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — (2026-04-12) — D4 Step 4 (Builder fixes) complete. All MUST FIX and SHOULD FIX items from persona critique applied to `mockups/D4VisitDetailScreen.tsx`. Consent gate spec gap resolved: consent-layer-spec table "View records by other doctors: ❌ without consent" confirms ALL records (notes + scan OCR) must be gated, not just chief_complaint. Changes: (1) consent gate extended to notes text and scan OCR; (2) "Submit Visit" → "Finish Visit"; (3) patient name added to meta card; (4) bottom bar restructured — add-buttons row 1, full-width Finish Visit row 2; (5) long-press edit/delete on note cards (open visits only).
+**Last Session:** Builder Agent — (2026-04-19) — D4 Step 5 (wire real data) + Step 5b (contract sync) complete. Live screen `src/screens/doctor/VisitDetailScreen.tsx` built. New modules: `src/api/records.ts`, `src/db/records.ts`. Schema: `status` column added to `visits` table; `visit_records` table added. Data flow: `LocalVisit.status` propagated through all visit functions; `upsertVisitsFromServer` updated; `adaptApiVisit` in D3 updated. D3 `onViewFullVisit` wired to navigate to `VisitDetail` for synced visits. Logout: `clearDoctorRecords` added. Sync worker: note records now synced via POST /sync (not deferred like scan records); `markRecordSynced` called on success. Step 5b contract gaps documented: `status` field in GET /patients/:id/visits response; PATCH /records/:id (note edit — not yet backend-implemented); DELETE /records/:id (note delete — not yet backend-implemented). Known D4 MEDIUM debt: note edits are local-only until PATCH /records/:id is implemented; soft-deleted notes may reappear after server refresh. Add Scan in D4 is stub (requires D7 rework for server visit IDs). View Scan is stub pending D8 build.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D4 (Visit Detail) — Step 5: Builder wire real data** | Mockup approved after critique fixes |
+| 1 | **D4 (Visit Detail) — Step 6: Security Agent** | Live screen built; security audit required before QA |
 | 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 | 3 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
@@ -104,7 +104,7 @@ _Carry these into every build/mockup session for these screens._
 | Screen | Status | Notes |
 |---|---|---|
 | D6 — New Visit | **DEVICE TESTING COMPLETE (2026-03-28, session 6). BUG-D6-DT5-1 fix verified. Zero bugs. Clear to merge to main. Security re-audit v3 (2026-04-11): CLEAR TO MERGE TO MAIN.** All CRITICAL/HIGH verified fixed. MEDIUM finding: debug syncLogger still active in production builds — must remove `src/sync/syncLogger.ts` and call sites before v1 launch. Items #49, #60 permanently deferred (simulation, v1 acceptable). Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-6.md`. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
-| D4 — Visit Detail | **Persona critique complete (2026-04-12). Score: 3.53/5. Verdict: Revise and re-evaluate. Step 4 (Builder fixes) next.** MUST FIX: consent gate incomplete (notes+OCR visible without consent — spec gap); "Submit Visit" → "Finish Visit". SHOULD FIX: patient name in meta card; finish button visually distinct from add buttons; note edit/delete on open visits. Report: `reviews/D4-persona-critique.md`. | Tier 3. Required before "View Full Visit" button in D3 can be wired. Build constraints: consent gate on chief_complaint (must be explicit — not implicit from D3); scan section non-blocking async render with stub to D8. Review: `reviews/D4-pm-review.md`. |
+| D4 — Visit Detail | **Live screen built (2026-04-19) — Step 5 + Step 5b complete. Next: Step 6 (Security Agent).** Live screen: `src/screens/doctor/VisitDetailScreen.tsx`. New: `src/api/records.ts`, `src/db/records.ts`. Navigated from D3 via `VisitDetail` route (synced visits only). Consent gate: chief_complaint + notes + scan OCR all hidden when !consentGranted. Note add: SQLite → enqueueOperation → POST /records (online). Finish Visit: PATCH /visits/:id (online only). Known MEDIUM debt: note edit local-only; soft-deleted notes may reappear after server refresh; Add Scan stub; View Scan stub. Build constraints: consent gate on chief_complaint (explicit — not implicit from D3); scan section non-blocking async render with stub to D8. Report: `reviews/D4-pm-review.md`, `reviews/D4-persona-critique.md`. | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
@@ -228,7 +228,7 @@ _Carry these into every build/mockup session for these screens._
 | ~~Patient name has no overflow guard at 22pt — long names wrap and push consent badge off-screen~~ | D3 | QA M-4 | **CLOSED 2026-02-24** — `numberOfLines={1}` + `ellipsizeMode="tail"` on patient name in live screen. |
 | ~~Empty state shows "Access Granted" badge — semantically misleading when there are no records to gate~~ | D3 | QA M-5 | **CLOSED 2026-02-24** — No consent badge rendered in empty-state variant. |
 | Server-side visit pagination not implemented — `GET /patients/:id/visits` returns all visits; client-side 20-per-page in use | D3 | Live build (QA H-4 follow-on) | Add `?page=&per_page=20` query params server-side. Required before high-volume patient records grow large in production. |
-| "View Full Visit" button disabled until D4 (Visit Detail) is built | D3 | Live build (QA M-1) | `onViewFullVisit` prop is a disabled stub with TODO comment. Wire to `navigation.navigate('VisitDetail', ...)` when D4 is built. |
+| ~~"View Full Visit" button disabled until D4 (Visit Detail) is built~~ | D3 | Live build (QA M-1) | **CLOSED 2026-04-19** — `onViewFullVisit` now navigates to `VisitDetail` for synced visits. Draft visits (`sync_status='draft'`) remain disabled (no server records to fetch). |
 | D9 consent request not yet wired — `handleRequestAccess` sets `consentRequestSent` state but does not navigate to D9 | D3 | Live build | `navigation.navigate('ConsentRequest', ...)` stubbed with TODO comment. Wire when D9 is built. |
 | Pull-to-refresh not implemented — reconnecting while D3 is open requires navigate-away-and-back for fresh server data | D3 | Live build | `useFocusEffect` handles focus re-fetches. Add `RefreshControl` on FlatList for in-screen refresh before D4. |
 | ~~D3 visit list does not show locally-created visits from visits_draft — new visit from D6 appears in D3 only after server sync~~ | D3/D6 | D6 live build | **CLOSED 0c4d204** — `getCachedVisits` now UNIONs `visits_draft`; `sync_status: 'synced' \| 'draft'` added to `LocalVisit`; cloud icon shown in VisitCard for draft rows. |
