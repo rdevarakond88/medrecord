@@ -37,6 +37,7 @@ import {
 import { clearDoctorScans, clearDoctorScanRecords } from '../db/scans';
 import { clearDoctorRecords } from '../db/records';
 import { clearDoctorSyncQueue } from '../sync/syncQueue';
+import { syncLog } from '../sync/syncLogger';
 
 export function useLogout(): () => Promise<void> {
   const db          = useSQLiteContext();
@@ -57,13 +58,29 @@ export function useLogout(): () => Promise<void> {
     // BUG-D3-DT4-1 fix: count both 'pending' AND 'failed' rows. Previously only
     // 'pending' was counted — if the sync worker exhausted max_attempts and moved the
     // row to 'failed', the M-6 dialog was skipped and the visit was silently deleted.
+    //
+    // BUG-D4-DT1-2 fix: belt-and-suspenders — also check sync_queue directly.
+    // If the visits_draft ↔ sync_queue mirror diverged (e.g. sync worker crashed
+    // mid-update), visits_draft count alone could miss unsynced entries.
     if (doctorId) {
       const pendingCount = await countUnsyncedDraftVisits(db, doctorId);
-      if (pendingCount > 0) {
+
+      // Sync_queue cross-check: pending/failed visit entries not yet uploaded.
+      const sqResult = await db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) AS count FROM sync_queue
+         WHERE entity_type = 'visit' AND status IN ('pending', 'failed') AND doctor_id = ?`,
+        [doctorId],
+      );
+      const sqCount = sqResult?.count ?? 0;
+
+      const totalUnsynced = Math.max(pendingCount, sqCount);
+      syncLog(`M-6 check: visits_draft=${pendingCount} sync_queue=${sqCount} total=${totalUnsynced}`);
+
+      if (totalUnsynced > 0) {
         const confirmed = await new Promise<boolean>((resolve) => {
           Alert.alert(
             'Unsynced visits',
-            `${pendingCount} visit${pendingCount > 1 ? 's have' : ' has'} not been ` +
+            `${totalUnsynced} visit${totalUnsynced > 1 ? 's have' : ' has'} not been ` +
             `uploaded to the server and will be lost if you log out now. ` +
             `Connect to the internet to sync before logging out.`,
             [

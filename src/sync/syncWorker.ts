@@ -189,6 +189,16 @@ async function applyResult(
       `UPDATE patients SET server_id = ?, synced_at = ? WHERE local_id = ?`,
       [result.server_id, now, result.local_id],
     );
+    // Cascade: update visits_draft for visits created before this patient had a
+    // server ID. fixOrphanVisitPayloads() will pick these up on the next sync
+    // trigger and fix their sync_queue payloads (BUG-D4-DT1-1).
+    if (result.server_id) {
+      await db.runAsync(
+        `UPDATE visits_draft SET patient_server_id = ?, updated_at = ?
+         WHERE patient_id = ? AND patient_server_id IS NULL`,
+        [result.server_id, now, result.local_id],
+      );
+    }
   } else if (entityType === 'record' && result.server_id) {
     // Update visit_records: replace local UUID with server-assigned ID.
     // markRecordSynced is idempotent — safe to call multiple times.
@@ -260,6 +270,100 @@ async function flushAuditEvents(
   }
 }
 
+// ─── Orphan visit payload fix ──────────────────────────────────────────────
+
+/**
+ * Recover visit sync_queue entries that were enqueued with patient_id: null.
+ *
+ * When createPatient() in D5 fails at form submission (timeout, 5xx, offline),
+ * D6 enqueues the new visit with patient_id: null because the patient's server
+ * ID is not yet known. The server rejects such entries — after max_attempts the
+ * entry is dead-lettered. This function runs once per sync invocation and looks
+ * for any such entries whose patient has since synced to the server.
+ *
+ * When a patient syncs, applyResult() cascades visits_draft.patient_server_id.
+ * This function uses that cascade (with a patients table fallback) to resolve
+ * the correct patient_id, patches the payload, and resets the entry to pending
+ * with attempts=0 so the drain loop can retry it (BUG-D4-DT1-1 fix).
+ */
+async function fixOrphanVisitPayloads(
+  db: SQLite.SQLiteDatabase,
+  doctorId: string,
+): Promise<void> {
+  const entries = await db.getAllAsync<{
+    id:              string;
+    entity_local_id: string;
+    payload:         string;
+  }>(
+    `SELECT id, entity_local_id, payload FROM sync_queue
+     WHERE entity_type = 'visit'
+       AND status IN ('pending', 'failed')
+       AND doctor_id = ?`,
+    [doctorId],
+  );
+
+  for (const entry of entries) {
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(entry.payload) as Record<string, unknown>;
+    } catch {
+      continue; // malformed payload — leave as-is
+    }
+
+    if (payload.patient_id !== null && payload.patient_id !== undefined) continue;
+
+    // Look up the patient's server ID via visits_draft → patients.
+    const draftVisit = await db.getFirstAsync<{
+      patient_id:        string;
+      patient_server_id: string | null;
+    }>(
+      `SELECT patient_id, patient_server_id FROM visits_draft WHERE local_id = ?`,
+      [entry.entity_local_id],
+    );
+
+    if (!draftVisit) continue;
+
+    // Prefer the cascade-updated visits_draft column; fall back to patients table.
+    let serverPatientId: string | null = draftVisit.patient_server_id;
+    if (!serverPatientId) {
+      const patient = await db.getFirstAsync<{ server_id: string | null }>(
+        `SELECT server_id FROM patients WHERE local_id = ?`,
+        [draftVisit.patient_id],
+      );
+      serverPatientId = patient?.server_id ?? null;
+    }
+
+    if (!serverPatientId) continue; // patient still not synced — nothing to fix yet
+
+    const now = new Date().toISOString();
+    payload.patient_id = serverPatientId;
+
+    // Reset the entry: correct patient_id, fresh attempt budget.
+    await db.runAsync(
+      `UPDATE sync_queue
+       SET payload         = ?,
+           status          = 'pending',
+           attempts        = 0,
+           error_message   = NULL,
+           last_attempt_at = ?
+       WHERE id = ?`,
+      [JSON.stringify(payload), now, entry.id],
+    );
+
+    // Keep visits_draft consistent — update patient_server_id and sync_status.
+    await db.runAsync(
+      `UPDATE visits_draft
+       SET patient_server_id = ?,
+           sync_status       = CASE WHEN sync_status = 'failed' THEN 'pending' ELSE sync_status END,
+           updated_at        = ?
+       WHERE local_id = ? AND patient_server_id IS NULL`,
+      [serverPatientId, now, entry.entity_local_id],
+    );
+
+    syncLog(`pre-drain fix: visit ${entry.entity_local_id} — patient_id resolved to ${serverPatientId}, reset to pending`);
+  }
+}
+
 // ─── Main drain loop ───────────────────────────────────────────────────────
 
 /**
@@ -314,6 +418,11 @@ export async function runSyncWorker(
         [doctorId],
       );
     }
+
+    // ── Pre-drain: recover visits with null patient_id ───────────────────
+    // Fixes visit entries dead-lettered because createPatient() failed in D5.
+    // Safe to call every run — no-op when there are no orphan entries.
+    await fixOrphanVisitPayloads(db, doctorId);
 
     // ── Batch drain loop ─────────────────────────────────────────────────
     while (true) {
