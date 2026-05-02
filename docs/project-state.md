@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Device testing BLOCKED (2026-05-02). Backend database down — Render.com PostgreSQL instance `medrecord-db` unreachable (Prisma P1001: can't reach `dpg-d6sujg6a2pns738fcuhg-a:5432`). Manual redeploy attempted and failed. No test cases run. Blocker: restore database before retrying.
+**Phase:** D4 (Visit Detail) — Device testing BLOCKED (2026-05-02). Backend restored (new DB). Two bugs found during data setup — draft visits from D5→D6 flow never sync (BUG-D4-DT1-1 HIGH), no M-6 logout warning with unsaved drafts (BUG-D4-DT1-2 MEDIUM). Zero D4 test cases run. Builder session required.
 **Last Updated:** 2026-05-02
 
 ---
@@ -24,12 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — (2026-05-02) — D4 device testing BLOCKED. Health check timed out (HTTP 000). Manual redeploy attempted; failed with Prisma P1001 — PostgreSQL database `medrecord-db` unreachable at `dpg-d6sujg6a2pns738fcuhg-a:5432`. Database may be expired/deleted (Render free tier 90-day limit). Zero test cases run. No bugs found or logged. Blocker: restore database on Render dashboard before retrying.
+**Last Session:** Device Tester — (2026-05-02) — D4 device testing BLOCKED. Backend restored (new PostgreSQL DB on Render). During data setup (D5→D6 visit creation), two bugs found: BUG-D4-DT1-1 (HIGH) — draft visits never sync, sync_queue shows zero pending rows, "View Full Visit" never accessible; BUG-D4-DT1-2 (MEDIUM) — no M-6 logout warning with unsaved drafts. Zero D4 test cases run. Session doc: `reviews/D4-device-test-session.md`. Builder session required before retry.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D4 (Visit Detail) — Step 9: Device Testing** | Retry — confirm `curl https://medrecord-api.onrender.com/v1/health` returns 200 first. Backend was down 2026-04-19. |
+| 1 | **D4 (Visit Detail) — Builder session** | Fix BUG-D4-DT1-1 (draft visits never sync from D5→D6 flow) + BUG-D4-DT1-2 (no M-6 warning on logout with unsaved drafts). Then retry device testing. |
 | 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 | 3 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
 
