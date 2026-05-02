@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Device testing BLOCKED (2026-04-19). Backend health check timed out (Render.com cold-start / down). No test cases run. Retry when backend is confirmed up.
-**Last Updated:** 2026-04-19
+**Phase:** D4 (Visit Detail) — Device testing BLOCKED (2026-05-02). Backend database down — Render.com PostgreSQL instance `medrecord-db` unreachable (Prisma P1001: can't reach `dpg-d6sujg6a2pns738fcuhg-a:5432`). Manual redeploy attempted and failed. No test cases run. Blocker: restore database before retrying.
+**Last Updated:** 2026-05-02
 
 ---
 
@@ -12,19 +12,19 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 |---|---|
 | API base URL (live) | `https://medrecord-api.onrender.com/v1` |
 | API base URL (frontend hardcoded) | `https://medrecord-api.onrender.com/v1` ✅ — updated 2026-03-18 |
-| Deployment status | **DEPLOYED** — Render.com free tier, deployed 2026-03-18 |
+| Deployment status | **DOWN** — Render.com PostgreSQL database unreachable as of 2026-05-02 |
 | Hosting provider | Render.com — service: `medrecord-api`, DB: `medrecord-db` |
-| Health check | `curl https://medrecord-api.onrender.com/v1/health` → 200 ✅ |
+| Health check | `curl https://medrecord-api.onrender.com/v1/health` → HTTP 000 (timeout) ❌ |
 | Test doctor name | Dr. Test Doctor |
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
-| Blocker for device testing | ~~`apiClient.ts` dead domain~~ RESOLVED. ~~BUG-D1-DT-1 `auth.ts:20` dead domain~~ **RESOLVED 2026-03-18** |
-| Next action | D1 device testing COMPLETE — clear to merge to main |
+| Blocker for device testing | **ACTIVE (2026-05-02):** Prisma P1001 — can't reach database server at `dpg-d6sujg6a2pns738fcuhg-a:5432`. Manual redeploy failed with same error. Check `medrecord-db` status on Render dashboard — may be expired/deleted (free tier 90-day limit). If deleted: create new PostgreSQL instance, update `DATABASE_URL` env var on `medrecord-api`, re-run migrations. |
+| Next action | Restore `medrecord-db` on Render dashboard, confirm health check returns 200, then retry D4 device testing |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — (2026-04-19) — D4 device testing BLOCKED. Backend health check (`curl https://medrecord-api.onrender.com/v1/health`) timed out after 60s (HTTP 000, exit 28). Render.com free tier likely hibernated or down. Zero test cases run. No bugs found or logged. Retry: confirm backend health check returns 200 before starting any test cases.
+**Last Session:** Device Tester — (2026-05-02) — D4 device testing BLOCKED. Health check timed out (HTTP 000). Manual redeploy attempted; failed with Prisma P1001 — PostgreSQL database `medrecord-db` unreachable at `dpg-d6sujg6a2pns738fcuhg-a:5432`. Database may be expired/deleted (Render free tier 90-day limit). Zero test cases run. No bugs found or logged. Blocker: restore database on Render dashboard before retrying.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
