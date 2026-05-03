@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Device testing BLOCKED. BUG-D4-DT1-1 + BUG-D4-DT1-2 Builder fixes NOT VERIFIED in session 2 (2026-05-02). Sync_queue still shows 0 pending rows; visit remains Draft after re-login; M-6 warning still absent. Zero D4 test cases run across 2 sessions. Next: Builder Agent — fix BUG-D4-DT2-1 + BUG-D4-DT2-2.
-**Last Updated:** 2026-05-02
+**Phase:** D4 (Visit Detail) — Device testing BLOCKED. BUG-D4-DT2-1 + BUG-D4-DT2-2 fixed by Builder (2026-05-03). Zero D4 test cases run across 2 sessions. Next: Restore backend DB on Render, then D4 device test session 3.
+**Last Updated:** 2026-05-03
 
 ---
 
@@ -24,14 +24,14 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — session 2 (2026-05-02) — BLOCKED. BUG-D4-DT1-1 fix NOT VERIFIED: sync_queue 0 pending rows, visit stays Draft. BUG-D4-DT1-2 fix NOT VERIFIED: M-6 warning still absent. Logged as BUG-D4-DT2-1 (HIGH) + BUG-D4-DT2-2 (MEDIUM). Session doc: `reviews/D4-device-test-session-2.md`.
+**Last Session:** Builder — BUG-D4-DT2-1 + BUG-D4-DT2-2 fixes (2026-05-03). Three-part fix: (1) `fixOrphanVisitPayloads` moved inside drain loop in syncWorker.ts so patient sync in batch N patches orphan visit before batch N+1; (2) D3 `fetchData` now re-reads patient from SQLite to compute `effectiveServerId` instead of relying on frozen nav params; (3) backend GET /patients/:id/visits now returns `status` field. Plus: TypeScript guard errors in `applyResult` (syncWorker.ts) fixed. Session doc: `reviews/D4-device-test-session-2.md`.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder Agent — fix BUG-D4-DT2-1 + BUG-D4-DT2-2** | Sync_queue empty despite visits_draft having Draft visit; M-6 warning missing. Must resolve before D4 device test session 3. |
-| 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
-| 3 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
+| 1 | **Restore backend DB on Render dashboard** | `medrecord-db` expired (free tier 90-day limit); must create new PostgreSQL instance, update DATABASE_URL, re-run migrations. Required before any device testing. |
+| 2 | **D4 device test session 3** | BUG-D4-DT2-1 + BUG-D4-DT2-2 fixed — ready to run D4 test cases once backend is up. |
+| 3 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 
 ---
 
@@ -104,7 +104,7 @@ _Carry these into every build/mockup session for these screens._
 | Screen | Status | Notes |
 |---|---|---|
 | D6 — New Visit | **DEVICE TESTING COMPLETE (2026-03-28, session 6). BUG-D6-DT5-1 fix verified. Zero bugs. Clear to merge to main. Security re-audit v3 (2026-04-11): CLEAR TO MERGE TO MAIN.** All CRITICAL/HIGH verified fixed. MEDIUM finding: debug syncLogger still active in production builds — must remove `src/sync/syncLogger.ts` and call sites before v1 launch. Items #49, #60 permanently deferred (simulation, v1 acceptable). Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-6.md`. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
-| D4 — Visit Detail | **Builder QA fixes complete (2026-04-19). C1+H1+H2+H3+H4+M1 closed.** MEDIUM debt: M2, M3, M4 — fix before v1 launch. QA test plan: `reviews/D4-qa-test-plan.md`. Security audit: all closed (2026-04-19). Live screen: `src/screens/doctor/VisitDetailScreen.tsx`. **Device test session 1 (2026-05-02): BLOCKED — zero D4 tests run. BUG-D4-DT1-1 + BUG-D4-DT1-2 found; Builder fixed (2026-05-02). Device test session 2 (2026-05-02): BLOCKED — zero D4 tests run. BUG-D4-DT1-1 fix NOT VERIFIED: sync_queue shows 0 pending rows; visit remains Draft after re-login; "View Full Visit" absent. BUG-D4-DT1-2 fix NOT VERIFIED: M-6 warning still not shown. Logged as BUG-D4-DT2-1 (HIGH) + BUG-D4-DT2-2 (MEDIUM). Builder session 3 required. Session docs: `reviews/D4-device-test-session.md`, `reviews/D4-device-test-session-2.md`.** | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
+| D4 — Visit Detail | **Builder QA fixes complete (2026-04-19). C1+H1+H2+H3+H4+M1 closed.** MEDIUM debt: M2, M3, M4 — fix before v1 launch. QA test plan: `reviews/D4-qa-test-plan.md`. Security audit: all closed (2026-04-19). Live screen: `src/screens/doctor/VisitDetailScreen.tsx`. **Device test session 1 (2026-05-02): BLOCKED — zero D4 tests run. BUG-D4-DT1-1 + BUG-D4-DT1-2 found; Builder fixed (2026-05-02). Device test session 2 (2026-05-02): BLOCKED — zero D4 tests run. BUG-D4-DT1-1 fix NOT VERIFIED: sync_queue shows 0 pending rows; visit remains Draft after re-login; "View Full Visit" absent. BUG-D4-DT1-2 fix NOT VERIFIED: M-6 warning still not shown. Logged as BUG-D4-DT2-1 (HIGH) + BUG-D4-DT2-2 (MEDIUM). Builder session 3 (2026-05-03): BUG-D4-DT2-1 + BUG-D4-DT2-2 FIXED — fixOrphanVisitPayloads moved inside drain loop; D3 fetchData uses effectiveServerId from fresh SQLite read; backend visits.ts adds status field. Pending D4 device test session 3. Session docs: `reviews/D4-device-test-session.md`, `reviews/D4-device-test-session-2.md`.** | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |

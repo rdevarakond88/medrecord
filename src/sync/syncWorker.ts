@@ -171,28 +171,33 @@ async function applyResult(
 ): Promise<void> {
   const now = new Date().toISOString();
 
-  // 1. Write local_id → server_id mapping (idempotent via OR REPLACE)
-  await db.runAsync(
-    `INSERT OR REPLACE INTO id_mapping (local_id, server_id, entity_type, mapped_at)
-     VALUES (?, ?, ?, ?)`,
-    [result.local_id, result.server_id, entityType, now],
-  );
+  // 1. Write local_id → server_id mapping (idempotent via OR REPLACE).
+  // Guard: server_id is absent on operation-level error results; skip mapping.
+  if (result.server_id) {
+    await db.runAsync(
+      `INSERT OR REPLACE INTO id_mapping (local_id, server_id, entity_type, mapped_at)
+       VALUES (?, ?, ?, ?)`,
+      [result.local_id, result.server_id, entityType, now],
+    );
+  }
 
   // 2. Entity-specific post-sync updates
   if (entityType === 'visit') {
     // Update visits_draft: set sync_status='synced' and record server_id.
     // markVisitSynced is idempotent — safe to call even if previously synced.
-    await markVisitSynced(db, result.local_id, result.server_id);
+    if (result.server_id) {
+      await markVisitSynced(db, result.local_id, result.server_id);
+    }
   } else if (entityType === 'patient') {
     // Update patients cache: record server-assigned ID and sync timestamp.
-    await db.runAsync(
-      `UPDATE patients SET server_id = ?, synced_at = ? WHERE local_id = ?`,
-      [result.server_id, now, result.local_id],
-    );
     // Cascade: update visits_draft for visits created before this patient had a
     // server ID. fixOrphanVisitPayloads() will pick these up on the next sync
     // trigger and fix their sync_queue payloads (BUG-D4-DT1-1).
     if (result.server_id) {
+      await db.runAsync(
+        `UPDATE patients SET server_id = ?, synced_at = ? WHERE local_id = ?`,
+        [result.server_id, now, result.local_id],
+      );
       await db.runAsync(
         `UPDATE visits_draft SET patient_server_id = ?, updated_at = ?
          WHERE patient_id = ? AND patient_server_id IS NULL`,
@@ -419,16 +424,18 @@ export async function runSyncWorker(
       );
     }
 
-    // ── Pre-drain: recover visits with null patient_id ───────────────────
-    // Fixes visit entries dead-lettered because createPatient() failed in D5.
-    // Safe to call every run — no-op when there are no orphan entries.
-    await fixOrphanVisitPayloads(db, doctorId);
-
     // ── Batch drain loop ─────────────────────────────────────────────────
     while (true) {
       // Fetch the next batch of pending entries in strict queued_at order.
       // Re-read token in case it was refreshed during a previous batch.
       currentToken = useAuthStore.getState().token ?? currentToken;
+
+      // Fix orphan visit payloads at the start of each iteration (BUG-D4-DT2-1 fix).
+      // Previously called once before the loop — this missed the window where the
+      // patient syncs in batch N and its orphan visit (patient_id:null) needs to be
+      // patched before batch N+1 in the same sync run. Moving inside the loop ensures
+      // the visit is patched and retried within the same run, not the next trigger.
+      await fixOrphanVisitPayloads(db, doctorId);
 
       // SW-H-1: scope drain reads to the authenticated doctor — defense-in-depth
       // against stale entries from a previous session surviving logout.
