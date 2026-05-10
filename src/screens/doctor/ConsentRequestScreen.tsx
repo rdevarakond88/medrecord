@@ -27,9 +27,11 @@
  *   DT1-4  NetInfo check in handleConfirm → immediate error on no connectivity
  *
  * Device-testing fixes (2026-05-10 Builder session 2):
- *   DT2-1  gestureEnabled: false in otp_input + failure states — NativeStack does not
- *          honour e.preventDefault() for the iOS swipe gesture; disabling the gesture
- *          is the only reliable intercept. Re-enabled on any other state transition.
+ *   DT2-1  gestureEnabled: false set statically in App.tsx Stack.Screen options —
+ *          NativeStack only honours this at push time; dynamic setOptions() post-push
+ *          and e.preventDefault() in beforeRemove are both ineffective on iOS (confirmed
+ *          in device test sessions 2 and 3). Static option blocks swipe for all states.
+ *          The beforeRemove listener still handles programmatic goBack() from States 3+6.
  */
 
 import React, {
@@ -211,14 +213,6 @@ export default function ConsentRequestScreen({ route, navigation }: Props) {
     });
     return unsubscribe;
   }, [navigation]);
-
-  // DT2-1: NativeStack does not honour e.preventDefault() for the iOS swipe gesture.
-  // Disabling the gesture entirely is the only reliable way to prevent swipe-back from
-  // otp_input/failure from bypassing the beforeRemove handler and popping to D3.
-  useEffect(() => {
-    const gestureEnabled = flowState !== 'otp_input' && flowState !== 'failure';
-    navigation.setOptions({ gestureEnabled });
-  }, [flowState, navigation]);
 
   // ─────────────────────────────────────────────────────────────
   // Initial consent request — fires on mount

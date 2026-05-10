@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — Device test session 3 complete (2026-05-10). BUG-D9-DT3-1 found: gestureEnabled: false via dynamic setOptions also ineffective on iOS NativeStack — swipe-back from failure state (State 6) still dismisses screen. Both known approaches (beforeRemove + gestureEnabled) exhausted. Builder session 3 required for alternative architecture fix. BUG-D9-DT1-4 still untested (hotspot constraint).
+**Phase:** D9 (Consent Request Flow) — Builder session 3 complete (2026-05-10). BUG-D9-DT3-1 FIXED: gestureEnabled: false set statically in App.tsx Stack.Screen options (dynamic setOptions post-push is ineffective on iOS NativeStack — only the static option at push time is honoured). BUG-D9-DT1-4 still untested (hotspot constraint — must verify on WiFi). Device test session 4 required to verify both fixes.
 **Last Updated:** 2026-05-10
 
 ---
@@ -19,18 +19,17 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Consent endpoints | `POST /consent/request` → HTTP 401 ✅ (2026-05-10). `POST /consent/verify` → HTTP 401 ✅ (2026-05-10). Blocker cleared. |
-| Next action | D9 — Builder session 3 (fix BUG-D9-DT3-1 — alternative swipe-block architecture). |
+| Next action | D9 — Device test session 4 (verify BUG-D9-DT3-1 fix + BUG-D9-DT1-4 on WiFi). |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — D9 Device test session 3 complete (2026-05-10). BUG-D9-DT3-1 found: `gestureEnabled: false` via `navigation.setOptions()` in a useEffect does NOT block iOS swipe on NativeStack — same console error and dismissal behaviour as the beforeRemove approach. Both approaches exhausted. TC-FIX-4 (BUG-D9-DT1-4) skipped again — hotspot constraint unchanged.
+**Last Session:** Builder — D9 Builder session 3 complete (2026-05-10). BUG-D9-DT3-1 FIXED: `gestureEnabled: false` set statically in App.tsx `Stack.Screen options` for ConsentRequest (dynamic `setOptions()` post-push is ineffective on iOS NativeStack — option is only processed at screen-push time). Dead dynamic useEffect removed from ConsentRequestScreen.tsx. BUG-D9-DT1-4 fix remains in place (NetInfo check in handleConfirm — still unverified on device due to hotspot constraint).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — Builder session 3 | Fix BUG-D9-DT3-1: find alternative architecture for blocking iOS swipe from failure state. Dynamic setOptions and beforeRemove both confirmed ineffective on NativeStack. Options: static gestureEnabled:false in App.tsx + programmatic back; modal overlay for failure state; navigation.replace on failure entry. Also re-verify BUG-D9-DT1-4 fix still in place. |
-| 2 | D9 — Device test session 4 | Verify BUG-D9-DT3-1 fix + BUG-D9-DT1-4 (requires WiFi — cannot test while iPhone is hotspot source). |
+| 1 | D9 — Device test session 4 | Verify BUG-D9-DT3-1 fix (static gestureEnabled:false in App.tsx) + BUG-D9-DT1-4 (offline verify error — requires WiFi, cannot test while iPhone is hotspot source). |
 
 ---
 
@@ -108,7 +107,7 @@ _Carry these into every build/mockup session for these screens._
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
-| D9 — Consent Request Flow | **Security Audit complete (2026-05-09). QA complete. Device test session 1 (2026-05-10): 4 bugs. Builder session 1 (2026-05-10): DT1-1 through DT1-4 fixed. Device test session 2 (2026-05-10): BUG-D9-DT1-1 ✅ BUG-D9-DT1-2 ✅ BUG-D9-DT1-3 ❌ (BUG-D9-DT2-1 logged). Builder session 2 (2026-05-10): BUG-D9-DT2-1 FIXED — `gestureEnabled: false` useEffect added for `otp_input` + `failure` states. Device test session 3 required: re-verify DT2-1 + DT1-4 (offline verify; untested due to hotspot constraint). Sessions: `reviews/D9-device-test-session-1.md`, `reviews/D9-device-test-session-2.md`. Live screen: `src/screens/doctor/ConsentRequestScreen.tsx`.** | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
+| D9 — Consent Request Flow | **Security Audit complete (2026-05-09). QA complete. Device test session 1 (2026-05-10): 4 bugs. Builder session 1 (2026-05-10): DT1-1 through DT1-4 fixed. Device test session 2 (2026-05-10): BUG-D9-DT1-1 ✅ BUG-D9-DT1-2 ✅ BUG-D9-DT1-3 ❌ (BUG-D9-DT2-1 logged). Builder session 2 (2026-05-10): BUG-D9-DT2-1 FIXED (gestureEnabled: false useEffect — confirmed ineffective in DT session 3). Device test session 3 (2026-05-10): BUG-D9-DT3-1 — dynamic setOptions also ineffective; both approaches exhausted. Builder session 3 (2026-05-10): BUG-D9-DT3-1 FIXED — gestureEnabled: false set statically in App.tsx Stack.Screen options (only approach iOS NativeStack honours). BUG-D9-DT1-4 still unverified (hotspot constraint). Device test session 4 required. Sessions: `reviews/D9-device-test-session-1.md` through `reviews/D9-device-test-session-3.md`. Live screen: `src/screens/doctor/ConsentRequestScreen.tsx`.** | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
 
 ---

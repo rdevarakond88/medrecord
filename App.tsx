@@ -188,7 +188,10 @@ function App() {
             <Stack.Screen name="DocumentScanner"   component={DocumentScannerScreen} />
             <Stack.Screen name="NewPatientForm"    component={NewPatientFormScreen} />
             <Stack.Screen name="VisitDetail"       component={VisitDetailScreen} />
-            <Stack.Screen name="ConsentRequest"    component={ConsentRequestScreen} />
+            {/* gestureEnabled:false set statically so iOS NativeStack honours it at push time.
+                Dynamic setOptions() does not propagate to the native layer after push. */}
+            <Stack.Screen name="ConsentRequest"    component={ConsentRequestScreen}
+                          options={{ gestureEnabled: false }} />
           </Stack.Navigator>
         </NavigationContainer>
       </QueryClientProvider>
