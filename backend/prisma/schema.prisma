@@ -191,6 +191,22 @@ model OtpRequest {
   @@map("otp_request")
 }
 
+// Consent OTP flow — scoped to (doctor_id, patient_id) pair
+model ConsentOtpRequest {
+  id        String    @id @default(uuid())
+  token     String    @unique // opaque otp_token returned to client
+  doctorId  String    @map("doctor_id")
+  patientId String    @map("patient_id")
+  otpHash   String    @map("otp_hash") // bcrypt hash — never store plaintext
+  expiresAt DateTime  @map("expires_at")
+  attempts  Int       @default(0)
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([doctorId, patientId])
+  @@map("consent_otp_request")
+}
+
 model RefreshToken {
   id        String    @id @default(uuid())
   doctorId  String    @map("doctor_id")
