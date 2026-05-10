@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — Builder Step 4 complete (2026-05-09). All MUST FIX + SHOULD FIX persona critique items applied to mockup. Next: Security Agent (Step 6).
+**Phase:** D9 (Consent Request Flow) — Security Audit complete (2026-05-09). BLOCKED: 1 CRITICAL finding (C-1: POST /consent API contract consent bypass). Builder must fix api-contracts.md + decide OTP expiry before wiring. See `reviews/D9-security-audit.md`.
 **Last Updated:** 2026-05-09
 
 ---
@@ -19,17 +19,19 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Blocker for device testing | None |
-| Next action | D9 Security Agent (Step 6) — audit revised mockup |
+| Next action | D9 — Builder fix C-1 (api-contracts.md consent bypass) + PM OTP expiry decision, then QA Agent (Step 7) |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder — D9 Step 4 (2026-05-09). All 3 MUST FIX + 3 SHOULD FIX persona critique items applied to `mockups/D9ConsentRequestScreen.tsx`. Changes: Hindi subtitles on patient OTP screen, tap-feedback on disabled Confirm button, one-time framing text + "Wrong number?" link in Waiting state, new doctor-side holding state (2b: D9ConsentDoctorWaiting, 8 states total), success footnote revised to remove patient-app implication. Consent caching confirmed in design comments. Prior: Persona Critic — D9 (2026-05-09) score 3.4/5. Critique: `reviews/D9-persona-critique.md`.
+**Last Session:** Security Agent — D9 Step 6 (2026-05-09). Audit: `reviews/D9-security-audit.md`. BLOCKED — 1 CRITICAL (C-1: existing POST /consent in api-contracts.md allows doctor to bypass OTP and self-grant consent), 3 HIGH (H-1: missing POST /consent/request + POST /consent/verify contracts, H-2: consent OTP expiry unspecified, H-3: no rate-limit exhaustion UI state). Prior: Builder Step 4 (2026-05-09). All 3 MUST FIX + 3 SHOULD FIX persona critique items applied to mockup. Persona Critic score 3.4/5. Critique: `reviews/D9-persona-critique.md`.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — Security Agent (Step 6) | Audit revised mockup before live build. |
+| 1 | D9 — Builder (fix C-1 + H-1) | Update api-contracts.md: replace POST /consent with POST /consent/request + POST /consent/verify. Fixes consent bypass + missing contracts. |
+| 2 | D9 — PM decision | Decide consent OTP expiry (recommend 10 min); document in security-spec. Update mockup Failure state text. |
+| 3 | D9 — QA Agent (Step 7) | After C-1 + H-1 fixed and OTP expiry decided. |
 
 ---
 
@@ -107,7 +109,7 @@ _Carry these into every build/mockup session for these screens._
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
-| D9 — Consent Request Flow | **PM pre-flight complete (2026-05-09). Mockup built + revised (2026-05-09) — `mockups/D9ConsentRequestScreen.tsx`. 8 states: requesting, waiting (30s resend), doctor_waiting (new — doctor holding state post-handoff), otp_input (patient-facing), verifying, success, failure, patient_not_available. Sub-flow A (push) deferred to v2. Two API contract gaps (POST /consent/request + POST /consent/verify) must be added before wiring step. Persona Critique complete (2026-05-09) — score 3.4/5, verdict: Revise and re-evaluate. Critique: `reviews/D9-persona-critique.md`. Builder Step 4 complete (2026-05-09) — all MUST FIX + SHOULD FIX applied. Next: Security Agent (Step 6).** | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
+| D9 — Consent Request Flow | **Security Audit complete (2026-05-09) — BLOCKED. Audit: `reviews/D9-security-audit.md`. C-1: POST /consent in api-contracts.md allows doctor to self-grant consent without OTP (must replace with POST /consent/request + POST /consent/verify). H-2: consent OTP expiry unspecified (decide before wiring). H-3: no rate-limit exhaustion UI state. Mockup revised (Builder Step 4, 2026-05-09) — all MUST FIX + SHOULD FIX persona items applied. 8 states. Sub-flow A (push) deferred to v2. Persona Critique: `reviews/D9-persona-critique.md`. Next: Builder fixes api-contracts.md, PM decides OTP expiry, then QA Agent.** | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
 
 ---
