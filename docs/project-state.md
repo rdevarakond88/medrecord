@@ -24,16 +24,17 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** PM Agent — Moment 2 (D9 post-flow) + Moment 3 (pre-launch gate) complete (2026-05-10). D9 Overall: Strong. All 8 core screens complete. Pre-launch verdict: Yes with conditions. Four conditions before pilot: (1) EAS build + cert pinning, (2) patient mobile edit (D3 stub), (3) D6 syncLogger removal, (4) D5-M-1 UNIQUE constraint fix. Review: `reviews/D9-pm-review-v3.md`.
+**Last Session:** Builder Agent — D3 patient mobile edit complete (2026-05-10). Edit button in D3 now opens a validated bottom-sheet modal. Saves to SQLite + enqueues 'update' sync operation. Backend gap flagged: POST /sync must handle patient 'update' before corrections reach server. Commit: a6f35d6.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder: Patient mobile edit** | D3 edit button is a stub. Needed before D9 SMS delivery can be corrected in field. Minimum: modal with validated mobile field, SQLite save + sync queue. |
+| ~~1~~ | ~~**Builder: Patient mobile edit**~~ | ~~DONE 2026-05-10 — commit a6f35d6~~ |
 | 2 | **Builder: D6 syncLogger removal** | `src/sync/syncLogger.ts` + call sites in `NewVisitScreen.tsx` lines 64, 342, 344, 368, 372. Must remove before EAS production build. |
 | 3 | **Builder: D5-M-1 UNIQUE constraint fix** | `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)` with schema migration. Required for multi-doctor clinics. |
-| 4 | **EAS build + cert pinning smoke test** | First EAS production binary. Validate cert pinning works. Run core flow smoke test. Highest field risk. |
-| 5 | **Device test: EAS build smoke test** | Confirm cert pinning, login → D9 consent flow in production binary. |
+| 4 | **Backend: patient update sync** | POST /sync does not yet handle patient 'update' operations. Required before D3 mobile corrections propagate server-side. Flagged by D3 mobile-edit build (2026-05-10). |
+| 5 | **EAS build + cert pinning smoke test** | First EAS production binary. Validate cert pinning works. Run core flow smoke test. Highest field risk. |
+| 6 | **Device test: EAS build smoke test** | Confirm cert pinning, login → D9 consent flow in production binary. |
 
 ---
 
