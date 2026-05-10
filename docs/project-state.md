@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Merged to main via PR #3 (2026-05-10). Next: D9 (Consent Request Flow).
-**Last Updated:** 2026-05-10
+**Phase:** D9 (Consent Request Flow) — PM pre-flight complete (2026-05-09). Next: Builder Agent — Step 2 (mockup).
+**Last Updated:** 2026-05-09
 
 ---
 
@@ -19,17 +19,17 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Blocker for device testing | None |
-| Next action | D4 device test session 3 |
+| Next action | D9 Builder mockup (Step 2) |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** PM — D4 merge to main via PR #3 (2026-05-10). Merge commit: 5fa8359. All D4 work (VisitDetailScreen, visit_records table, records API/DB layer, sync worker record support) now on main.
+**Last Session:** PM — D9 Consent Request Flow pre-flight (2026-05-09). Review: `reviews/D9-pm-review.md`. PROCEED with changes: Sub-flow B (SMS OTP) only in v1; two API contract gaps identified (POST /consent/request + POST /consent/verify); OTP-entry state must be designed for low-literacy patient hand-off. Prior session: D4 merge to main via PR #3 (2026-05-10), commit 5fa8359.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 (Consent Request) — PM pre-flight (Step 1) | Unlocks multi-doctor use cases; D3 `handleRequestAccess` has TODO stub pointing here |
+| 1 | D9 — Builder Agent (Step 2: mockup) | PM pre-flight done; build Sub-flow B mockup (SMS OTP states: sending, waiting+resend, OTP input, success, failure, fallback exit). Add missing API contracts before wiring. |
 
 ---
 
@@ -107,7 +107,7 @@ _Carry these into every build/mockup session for these screens._
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
-| D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
+| D9 — Consent Request Flow | **PM pre-flight complete (2026-05-09). PROCEED with changes. Sub-flow A (push notification) deferred to v2 (requires Patient app). Sub-flow B (SMS OTP) is v1 primary flow. Two API contract gaps must be added before wiring: `POST /consent/request` + `POST /consent/verify`. OTP-entry state must be designed for low-literacy patient hand-off. Review: `reviews/D9-pm-review.md`. Next: Builder mockup (Step 2).** | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
 
 ---
