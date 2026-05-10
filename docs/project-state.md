@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Security re-audit v2 complete (2026-05-09). CLEAR TO MERGE TO MAIN.
-**Last Updated:** 2026-05-09
+**Phase:** POST-D9. All 8 core doctor-facing screens complete and device-tested (D1, D2, D3, D4, D5, D6, D7, D9). PM Agent Moment 2 + Moment 3 complete (2026-05-10). D9 PR created and merged to main. Pre-launch conditions identified: (1) EAS build + cert pinning validation, (2) patient mobile edit (D3 stub → working form), (3) remove syncLogger, (4) D5-M-1 UNIQUE constraint fix. Next: Builder sessions for pre-launch conditions, then EAS build smoke test.
+**Last Updated:** 2026-05-10
 
 ---
 
@@ -12,25 +12,28 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 |---|---|
 | API base URL (live) | `https://medrecord-api.onrender.com/v1` |
 | API base URL (frontend hardcoded) | `https://medrecord-api.onrender.com/v1` ✅ — updated 2026-03-18 |
-| Deployment status | **UP** — HTTP 200 confirmed 2026-05-03. Render cold-starts on first request (~20-30s); use 30s curl timeout for pre-flight. |
+| Deployment status | **UP** — HTTP 200 confirmed 2026-05-10. Render cold-starts on first request (~20-30s); use 30s curl timeout for pre-flight. |
 | Hosting provider | Render.com — service: `medrecord-api`, DB: `medrecord-db` |
-| Health check | `curl --max-time 30 https://medrecord-api.onrender.com/v1/health` → HTTP 200 ✅ (2026-05-03) |
+| Health check | `curl --max-time 30 https://medrecord-api.onrender.com/v1/health` → HTTP 200 ✅ (2026-05-10) |
 | Test doctor name | Dr. Test Doctor |
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
-| Blocker for device testing | None |
-| Next action | D4 device test session 3 |
+| Consent endpoints | `POST /consent/request` → HTTP 401 ✅ (2026-05-10). `POST /consent/verify` → HTTP 401 ✅ (2026-05-10). Blocker cleared. |
+| Next action | POST-D9 — PM Moment 2 + Moment 3 complete (2026-05-10). D9 merged to main. Next: Builder sessions for pre-launch conditions (see Recommended Next Session Order). |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Security Agent — D4 security re-audit v2 (2026-05-09). CLEAR TO MERGE TO MAIN. All post-audit Builder fixes (DT2-1, DT2-2, DT3-1 through DT3-5) reviewed — no new security vulnerabilities. D4-KL-1 (enqueueOperation gap, LOW) documented as accepted expo-sqlite limitation.
+**Last Session:** PM Agent — Moment 2 (D9 post-flow) + Moment 3 (pre-launch gate) complete (2026-05-10). D9 Overall: Strong. All 8 core screens complete. Pre-launch verdict: Yes with conditions. Four conditions before pilot: (1) EAS build + cert pinning, (2) patient mobile edit (D3 stub), (3) D6 syncLogger removal, (4) D5-M-1 UNIQUE constraint fix. Review: `reviews/D9-pm-review-v3.md`.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D4 merge to main (PR)** | Security re-audit v2 CLEAR. D4 ready for PR to main. |
-| 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 1 | **Builder: Patient mobile edit** | D3 edit button is a stub. Needed before D9 SMS delivery can be corrected in field. Minimum: modal with validated mobile field, SQLite save + sync queue. |
+| 2 | **Builder: D6 syncLogger removal** | `src/sync/syncLogger.ts` + call sites in `NewVisitScreen.tsx` lines 64, 342, 344, 368, 372. Must remove before EAS production build. |
+| 3 | **Builder: D5-M-1 UNIQUE constraint fix** | `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)` with schema migration. Required for multi-doctor clinics. |
+| 4 | **EAS build + cert pinning smoke test** | First EAS production binary. Validate cert pinning works. Run core flow smoke test. Highest field risk. |
+| 5 | **Device test: EAS build smoke test** | Confirm cert pinning, login → D9 consent flow in production binary. |
 
 ---
 
@@ -108,7 +111,7 @@ _Carry these into every build/mockup session for these screens._
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
-| D9 — Consent Request Flow | Not started | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
+| D9 — Consent Request Flow | **MERGED TO MAIN (2026-05-10). PM Moment 2 + Moment 3 complete. Device testing COMPLETE (sessions 1–4). Security re-audit v3 — 0 critical/high/medium. D3 `handleRequestAccess` fully wired to D9 (not a stub).** Pre-launch conditions: (1) patient mobile edit in D3, (2) EAS build + cert pinning, (3) D5-M-1 UNIQUE fix, (4) D6 syncLogger removal. Reviews: `reviews/D9-pm-review-v3.md`, `reviews/D9-security-audit-v3.md`. Sessions: `reviews/D9-device-test-session-1.md` through `reviews/D9-device-test-session-4.md`. Live screen: `src/screens/doctor/ConsentRequestScreen.tsx`. | Tier 3. MERGED. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
 
 ---
@@ -495,6 +498,22 @@ _Carry these into every build/mockup session for these screens._
 | **D5-PC-SF-2:** No post-save affordance — user has no indication where they'll land after tapping the button. | D5 | Persona critique — Dr. Sinha | Add hint text below button: "You'll be taken directly to a new visit for this patient." (already in mockup — verify persists in live build). |
 | **D5-PC-SF-3:** No "add more later" note — no signal that additional details (blood group, allergies, address) can be added from the patient profile after save. | D5 | Persona critique — Dr. Nair, Sunita | Add informational line below form. |
 | **D5-PC-SF-4:** Age derived from DOB is hardcoded "39 years" in mockup — must be computed dynamically in live build. | D5 | Persona critique — Dr. Nair | Compute from DOB at render time in live build. |
+
+### MUST FIX — D9 persona critique (apply before live build)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D9-PC-MF-1:** OTP entry screen (Variant 3) is English-only — blocks non-English-speaking patients from completing the task without staff translation. Add Hindi subtitle under primary instruction: "अपना 6-अंकों का कोड डालें" and under hint: "MedRecord के SMS से कोड देखें." | D9 | Persona critique — Sunita, Shantabai | Critical accessibility gap. Spec requires this screen to work for low-literacy patients in 10 seconds. |
+| **D9-PC-MF-2:** Disabled "Confirm" button provides no feedback — tapping it with fewer than 6 digits entered shows nothing. Show inline hint on tap: "Please enter all 6 digits." Without this, elderly patients will assume the phone is broken. | D9 | Persona critique — Shantabai | |
+| **D9-PC-MF-3:** No framing in Waiting state that consent is a one-time step for new patients — Dr. Sinha will resist this as ongoing overhead for every visit. Add 1-line framing: "Unlocks full patient history — one-time setup for new patients." Also confirm consent caching in spec and implementation — returning patients must never trigger this flow again. | D9 | Persona critique — Dr. Sinha | Inherent workflow friction; mitigable via framing + confirmed caching. |
+
+### SHOULD FIX — D9 persona critique (apply before live build)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D9-PC-SF-1:** No mobile number correction path — if the registered mobile is wrong, staff cannot fix it mid-flow. Add "Wrong number? Go back to edit" link in the Waiting state. | D9 | Persona critique — Sunita | Real Day-1 operational gap. |
+| **D9-PC-SF-2:** Doctor has no feedback after handing phone to patient — after tapping "Patient is ready — show them the entry screen", the doctor sees nothing. Add a "Waiting for patient to enter code…" holding state on the doctor's side. | D9 | Persona critique — Dr. Nair | |
+| **D9-PC-SF-3:** Success screen footnote implies a patient app the user may not have — "You can remove this access at any time from the MedRecord app." Revise to: "To remove access later, contact the clinic." | D9 | Persona critique — Arjun | |
 
 ---
 

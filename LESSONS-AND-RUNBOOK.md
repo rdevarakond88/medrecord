@@ -469,6 +469,16 @@ Rule going forward: The PM pre-flow gate is mandatory before every new screen se
 
 ---
 
+**Mistake 10 — Backend Agent session not triggered after api-contracts.md was modified by Security Audit**
+
+What happened: The D9 Security Audit C-1 finding required replacing `POST /consent` with two new endpoints (`POST /consent/request` + `POST /consent/verify`) in `api-contracts.md`. The Builder applied the contract change. No Backend Agent session was run to implement and deploy those endpoints. The Device Tester pre-flight discovered both endpoints return 404. D9 device testing was blocked.
+
+Root cause: The Backend Agent step (Step 11) is documented as running "after ALL frontend screens for the flow are complete." But a Security Audit mid-flow that modifies `api-contracts.md` creates a new backend obligation that the existing Step 11 trigger condition does not cover. The blocker was noted in `project-state.md` but no session was queued — the note was passive, not a hard gate.
+
+Rule going forward: Any time a Security Audit **modifies `api-contracts.md`** (adds, renames, or restructures endpoints), the next session must be Backend Agent (Step 11) — not Device Tester. When closing a Security Audit session, the agent must explicitly check whether `api-contracts.md` was changed and, if so, set "Backend Agent session required" as Priority 1 in `project-state.md` Recommended Next Session Order, ranked above Device Tester. The Device Tester pre-flight (Step 8 Part A) also enforces this — see item 5 added to that checklist.
+
+---
+
 ## 4. Standard Runbook — Building Each Screen
 
 ### Step 1: Read Before Writing

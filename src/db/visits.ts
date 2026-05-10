@@ -597,3 +597,25 @@ export async function logConsentAccess(
     [id, 'consent_accessed', doctorId, patientId, now],
   );
 }
+
+/**
+ * Write a consent_request_initiated audit event to the local audit_events table.
+ * Called by D9 before POST /consent/request is sent.
+ *
+ * DPDP Act 2023 §8 — M-4 requirement from D9 QA test plan.
+ * Events are flushed to the server audit log via POST /sync on reconnect.
+ */
+export async function logConsentRequested(
+  db: SQLite.SQLiteDatabase,
+  doctorId: string,
+  patientId: string,
+): Promise<void> {
+  const id  = Crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `INSERT OR IGNORE INTO audit_events
+       (id, event_type, doctor_id, patient_id, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    [id, 'consent_request_initiated', doctorId, patientId, now],
+  );
+}

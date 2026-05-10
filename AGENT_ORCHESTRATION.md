@@ -188,9 +188,12 @@ Produce a full test plan and edge case analysis for D2: Patient Search.
 #### Part A — Infrastructure Pre-flight (run before any test that makes a network call)
 ```
 1. Check Backend Status in docs/project-state.md
-2. Run: curl -s -o /dev/null -w "%{http_code}" --max-time 5 <backend-url>/health
+2. Run: curl -s -o /dev/null -w "%{http_code}" --max-time 30 <backend-url>/health
 3. Confirm test credentials exist (test doctor account)
 4. Confirm test mobile number or OTP bypass method is documented
+5. If api-contracts.md was modified during this flow's Security Audit: run a live curl
+   against each new or renamed endpoint. If any returns 404, declare BLOCKED —
+   Backend Agent session (Step 11) required before device testing.
 ```
 If any check fails → declare "Device testing BLOCKED — reason: [reason]" and stop.
 Do not proceed to Part B until all checks pass.

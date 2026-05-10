@@ -60,12 +60,31 @@ export const uploadUrlLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// POST /consent — 10 per patient per hour (security-spec.md)
-export const consentLimiter = rateLimit({
+// POST /consent/request — 10 per (doctor_id, patient_id) per hour (api-contracts.md)
+export const consentRequestLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
-  keyGenerator: (req) => req.body?.patient_id ?? req.ip ?? 'unknown',
+  keyGenerator: (req) => {
+    const doctorId  = (req as any).auth?.sub ?? 'unknown';
+    const patientId = req.body?.patient_id    ?? 'unknown';
+    return `${doctorId}:${patientId}`;
+  },
+  handler: (_req, res) => {
+    res.status(429).json({
+      error:                'rate_limit_exhausted',
+      retry_after_seconds:  3600,
+    });
+  },
+  standardHeaders: true,
+  legacyHeaders:   false,
+});
+
+// POST /consent/verify — IP-level backstop; per-token attempt limit enforced in handler
+export const consentVerifyLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  keyGenerator: (req) => req.ip ?? 'unknown',
   ...jsonLimit,
   standardHeaders: true,
-  legacyHeaders: false,
+  legacyHeaders:   false,
 });
