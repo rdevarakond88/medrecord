@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — C-1 + H-1 fixed. H-2 (consent OTP expiry) decided: **10 minutes** (PM 2026-05-09). security-spec.md §Consent OTP Security added. api-contracts.md `expires_in: 600` confirmed. Next: QA Agent (Step 7).
+**Phase:** D9 (Consent Request Flow) — QA test plan complete (2026-05-09). 2 CRITICAL + 3 HIGH findings. H-3 decision: rate-limit state required (not a toast). Next: Builder Agent (Step 5 — live build), applying all QA CRITICAL + HIGH fixes.
 **Last Updated:** 2026-05-09
 
 ---
@@ -18,18 +18,18 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test doctor name | Dr. Test Doctor |
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
-| Blocker for device testing | None |
-| Next action | D9 — QA Agent (Step 7). H-2 resolved (consent OTP = 10 min, 2026-05-09). |
+| Blocker for device testing | **POST /consent/request and POST /consent/verify not confirmed deployed** — must verify before D9 device testing. |
+| Next action | D9 — Builder Agent (Step 5 — live build). QA CRITICAL + HIGH fixes must be applied before wiring. |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** PM Agent — D9 consent OTP expiry decided: 10 minutes (2026-05-09). security-spec.md §Consent OTP Security added. api-contracts.md NOTE placeholder replaced with confirmed value. H-2 closed. Prior: Builder Agent — D9 C-1+H-1 fix (2026-05-09). api-contracts.md updated: POST /consent removed; POST /consent/request + POST /consent/verify added.
+**Last Session:** QA Agent — D9 QA test plan complete (2026-05-09). 2 CRITICAL findings (C-1 iOS autofill distribution, C-2 resend must re-fetch otp_token), 3 HIGH findings (H-1 State 2b is v2-only, H-2 rate-limit state required, H-3 otp_token back-nav lifecycle). H-3 decided: distinct rate-limit state required, not a toast. Plan saved to `reviews/D9-qa-test-plan.md`. Prior: PM Agent — D9 consent OTP expiry decided: 10 minutes (2026-05-09). Prior: Builder Agent — D9 C-1+H-1 fix (2026-05-09).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — QA Agent (Step 7) | H-2 resolved. H-3 (rate-limit exhaustion UI state) open — QA Agent should determine if error toast is sufficient for v1 or if a distinct UI state is required. |
+| 1 | D9 — Builder Agent (Step 5 — live build) | QA test plan complete. Builder must apply all CRITICAL + HIGH fixes during wiring: C-1 (iOS autofill), C-2 (resend re-fetches otp_token), H-1 (remove State 2b for v1), H-2 (rate-limit Variant 8 state), H-3 (back-nav otp_token lifecycle). M-1 through M-4 also addressed in same session. |
 
 ---
 
