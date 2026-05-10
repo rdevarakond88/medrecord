@@ -18,6 +18,12 @@
  *   M-3  Distinct failure messages for 400 (wrong) vs 410 (exhausted/expired)
  *   M-4  DPDP audit event logged on POST /consent/request
  *   E-5  State 7 "Start New Visit" navigates to D6 with consentGranted: false
+ *
+ * Device-testing fixes (2026-05-10 Builder session):
+ *   DT1-1  State 2 icon changed ✉ → 💬 (SMS, not email)
+ *   DT1-2  handleKeyPress now clears previous box digit on backspace from empty box
+ *   DT1-3  beforeRemove intercepts back from 'failure' state → returns to State 2
+ *   DT1-4  NetInfo check in handleConfirm → immediate error on no connectivity
  */
 
 import React, {
@@ -40,6 +46,7 @@ import {
   Alert,
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
+import NetInfo from '@react-native-community/netinfo';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../App';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -175,13 +182,20 @@ export default function ConsentRequestScreen({ route, navigation }: Props) {
   }, []);
 
   // ─────────────────────────────────────────────────────────────
-  // Back navigation interception — H-3
+  // Back navigation interception — H-3 + DT1-3
   // State 3 (otp_input): intercept → restore State 2, clear OTP boxes
+  // State 6 (failure):   intercept → restore State 2, preserve otp_token
+  //   DT1-3: without interception here, system-back from State 6 pops the
+  //   screen entirely, otp_token is lost, and re-entering D9 issues a fresh
+  //   token — resetting the server-side attempt count silently.
   // All other states: natural back → pops to D3 (triggering D3 useFocusEffect)
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (flowStateRef.current === 'otp_input') {
+      if (
+        flowStateRef.current === 'otp_input' ||
+        flowStateRef.current === 'failure'
+      ) {
         e.preventDefault();
         setDigits(Array(OTP_LENGTH).fill(''));
         setOtpErrorMsg(null);
@@ -313,13 +327,24 @@ export default function ConsentRequestScreen({ route, navigation }: Props) {
     setOtpErrorMsg(null);
   }, []);
 
+  // DT1-2: when backspacing from an empty box, clear the previous box's digit
+  // before focusing it. Without this, the previous box retains its value and
+  // onChangeText fires with "<old-digit><new-digit>" — the paste path picks it
+  // up and fills both boxes instead of replacing the single digit.
   const handleKeyPress = useCallback((index: number, key: string) => {
     if (key === 'Backspace' && !digits[index] && index > 0) {
+      setDigits(prev => {
+        const next = [...prev];
+        next[index - 1] = '';
+        return next;
+      });
       inputRefs.current[index - 1]?.focus();
     }
   }, [digits]);
 
   // M-1: tap guard via isSubmittingRef (synchronous — no race window unlike useState)
+  // DT1-4: NetInfo check before entering verifying state — gives immediate error
+  // instead of a silent 30s hang when the network drops between State 2 and Confirm.
   const handleConfirm = useCallback(async () => {
     const isComplete = digits.every(d => d !== '');
 
@@ -328,6 +353,12 @@ export default function ConsentRequestScreen({ route, navigation }: Props) {
       return;
     }
     if (isSubmittingRef.current || !otpToken) return;
+
+    const netState = await NetInfo.fetch();
+    if (netState.isConnected === false) {
+      setOtpErrorMsg('No connection — please check your network and try again.');
+      return;
+    }
 
     isSubmittingRef.current = true;
     setOtpErrorMsg(null);
@@ -470,7 +501,7 @@ export default function ConsentRequestScreen({ route, navigation }: Props) {
           <View style={styles.waitingCard}>
             <View style={styles.waitingIconRow}>
               <View style={styles.smsIcon}>
-                <Text style={styles.smsIconText}>✉</Text>
+                <Text style={styles.smsIconText}>💬</Text>
               </View>
               <View style={styles.waitingTextBlock}>
                 <Text style={styles.waitingTitle}>SMS sent</Text>
