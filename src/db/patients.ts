@@ -145,6 +145,23 @@ export async function getPatientByLocalId(
 }
 
 /**
+ * Fetch a single patient by server UUID, scoped to the current doctor.
+ * Used by D4 after records load to re-read consent_granted from SQLite
+ * (D4-SA-H1: consent gate must not rely solely on stale nav params).
+ * Returns null if the patient is not cached locally for this doctor.
+ */
+export async function getPatientByServerId(
+  db: SQLite.SQLiteDatabase,
+  serverId: string,
+  doctorId: string,
+): Promise<LocalPatient | null> {
+  return db.getFirstAsync<LocalPatient>(
+    `SELECT * FROM patients WHERE server_id = ? AND doctor_id = ?`,
+    [serverId, doctorId],
+  );
+}
+
+/**
  * Write a patient access audit event to the local audit_events table.
  * Called by D2 whenever getRecentPatients() or searchPatientsByMobile() returns
  * patient PII, regardless of online state — this closes the H-3 pre-merge blocker

@@ -24,6 +24,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSyncStore } from '../store/useSyncStore';
 import { markVisitSynced } from '../db/visits';
+import { markRecordSynced } from '../db/records';
 import { apiFetch, ApiError, API_BASE_URL } from '../api/apiClient';
 import { pinnedFetch } from '../api/pinnedFetch';
 import { REFRESH_TOKEN_KEY } from '../auth/constants';
@@ -170,24 +171,43 @@ async function applyResult(
 ): Promise<void> {
   const now = new Date().toISOString();
 
-  // 1. Write local_id → server_id mapping (idempotent via OR REPLACE)
-  await db.runAsync(
-    `INSERT OR REPLACE INTO id_mapping (local_id, server_id, entity_type, mapped_at)
-     VALUES (?, ?, ?, ?)`,
-    [result.local_id, result.server_id, entityType, now],
-  );
+  // 1. Write local_id → server_id mapping (idempotent via OR REPLACE).
+  // Guard: server_id is absent on operation-level error results; skip mapping.
+  if (result.server_id) {
+    await db.runAsync(
+      `INSERT OR REPLACE INTO id_mapping (local_id, server_id, entity_type, mapped_at)
+       VALUES (?, ?, ?, ?)`,
+      [result.local_id, result.server_id, entityType, now],
+    );
+  }
 
   // 2. Entity-specific post-sync updates
   if (entityType === 'visit') {
     // Update visits_draft: set sync_status='synced' and record server_id.
     // markVisitSynced is idempotent — safe to call even if previously synced.
-    await markVisitSynced(db, result.local_id, result.server_id);
+    if (result.server_id) {
+      await markVisitSynced(db, result.local_id, result.server_id);
+    }
   } else if (entityType === 'patient') {
     // Update patients cache: record server-assigned ID and sync timestamp.
-    await db.runAsync(
-      `UPDATE patients SET server_id = ?, synced_at = ? WHERE local_id = ?`,
-      [result.server_id, now, result.local_id],
-    );
+    // Cascade: update visits_draft for visits created before this patient had a
+    // server ID. fixOrphanVisitPayloads() will pick these up on the next sync
+    // trigger and fix their sync_queue payloads (BUG-D4-DT1-1).
+    if (result.server_id) {
+      await db.runAsync(
+        `UPDATE patients SET server_id = ?, synced_at = ? WHERE local_id = ?`,
+        [result.server_id, now, result.local_id],
+      );
+      await db.runAsync(
+        `UPDATE visits_draft SET patient_server_id = ?, updated_at = ?
+         WHERE patient_id = ? AND patient_server_id IS NULL`,
+        [result.server_id, now, result.local_id],
+      );
+    }
+  } else if (entityType === 'record' && result.server_id) {
+    // Update visit_records: replace local UUID with server-assigned ID.
+    // markRecordSynced is idempotent — safe to call multiple times.
+    await markRecordSynced(db, result.local_id, result.server_id);
   }
   // consent: no additional local state to update beyond id_mapping + queue status.
 
@@ -255,6 +275,100 @@ async function flushAuditEvents(
   }
 }
 
+// ─── Orphan visit payload fix ──────────────────────────────────────────────
+
+/**
+ * Recover visit sync_queue entries that were enqueued with patient_id: null.
+ *
+ * When createPatient() in D5 fails at form submission (timeout, 5xx, offline),
+ * D6 enqueues the new visit with patient_id: null because the patient's server
+ * ID is not yet known. The server rejects such entries — after max_attempts the
+ * entry is dead-lettered. This function runs once per sync invocation and looks
+ * for any such entries whose patient has since synced to the server.
+ *
+ * When a patient syncs, applyResult() cascades visits_draft.patient_server_id.
+ * This function uses that cascade (with a patients table fallback) to resolve
+ * the correct patient_id, patches the payload, and resets the entry to pending
+ * with attempts=0 so the drain loop can retry it (BUG-D4-DT1-1 fix).
+ */
+async function fixOrphanVisitPayloads(
+  db: SQLite.SQLiteDatabase,
+  doctorId: string,
+): Promise<void> {
+  const entries = await db.getAllAsync<{
+    id:              string;
+    entity_local_id: string;
+    payload:         string;
+  }>(
+    `SELECT id, entity_local_id, payload FROM sync_queue
+     WHERE entity_type = 'visit'
+       AND status IN ('pending', 'failed')
+       AND doctor_id = ?`,
+    [doctorId],
+  );
+
+  for (const entry of entries) {
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(entry.payload) as Record<string, unknown>;
+    } catch {
+      continue; // malformed payload — leave as-is
+    }
+
+    if (payload.patient_id !== null && payload.patient_id !== undefined) continue;
+
+    // Look up the patient's server ID via visits_draft → patients.
+    const draftVisit = await db.getFirstAsync<{
+      patient_id:        string;
+      patient_server_id: string | null;
+    }>(
+      `SELECT patient_id, patient_server_id FROM visits_draft WHERE local_id = ?`,
+      [entry.entity_local_id],
+    );
+
+    if (!draftVisit) continue;
+
+    // Prefer the cascade-updated visits_draft column; fall back to patients table.
+    let serverPatientId: string | null = draftVisit.patient_server_id;
+    if (!serverPatientId) {
+      const patient = await db.getFirstAsync<{ server_id: string | null }>(
+        `SELECT server_id FROM patients WHERE local_id = ?`,
+        [draftVisit.patient_id],
+      );
+      serverPatientId = patient?.server_id ?? null;
+    }
+
+    if (!serverPatientId) continue; // patient still not synced — nothing to fix yet
+
+    const now = new Date().toISOString();
+    payload.patient_id = serverPatientId;
+
+    // Reset the entry: correct patient_id, fresh attempt budget.
+    await db.runAsync(
+      `UPDATE sync_queue
+       SET payload         = ?,
+           status          = 'pending',
+           attempts        = 0,
+           error_message   = NULL,
+           last_attempt_at = ?
+       WHERE id = ?`,
+      [JSON.stringify(payload), now, entry.id],
+    );
+
+    // Keep visits_draft consistent — update patient_server_id and sync_status.
+    await db.runAsync(
+      `UPDATE visits_draft
+       SET patient_server_id = ?,
+           sync_status       = CASE WHEN sync_status = 'failed' THEN 'pending' ELSE sync_status END,
+           updated_at        = ?
+       WHERE local_id = ? AND patient_server_id IS NULL`,
+      [serverPatientId, now, entry.entity_local_id],
+    );
+
+    syncLog(`pre-drain fix: visit ${entry.entity_local_id} — patient_id resolved to ${serverPatientId}, reset to pending`);
+  }
+}
+
 // ─── Main drain loop ───────────────────────────────────────────────────────
 
 /**
@@ -316,6 +430,13 @@ export async function runSyncWorker(
       // Re-read token in case it was refreshed during a previous batch.
       currentToken = useAuthStore.getState().token ?? currentToken;
 
+      // Fix orphan visit payloads at the start of each iteration (BUG-D4-DT2-1 fix).
+      // Previously called once before the loop — this missed the window where the
+      // patient syncs in batch N and its orphan visit (patient_id:null) needs to be
+      // patched before batch N+1 in the same sync run. Moving inside the loop ensures
+      // the visit is patched and retried within the same run, not the next trigger.
+      await fixOrphanVisitPayloads(db, doctorId);
+
       // SW-H-1: scope drain reads to the authenticated doctor — defense-in-depth
       // against stale entries from a previous session surviving logout.
       const rows = await db.getAllAsync<SyncQueueRow>(
@@ -331,22 +452,33 @@ export async function runSyncWorker(
       syncLog(`drain: ${rows.length} pending rows for doctorId:${doctorId}`);
       if (rows.length === 0) break;
 
-      // ── Defer 'record' (scan) entries — S3 upload is v2 (locked) ──────
-      const recordRows  = rows.filter((r) => r.entity_type === 'record');
-      const syncRows    = rows.filter((r) => r.entity_type !== 'record');
+      // ── Defer scan record entries — S3 upload is v2 (locked) ─────────
+      // Note records (payload.type === 'note') are synced via POST /sync.
+      // Scan records require S3 image upload and remain deferred until v2.
+      function isScanRecord(r: SyncQueueRow): boolean {
+        try {
+          const payload = JSON.parse(r.payload) as { type?: string };
+          return r.entity_type === 'record' && payload.type !== 'note';
+        } catch {
+          return r.entity_type === 'record';  // malformed payload — defer to be safe
+        }
+      }
 
-      if (recordRows.length > 0) {
-        const deferredIds = recordRows.map(() => '?').join(',');
+      const scanRows = rows.filter(isScanRecord);
+      const syncRows = rows.filter((r) => !isScanRecord(r));
+
+      if (scanRows.length > 0) {
+        const deferredIds = scanRows.map(() => '?').join(',');
         await db.runAsync(
           `UPDATE sync_queue
            SET status        = 'deferred',
                error_message = 'S3 image upload deferred to v2'
            WHERE id IN (${deferredIds})`,
-          recordRows.map((r) => r.id),
+          scanRows.map((r) => r.id),
         );
       }
 
-      // Nothing left to sync in this batch after deferring record entries.
+      // Nothing left to sync in this batch after deferring scan entries.
       if (syncRows.length === 0) continue;
 
       // Mark batch as in_progress so a crash mid-batch is detectable.

@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D5 (New Patient Form) — DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). BUG-D5-DT1-1 + HP-6 both VERIFIED fixed. Zero open bugs. Clear to merge to main.
-**Last Updated:** 2026-04-12
+**Phase:** D4 (Visit Detail) — Security re-audit v2 complete (2026-05-09). CLEAR TO MERGE TO MAIN.
+**Last Updated:** 2026-05-09
 
 ---
 
@@ -12,27 +12,25 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 |---|---|
 | API base URL (live) | `https://medrecord-api.onrender.com/v1` |
 | API base URL (frontend hardcoded) | `https://medrecord-api.onrender.com/v1` ✅ — updated 2026-03-18 |
-| Deployment status | **DEPLOYED** — Render.com free tier, deployed 2026-03-18 |
+| Deployment status | **UP** — HTTP 200 confirmed 2026-05-03. Render cold-starts on first request (~20-30s); use 30s curl timeout for pre-flight. |
 | Hosting provider | Render.com — service: `medrecord-api`, DB: `medrecord-db` |
-| Health check | `curl https://medrecord-api.onrender.com/v1/health` → 200 ✅ |
+| Health check | `curl --max-time 30 https://medrecord-api.onrender.com/v1/health` → HTTP 200 ✅ (2026-05-03) |
 | Test doctor name | Dr. Test Doctor |
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
-| Blocker for device testing | ~~`apiClient.ts` dead domain~~ RESOLVED. ~~BUG-D1-DT-1 `auth.ts:20` dead domain~~ **RESOLVED 2026-03-18** |
-| Next action | D1 device testing COMPLETE — clear to merge to main |
+| Blocker for device testing | None |
+| Next action | D4 device test session 3 |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — (2026-04-12) — D5 Device Test Session 2. BUG-D5-DT1-1 VERIFIED fixed (isSavingRef reset on success path confirmed working across 3 re-entries). HP-6 VERIFIED fixed (D5-created patients appear in D2 recent list via useFocusEffect). 5 PASS, 0 FAIL. Zero open bugs. D5 clear to merge to main.
+**Last Session:** Security Agent — D4 security re-audit v2 (2026-05-09). CLEAR TO MERGE TO MAIN. All post-audit Builder fixes (DT2-1, DT2-2, DT3-1 through DT3-5) reviewed — no new security vulnerabilities. D4-KL-1 (enqueueOperation gap, LOW) documented as accepted expo-sqlite limitation.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Merge PR #1 (dev → main)** | PR open at github.com/rdevarakond88/medrecord/pull/1 — D1, D2, D3, D5, D6, D7 all clear to merge |
-| 2 | D4 (Visit Detail) — build Steps 2–10 | Unlocks D3 history list value |
-| 3 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
-| 4 | D8 (Full Scan View) — build Steps 2–10 | Additive, not blocking anything |
+| 1 | **D4 merge to main (PR)** | Security re-audit v2 CLEAR. D4 ready for PR to main. |
+| 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 
 ---
 
@@ -105,7 +103,7 @@ _Carry these into every build/mockup session for these screens._
 | Screen | Status | Notes |
 |---|---|---|
 | D6 — New Visit | **DEVICE TESTING COMPLETE (2026-03-28, session 6). BUG-D6-DT5-1 fix verified. Zero bugs. Clear to merge to main. Security re-audit v3 (2026-04-11): CLEAR TO MERGE TO MAIN.** All CRITICAL/HIGH verified fixed. MEDIUM finding: debug syncLogger still active in production builds — must remove `src/sync/syncLogger.ts` and call sites before v1 launch. Items #49, #60 permanently deferred (simulation, v1 acceptable). Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-6.md`. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
-| D4 — Visit Detail | Not started | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
+| D4 — Visit Detail | **Builder QA fixes complete (2026-04-19). C1+H1+H2+H3+H4+M1 closed.** MEDIUM debt: M2, M3, M4 — fix before v1 launch. QA test plan: `reviews/D4-qa-test-plan.md`. Security audit: all closed (2026-04-19). Live screen: `src/screens/doctor/VisitDetailScreen.tsx`. **Device test session 1 (2026-05-02): BLOCKED. Device test session 2 (2026-05-02): BLOCKED. Builder session 3 (2026-05-03): BUG-D4-DT2-1 + BUG-D4-DT2-2 FIXED. Device test session 3 (2026-05-03): COMPLETE — 5 bugs found. Builder session 4 (2026-05-09): BUG-D4-DT3-1 through DT3-5 FIXED. Device test session 4 (2026-05-09): COMPLETE — 0 bugs found. All 5 fixes verified. DEVICE TESTING COMPLETE. Security re-audit v2 (2026-05-09): CLEAR TO MERGE TO MAIN. All post-audit Builder fixes reviewed — no new security vulnerabilities. D4-KL-1 (enqueueOperation gap, LOW) accepted as expo-sqlite limitation. Audit: `reviews/D4-security-audit-v2.md`. Session docs: `reviews/D4-device-test-session.md` through `reviews/D4-device-test-session-4.md`.** | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
@@ -126,6 +124,57 @@ _Carry these into every build/mockup session for these screens._
 ---
 
 ## Known Technical Debt
+
+### CRITICAL — D4 QA test plan (2026-04-19) — MUST FIX before device testing
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| ~~**D4-QA-C1:** `handleSaveNote` calls `createNote` (online) + `markRecordSynced` but never marks the `sync_queue` entry `status='success'`. Sync worker re-POSTs the note; if server doesn't deduplicate on `local_id`, doctor sees note twice.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — `markSyncEntrySuccess(db, localId, 'record')` called after `markRecordSynced` succeeds in `handleSaveNote`. |
+
+### HIGH — D4 QA test plan (2026-04-19) — MUST FIX before device testing
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| ~~**D4-QA-H1:** `isOnline` initial state is `false` (by design — D2 H-5 fix). `useEffect([], [])` fires with initial `isOnline=false` → `loadRecords` always skips the server fetch on first open.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — `useEffect` dependency changed from `[]` to `[loadRecords]`; effect re-fires when `isOnline` transitions to true. |
+| ~~**D4-QA-H2:** `loadRecords` calls `setIsLoading(false)` only after `getCachedRecords`. If `getCachedRecords` throws, `setIsLoading(false)` never runs → infinite spinner.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — SQLite read block wrapped in `try/finally`; `setIsLoading(false)` in `finally`. |
+| ~~**D4-QA-H3:** `handleSaveNote` `finally` block calls `getCachedRecords` before resetting tap guard. If `getCachedRecords` throws, `isSavingRef` stays true and `+ Note` is permanently disabled.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — tap guard reset first in `finally`; SQLite refresh in nested `try/catch`. |
+| ~~**D4-QA-H4:** `handleFinishVisit` uses React state `isFinishing` (async) for tap guard — rapid double-tap can open two Alert dialogs and fire two PATCH calls.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — `isFinishingRef = useRef(false)` added; checked synchronously before Alert; set/reset around the `onPress` async block. |
+
+### MEDIUM — D4 QA test plan (2026-04-19) — fix before v1 launch
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| ~~**D4-QA-M1:** Consent banner in meta card reads stale `consentGranted` nav param, not `consentGrantedLive`.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — `!consentGranted` → `!consentGrantedLive`. |
+| **D4-QA-M2:** `upsertRecordsFromServer` iterates records with `for...of` and runs one `db.runAsync` per row without a transaction wrapper. App killed mid-loop leaves visit_records partially updated. Self-healing on next server fetch. Fix: wrap loop in `db.withTransactionAsync()`. | D4 | D4 QA test plan | `src/db/records.ts:78-94` |
+| **D4-QA-M3:** Soft-deleted pending note reappears after next server refresh — `upsertRecordsFromServer` conflict clause `WHERE sync_status != 'pending'` allows overwriting `sync_status='deleted'` rows. Existing debt documented in `records.ts:183`. Fix deferred pending DELETE /records/:id backend implementation. | D4 | D4 QA test plan (existing debt) | `src/db/records.ts:183` |
+| **D4-QA-M4:** `handleFinishVisit` does not update `visits.record_count` after PATCH succeeds. D3 visit list shows pre-finish record count until next full `getPatientVisits` fetch. | D4 | D4 QA test plan | `VisitDetailScreen.tsx:274-276` |
+
+### CRITICAL — D4 live screen security audit (2026-04-19) — MUST FIX before QA
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| ~~**D4-SA-C1:** `insertLocalNote` + `enqueueOperation` in `handleSaveNote` are two sequential `await` calls with no `db.withTransactionAsync()` wrapper. App killed between writes leaves note in `visit_records` with no `sync_queue` entry — clinical note silently never uploaded to server.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — both calls wrapped in `db.withTransactionAsync()`. Same pattern as D6-MEDIUM-4. |
+
+### HIGH — D4 live screen security audit (2026-04-19) — MUST FIX before QA
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| ~~**D4-SA-H1:** `showClinicalContent = isOwnVisit \|\| consentGranted` derived entirely from stale nav params — never re-verified from server or SQLite within D4.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `consentGrantedLive` state added; `getPatientByServerId()` called in `loadRecords` after records load to re-read SQLite value; `showClinicalContent` uses live state. `getPatientByServerId(db, serverId, doctorId)` added to `src/db/patients.ts`. |
+| ~~**D4-SA-H2:** 401 (session expiry) silently swallowed in both `loadRecords` and `handleFinishVisit` catch blocks.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `ApiError` imported; 401 check in both catch blocks → `setSessionExpired(true)` + 2s redirect to Login; `SessionExpiredBanner` shown in JSX. D2/D3 pattern. |
+
+### MEDIUM — D4 live screen security audit (2026-04-19) — fix before v1 launch
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| ~~**D4-SA-M1:** Note `TextInput` (new note and inline edit) has no `maxLength`.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `maxLength={5000}` added to both `InlineNoteInput` and `NoteRecordRow` edit `TextInput`. |
+| ~~**D4-SA-M2:** `logVisitViewed` fires on every mount with no session guard.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `viewLoggedRef = useRef(false)` added; fires once per D4 mount lifetime. |
+| ~~**D4-SA-M3:** Patient full name rendered at 17pt bold with no `numberOfLines` guard.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `numberOfLines={1}` + `ellipsizeMode="tail"` added. Name-dimming tracked for v1 launch. |
+
+### LOW — D4 live screen security audit (2026-04-19)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| ~~**D4-SA-L1:** `updateLocalNoteText` and `deleteLocalRecord` use `WHERE id = ?` with no `doctor_id` scope.~~ | D4 | D4 security audit | **CLOSED 2026-04-19** — `AND doctor_id = ?` added to both WHERE clauses in `src/db/records.ts`; `doctorId` threaded from `handleEditNote` and `handleDeleteNote` callers. |
 
 ### CRITICAL — Must fix before merging D2 to main
 
@@ -217,6 +266,7 @@ _Carry these into every build/mockup session for these screens._
 | `searchPatientsByMobile` LIKE query not prefix-anchored (`%123%`); common digit sequences return noisy results | D2 | QA E-6 | Change to prefix-anchored LIKE pattern (`123%`). |
 | Double-tap on `PatientRow` pushes two D3 screens onto navigation stack | D2 | QA E-7 | Add tap-guard ref; disable `onPress` immediately on first tap. |
 | "Add New Patient" CTA fires with partial (3–9 digit) query; D5 receives invalid `prefillMobile` | D2 | QA E-8 | Only pass `prefillMobile` if `query.length === 10`. |
+| **UX-D2-1 (MEDIUM):** Doctor taps "New Patient" without searching any mobile number — D5 opens with empty locked mobile field; save fails with "Invalid mobile number" error with no guidance to go back and search first. No hint or guard prevents this. Fix options: (a) disable "New Patient" button in D2 unless `query.length === 10`, OR (b) add explanatory text under the locked mobile field in D5 ("Go back and search the patient's mobile number to fill this field"). | D2 / D5 | D4 device test session 4 observation | Observed during data setup: doctor navigated directly to D5 without searching. Common first-time-user failure mode. |
 | `recentPatients` not refreshed when background sync completes while D2 is active | D2 | QA E-2 | Use `useFocusEffect` to re-run `getRecentPatients` on screen focus. |
 | Patient full name displayed at 22pt bold in D3 header — no PII dimming option; visible to bystanders in shared clinic waiting areas | D3 | Persona critique SHOULD FIX | Flagged by Shantabai and Arjun. Address before production: name-dimming gesture or abbreviated display after screen idle timeout. |
 | ~~Request Access button has no offline guard — stub fires with no feedback when device is offline~~ | D3 | Security audit MEDIUM | **CLOSED 2026-02-24** — `handleRequestAccess` checks `isOnline` before showing Alert. If offline, shows "Cannot send consent request — no internet connection." `Send Request` option not shown when offline. |
@@ -229,7 +279,7 @@ _Carry these into every build/mockup session for these screens._
 | ~~Patient name has no overflow guard at 22pt — long names wrap and push consent badge off-screen~~ | D3 | QA M-4 | **CLOSED 2026-02-24** — `numberOfLines={1}` + `ellipsizeMode="tail"` on patient name in live screen. |
 | ~~Empty state shows "Access Granted" badge — semantically misleading when there are no records to gate~~ | D3 | QA M-5 | **CLOSED 2026-02-24** — No consent badge rendered in empty-state variant. |
 | Server-side visit pagination not implemented — `GET /patients/:id/visits` returns all visits; client-side 20-per-page in use | D3 | Live build (QA H-4 follow-on) | Add `?page=&per_page=20` query params server-side. Required before high-volume patient records grow large in production. |
-| "View Full Visit" button disabled until D4 (Visit Detail) is built | D3 | Live build (QA M-1) | `onViewFullVisit` prop is a disabled stub with TODO comment. Wire to `navigation.navigate('VisitDetail', ...)` when D4 is built. |
+| ~~"View Full Visit" button disabled until D4 (Visit Detail) is built~~ | D3 | Live build (QA M-1) | **CLOSED 2026-04-19** — `onViewFullVisit` now navigates to `VisitDetail` for synced visits. Draft visits (`sync_status='draft'`) remain disabled (no server records to fetch). |
 | D9 consent request not yet wired — `handleRequestAccess` sets `consentRequestSent` state but does not navigate to D9 | D3 | Live build | `navigation.navigate('ConsentRequest', ...)` stubbed with TODO comment. Wire when D9 is built. |
 | Pull-to-refresh not implemented — reconnecting while D3 is open requires navigate-away-and-back for fresh server data | D3 | Live build | `useFocusEffect` handles focus re-fetches. Add `RefreshControl` on FlatList for in-screen refresh before D4. |
 | ~~D3 visit list does not show locally-created visits from visits_draft — new visit from D6 appears in D3 only after server sync~~ | D3/D6 | D6 live build | **CLOSED 0c4d204** — `getCachedVisits` now UNIONs `visits_draft`; `sync_status: 'synced' \| 'draft'` added to `LocalVisit`; cloud icon shown in VisitCard for draft rows. |

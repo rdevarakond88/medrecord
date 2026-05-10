@@ -140,23 +140,33 @@ export default function PatientDetailScreen() {
     setLoadState('loading');
     setFetchError(null);
 
+    // Re-read the patient from SQLite to pick up server_id that may have been
+    // written by the sync worker since this screen was navigated to.
+    // patientServerId from route.params is fixed at navigation time — if
+    // createPatient() timed out in D5, it would be null even after the patient
+    // subsequently syncs. (BUG-D4-DT2-1 root cause fix)
+    const freshPatient = await getPatientByLocalId(db, patientLocalId);
+    const effectiveServerId = freshPatient?.server_id ?? patientServerId;
+    if (freshPatient) setPatient(freshPatient);
+
     try {
-      if (isOnline && patientServerId) {
+      if (isOnline && effectiveServerId) {
         // ── Online path: server is authoritative ─────────────
-        const result = await getPatientVisits(patientServerId, token);
+        const result = await getPatientVisits(effectiveServerId, token);
 
         // Cache both lists to SQLite for offline fallback — doctor-scoped (H-2)
-        await upsertVisitsFromServer(db, result.my_visits, true, patientServerId, user.id);
-        await upsertVisitsFromServer(db, result.other_doctor_visits, false, patientServerId, user.id);
+        await upsertVisitsFromServer(db, result.my_visits, true, effectiveServerId, user.id);
+        await upsertVisitsFromServer(db, result.other_doctor_visits, false, effectiveServerId, user.id);
 
         // Update local consent in SQLite patients table so D2's cache stays fresh
         // (minor hygiene — not a security gate; the server response is the gate)
         await db.runAsync(
           `UPDATE patients SET consent_granted = ?, updated_at = ? WHERE server_id = ?`,
-          [result.consent_granted ? 1 : 0, new Date().toISOString(), patientServerId],
+          [result.consent_granted ? 1 : 0, new Date().toISOString(), effectiveServerId],
         );
 
-        // H-1: refresh patient state so subsequent offline fetchData reads current consent
+        // freshPatient already read and patient state set at top of fetchData (BUG-D4-DT2-1 fix).
+        // Re-read once more to pick up the consent_granted we just updated above.
         const refreshedPatient = await getPatientByLocalId(db, patientLocalId);
         if (refreshedPatient) setPatient(refreshedPatient);
 
@@ -182,13 +192,13 @@ export default function PatientDetailScreen() {
         const serverMapped = result.my_visits.map(adaptMyVisit);
         const serverIds    = result.my_visits.map((v) => v.id);
         const pendingDrafts = await getPendingDraftVisits(
-          db, patientServerId, patientLocalId, user.id,
+          db, effectiveServerId, patientLocalId, user.id,
         );
         const syncedDraftsNotOnServer = await getSyncedDraftVisitsNotInServer(
-          db, patientServerId, patientLocalId, user.id, serverIds,
+          db, effectiveServerId, patientLocalId, user.id, serverIds,
         );
         const failedDrafts = await getFailedDraftVisits(
-          db, patientServerId, patientLocalId, user.id,
+          db, effectiveServerId, patientLocalId, user.id,
         );
         // Merge all four sources; YYYY-MM-DD strings compare correctly for newest-first sort.
         const mergedMyVisits = [
@@ -216,7 +226,7 @@ export default function PatientDetailScreen() {
         // H-2: scope cache read to this doctor's rows only.
         // M-5: pass patientLocalId so offline-only patients (patientServerId=null)
         // see their draft visits via the OR branch added to getCachedVisits.
-        const cached = await getCachedVisits(db, patientServerId, patientLocalId, user.id);
+        const cached = await getCachedVisits(db, effectiveServerId, patientLocalId, user.id);
 
         setConsentGranted(offlineConsent);
         setMyVisits(cached.myVisits);
@@ -243,7 +253,7 @@ export default function PatientDetailScreen() {
       // Any other error — fail secure: deny consent, show what SQLite has for own visits
       // consent-layer-spec.md: "Never fail open" (QA H-2, security audit HIGH)
       // H-2 + M-5: scope cache read to this doctor; patientLocalId handles offline-only patients
-      const cached = await getCachedVisits(db, patientServerId, patientLocalId, user.id);
+      const cached = await getCachedVisits(db, effectiveServerId, patientLocalId, user.id);
 
       setFetchError(
         err instanceof ApiError
@@ -295,8 +305,12 @@ export default function PatientDetailScreen() {
   // consent-layer-spec.md: patients can request a log of who accessed their data.
   // Event synced to server on reconnect via POST /sync (H-3 pre-merge blocker).
   useEffect(() => {
-    if (loadState === 'loaded' && consentGranted && user && patientServerId) {
-      void logConsentAccess(db, user.id, patientServerId);
+    // Use patient?.server_id as the effective server ID — patientServerId from
+    // route.params may be null if createPatient() timed out in D5 and the patient
+    // has since synced. (BUG-D4-DT2-1 fix — same pattern as currentPatientServerId below)
+    const auditServerId = patient?.server_id ?? patientServerId;
+    if (loadState === 'loaded' && consentGranted && user && auditServerId) {
+      void logConsentAccess(db, user.id, auditServerId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadState, consentGranted]);
@@ -306,6 +320,14 @@ export default function PatientDetailScreen() {
   // This guard fires after hooks, before any JSX, so the screen renders nothing
   // to the display when the token is absent.
   if (!token || !user) return null;
+
+  // Effective patient server ID — prefers the value freshly read from SQLite
+  // (patient?.server_id) over the potentially-stale nav param (patientServerId).
+  // When createPatient() timed out in D5, the nav param is null and stays null
+  // for the lifetime of this screen instance. patient?.server_id is updated by
+  // fetchData as soon as the sync worker writes the server_id to SQLite.
+  // Used for: "View Full Visit" gate, navigation params for D4/D6.
+  const currentPatientServerId = patient?.server_id ?? patientServerId;
 
   // ── Derived display variant ──────────────────────────────────
   const hasAnyVisits = myVisits.length + otherVisits.length > 0;
@@ -502,11 +524,25 @@ export default function PatientDetailScreen() {
                         )
                 }
                 onViewFullVisit={
-                  item.grayed
+                  // D4 is only navigable for server-synced visits with a patient server ID.
+                  // Draft visits (sync_status='draft') have no server records to fetch.
+                  // currentPatientServerId covers the case where patientServerId (nav param)
+                  // was null because createPatient() timed out in D5 — once the patient
+                  // syncs, patient?.server_id provides the effective ID. (BUG-D4-DT2-1 fix)
+                  item.grayed || item.visit.sync_status === 'draft' || !currentPatientServerId
                     ? undefined
                     : () => {
-                        // TODO: navigate to D4 (Visit Detail) when built.
-                        // navigation.navigate('VisitDetail', { visitServerId: item.visit.server_id });
+                        navigation.navigate('VisitDetail', {
+                          visitServerId:   item.visit.server_id,
+                          visitDate:       item.visit.visit_date,
+                          visitStatus:     item.visit.status,
+                          chiefComplaint:  item.visit.chief_complaint,
+                          clinicName:      item.visit.clinic_name,
+                          isOwnVisit:      item.visit.is_own_visit,
+                          consentGranted:  consentGranted,
+                          patientServerId: currentPatientServerId,
+                          patientName:     patient?.name ?? 'Patient',
+                        });
                       }
                 }
               />
@@ -529,7 +565,7 @@ export default function PatientDetailScreen() {
               onNewVisit={() => {
                 navigation.navigate('NewVisit', {
                   patientId:       patientLocalId,
-                  patientServerId: patientServerId,
+                  patientServerId: currentPatientServerId,
                   patientName:     patient?.name ?? 'Patient',
                   patientMobile:   patient?.mobile_number ?? '',
                   consentGranted:  consentGranted,
@@ -562,7 +598,7 @@ export default function PatientDetailScreen() {
 // ─────────────────────────────────────────────────────────────
 
 function adaptApiVisit(
-  v: { id: string; visit_date: string; chief_complaint: string | null; clinic_name: string; record_count: number },
+  v: { id: string; visit_date: string; chief_complaint: string | null; clinic_name: string; record_count: number; status: 'open' | 'submitted' },
   isOwn: boolean = false,
 ): LocalVisit {
   return {
@@ -572,6 +608,7 @@ function adaptApiVisit(
     chief_complaint:     v.chief_complaint,
     clinic_name:         v.clinic_name,
     record_count:        v.record_count,
+    status:              v.status,
     is_own_visit:        isOwn,
     cached_by_doctor_id: '',    // not used for display; populated in DB via upsertVisitsFromServer
     synced_at:           new Date().toISOString(),

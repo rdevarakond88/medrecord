@@ -35,3 +35,25 @@ export function formatDateForDisplay(isoDate: string | null): string | null {
   const [year, month, day] = isoDate.split('-');
   return `${day}/${month}/${year}`;
 }
+
+/**
+ * Convert an ISO 8601 timestamp to "DD/MM/YYYY · H:MM AM/PM" display format.
+ * Used in D4 record cards to show when a note or scan was created.
+ * Returns the raw string unchanged if parsing fails (graceful degradation).
+ */
+export function formatTimestamp(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const day    = String(d.getDate()).padStart(2, '0');
+    const month  = String(d.getMonth() + 1).padStart(2, '0');
+    const year   = d.getFullYear();
+    const hours  = d.getHours();
+    const mins   = String(d.getMinutes()).padStart(2, '0');
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const h12    = hours % 12 || 12;
+    return `${day}/${month}/${year} · ${h12}:${mins} ${period}`;
+  } catch {
+    return iso;
+  }
+}

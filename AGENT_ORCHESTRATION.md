@@ -3,6 +3,11 @@
 This is your single reference for how to run agents in the right order.
 Read this before starting any work in Claude Code.
 
+> **Note for agents:** The "Prompt to paste:" blocks in each step below are
+> onboarding scaffolding written for a human reading this file for the first
+> time. Do not reproduce them at session end. The only end-of-session output
+> required is the SESSION COMPLETE signal defined in CLAUDE.md.
+
 ---
 
 ## The Big Picture

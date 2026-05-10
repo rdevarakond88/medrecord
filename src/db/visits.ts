@@ -21,14 +21,15 @@ import * as Crypto from 'expo-crypto';
 export interface LocalVisit {
   server_id:           string;
   patient_server_id:   string;
-  visit_date:          string;         // server-assigned UTC ISO
-  chief_complaint:     string | null;  // null for other-doctor visits without consent
+  visit_date:          string;                 // server-assigned UTC ISO
+  chief_complaint:     string | null;          // null for other-doctor visits without consent
   clinic_name:         string;
   record_count:        number;
-  is_own_visit:        boolean;        // true = current doctor created this visit
-  cached_by_doctor_id: string;         // H-2: doctor who fetched and cached this row (security audit)
-  synced_at:           string;         // when this row was last written from a server response
-  sync_status:         'synced' | 'draft';  // 'synced' = server cache; 'draft' = D6 local-only
+  status:              'open' | 'submitted';   // visit lifecycle state (added for D4)
+  is_own_visit:        boolean;                // true = current doctor created this visit
+  cached_by_doctor_id: string;                 // H-2: doctor who fetched and cached this row
+  synced_at:           string;                 // when this row was last written from a server response
+  sync_status:         'synced' | 'draft';     // 'synced' = server cache; 'draft' = D6 local-only
 }
 
 export interface CachedVisitsResult {
@@ -72,6 +73,7 @@ export async function getCachedVisits(
        chief_complaint,
        clinic_name,
        record_count,
+       status,
        is_own_visit,
        cached_by_doctor_id,
        synced_at,
@@ -86,6 +88,7 @@ export async function getCachedVisits(
        chief_complaint,
        ''                              AS clinic_name,
        0                               AS record_count,
+       'open'                          AS status,
        1                               AS is_own_visit,
        doctor_id                       AS cached_by_doctor_id,
        created_at                      AS synced_at,
@@ -96,8 +99,16 @@ export async function getCachedVisits(
          patient_server_id = ?
          OR (patient_server_id IS NULL AND patient_id = ?)
        )
+       AND (
+         server_id IS NULL
+         OR NOT EXISTS (
+           SELECT 1 FROM visits
+           WHERE server_id = visits_draft.server_id
+             AND cached_by_doctor_id = ?
+         )
+       )
      ORDER BY visit_date DESC`,
-    [patientServerId, doctorId, doctorId, patientServerId, patientLocalId],
+    [patientServerId, doctorId, doctorId, patientServerId, patientLocalId, doctorId],
   );
 
   // SQLite stores booleans as integers — normalise to JS
@@ -133,11 +144,12 @@ export async function getCachedVisits(
 export async function upsertVisitsFromServer(
   db: SQLite.SQLiteDatabase,
   visits: Array<{
-    id:              string;   // server visit ID — used as server_id (primary key)
+    id:              string;                  // server visit ID — used as server_id (primary key)
     visit_date:      string;
     chief_complaint: string | null;
     clinic_name:     string;
     record_count:    number;
+    status:          'open' | 'submitted';    // visit lifecycle state (D4)
   }>,
   isOwnVisit: boolean,
   patientServerId: string,
@@ -148,12 +160,13 @@ export async function upsertVisitsFromServer(
     await db.runAsync(
       `INSERT INTO visits
          (server_id, patient_server_id, visit_date, chief_complaint,
-          clinic_name, record_count, is_own_visit, cached_by_doctor_id, synced_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          clinic_name, record_count, status, is_own_visit, cached_by_doctor_id, synced_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(server_id) DO UPDATE SET
          chief_complaint     = excluded.chief_complaint,
          clinic_name         = excluded.clinic_name,
          record_count        = excluded.record_count,
+         status              = excluded.status,
          is_own_visit        = excluded.is_own_visit,
          cached_by_doctor_id = excluded.cached_by_doctor_id,
          synced_at           = excluded.synced_at`,
@@ -164,6 +177,7 @@ export async function upsertVisitsFromServer(
         v.chief_complaint,
         v.clinic_name,
         v.record_count,
+        v.status,
         isOwnVisit ? 1 : 0,
         doctorId,
         now,
@@ -325,6 +339,7 @@ export async function getFailedDraftVisits(
     chief_complaint:     r.chief_complaint,
     clinic_name:         '',
     record_count:        0,
+    status:              'open' as const,  // draft visits are always open (not yet submitted)
     is_own_visit:        true,
     cached_by_doctor_id: doctorId,
     synced_at:           r.created_at,
@@ -448,6 +463,7 @@ export async function getPendingDraftVisits(
     chief_complaint:     r.chief_complaint,
     clinic_name:         '',
     record_count:        0,
+    status:              'open' as const,  // draft visits are always open (not yet submitted)
     is_own_visit:        true,
     cached_by_doctor_id: doctorId,
     synced_at:           r.created_at,
@@ -511,11 +527,52 @@ export async function getSyncedDraftVisitsNotInServer(
     chief_complaint:     r.chief_complaint,
     clinic_name:         '',
     record_count:        0,
+    status:              'open' as const,  // synced-but-absent draft visits are always open
     is_own_visit:        true,
     cached_by_doctor_id: doctorId,
     synced_at:           r.created_at,
     sync_status:         'draft' as const,
   }));
+}
+
+/**
+ * Write a visit_viewed audit event to the local audit_events table.
+ * Called by D4 on mount after records are loaded.
+ *
+ * DPDP Act 2023 §8 — patients can request a log of who accessed their data.
+ * Captures each time a doctor views a specific visit's full records.
+ * Events are flushed to the server audit log via POST /sync on reconnect.
+ */
+export async function logVisitViewed(
+  db: SQLite.SQLiteDatabase,
+  doctorId: string,
+  patientId: string,
+  visitId: string,
+): Promise<void> {
+  const id  = Crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `INSERT OR IGNORE INTO audit_events
+       (id, event_type, doctor_id, patient_id, metadata, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, 'visit_viewed', doctorId, patientId, JSON.stringify({ visitId }), now],
+  );
+}
+
+/**
+ * Update the status of a server-cached visit after Finish Visit in D4.
+ * Called after PATCH /visits/:id confirms the status change server-side.
+ */
+export async function updateVisitStatus(
+  db: SQLite.SQLiteDatabase,
+  visitServerId: string,
+  status: 'open' | 'submitted',
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `UPDATE visits SET status = ?, synced_at = ? WHERE server_id = ?`,
+    [status, now, visitServerId],
+  );
 }
 
 /**

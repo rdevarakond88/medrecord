@@ -58,6 +58,7 @@ router.get('/patients/:id/visits', requireAuth, async (req, res) => {
       chief_complaint: v.chiefComplaint,  // always present for own visits
       clinic_name:     v.clinic?.name ?? null,
       record_count:    v.records.length,
+      status:          v.status,          // 'open' | 'submitted' — required for D4 navigation gate
     }));
 
     // D3-H-1: exclude chief_complaint at this layer when consent_granted=false
@@ -67,6 +68,7 @@ router.get('/patients/:id/visits', requireAuth, async (req, res) => {
       chief_complaint: consentGranted ? v.chiefComplaint : null,  // enforced here, not on client
       clinic_name:     v.clinic?.name ?? null,
       record_count:    v.records.length,
+      status:          v.status,          // 'open' | 'submitted' — required for D4 navigation gate
     }));
 
     await logAudit({

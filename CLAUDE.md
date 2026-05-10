@@ -125,6 +125,9 @@ Do not combine multiple agent steps into one session.
 - After pushing, print the following signal before stopping:
   > SESSION COMPLETE — Next: [Agent Name] — [Step N: step name] — [Screen ID + name]
   > Type 'exit' then 'claude' to start the next step.
+- Do not add prompt templates, "prompt to paste" blocks, or any next-session
+  instructions beyond the SESSION COMPLETE signal above. The next session reads
+  `docs/project-state.md` and picks up from there.
 
 ---
 

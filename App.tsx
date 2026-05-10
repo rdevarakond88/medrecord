@@ -31,6 +31,7 @@ import PatientDetailScreen from './src/screens/doctor/PatientDetailScreen';
 import NewVisitScreen from './src/screens/doctor/NewVisitScreen';
 import DocumentScannerScreen from './src/screens/doctor/DocumentScannerScreen';
 import NewPatientFormScreen from './src/screens/doctor/NewPatientFormScreen';
+import VisitDetailScreen from './src/screens/doctor/VisitDetailScreen';
 import { useSyncWorker } from './src/sync/useSyncWorker';
 import { refreshAccessToken } from './src/api/auth';
 import { ApiError } from './src/api/apiClient';
@@ -62,6 +63,17 @@ export type RootStackParamList = {
     existingScanCount?: number;   // D7-SF-6: shows "N scan(s) attached" pill in viewfinder top bar
   };
   NewPatientForm: { prefillMobile?: string };
+  VisitDetail: {
+    visitServerId:   string;
+    visitDate:       string;                 // YYYY-MM-DD from server
+    visitStatus:     'open' | 'submitted';
+    chiefComplaint:  string | null;
+    clinicName:      string;
+    isOwnVisit:      boolean;
+    consentGranted:  boolean;
+    patientServerId: string;
+    patientName:     string;
+  };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -168,6 +180,7 @@ function App() {
             <Stack.Screen name="NewVisit"          component={NewVisitScreen} />
             <Stack.Screen name="DocumentScanner"   component={DocumentScannerScreen} />
             <Stack.Screen name="NewPatientForm"    component={NewPatientFormScreen} />
+            <Stack.Screen name="VisitDetail"       component={VisitDetailScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </QueryClientProvider>
