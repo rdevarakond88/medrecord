@@ -32,6 +32,7 @@ import NewVisitScreen from './src/screens/doctor/NewVisitScreen';
 import DocumentScannerScreen from './src/screens/doctor/DocumentScannerScreen';
 import NewPatientFormScreen from './src/screens/doctor/NewPatientFormScreen';
 import VisitDetailScreen from './src/screens/doctor/VisitDetailScreen';
+import ConsentRequestScreen from './src/screens/doctor/ConsentRequestScreen';
 import { useSyncWorker } from './src/sync/useSyncWorker';
 import { refreshAccessToken } from './src/api/auth';
 import { ApiError } from './src/api/apiClient';
@@ -73,6 +74,13 @@ export type RootStackParamList = {
     consentGranted:  boolean;
     patientServerId: string;
     patientName:     string;
+  };
+  ConsentRequest: {
+    patientLocalId:  string;
+    patientServerId: string | null;
+    patientName:     string;
+    maskedMobile:    string;
+    patientMobile:   string;
   };
 };
 
@@ -181,6 +189,7 @@ function App() {
             <Stack.Screen name="DocumentScanner"   component={DocumentScannerScreen} />
             <Stack.Screen name="NewPatientForm"    component={NewPatientFormScreen} />
             <Stack.Screen name="VisitDetail"       component={VisitDetailScreen} />
+            <Stack.Screen name="ConsentRequest"    component={ConsentRequestScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </QueryClientProvider>

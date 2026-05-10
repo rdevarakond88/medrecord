@@ -379,9 +379,13 @@ export default function PatientDetailScreen() {
           text: 'Send Request',
           style: 'default',
           onPress: () => {
-            setConsentRequestSent(true);
-            // TODO: navigate to D9 (Consent Request Flow) when built.
-            // navigation.navigate('ConsentRequest', { patientServerId, patientLocalId });
+            navigation.navigate('ConsentRequest', {
+              patientLocalId,
+              patientServerId: currentPatientServerId,
+              patientName,
+              maskedMobile,
+              patientMobile:  patient?.mobile_number ?? '',
+            });
           },
         },
       ],

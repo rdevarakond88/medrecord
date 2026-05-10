@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — QA test plan complete (2026-05-09). 2 CRITICAL + 3 HIGH findings. H-3 decision: rate-limit state required (not a toast). Next: Builder Agent (Step 5 — live build), applying all QA CRITICAL + HIGH fixes.
+**Phase:** D9 (Consent Request Flow) — Live screen built (2026-05-09). All QA CRITICAL + HIGH + MEDIUM fixes applied. Screen at `src/screens/doctor/ConsentRequestScreen.tsx`. Next: Security Agent (Step 6 — security audit of live D9 screen).
 **Last Updated:** 2026-05-09
 
 ---
@@ -19,17 +19,17 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Blocker for device testing | **POST /consent/request and POST /consent/verify not confirmed deployed** — must verify before D9 device testing. |
-| Next action | D9 — Builder Agent (Step 5 — live build). QA CRITICAL + HIGH fixes must be applied before wiring. |
+| Next action | D9 — Security Agent (Step 6). Live screen built and registered. Consent endpoints still need backend confirmation before device testing. |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** QA Agent — D9 QA test plan complete (2026-05-09). 2 CRITICAL findings (C-1 iOS autofill distribution, C-2 resend must re-fetch otp_token), 3 HIGH findings (H-1 State 2b is v2-only, H-2 rate-limit state required, H-3 otp_token back-nav lifecycle). H-3 decided: distinct rate-limit state required, not a toast. Plan saved to `reviews/D9-qa-test-plan.md`. Prior: PM Agent — D9 consent OTP expiry decided: 10 minutes (2026-05-09). Prior: Builder Agent — D9 C-1+H-1 fix (2026-05-09).
+**Last Session:** Builder Agent — D9 live screen built (2026-05-09). All C-1, C-2, H-1, H-2, H-3, H-4, M-1, M-2, M-3, M-4, E-5 QA findings applied. New files: `src/api/consent.ts`, `src/screens/doctor/ConsentRequestScreen.tsx`. Updated: `App.tsx` (ConsentRequest route added), `src/db/visits.ts` (logConsentRequested added), `src/screens/doctor/PatientDetailScreen.tsx` (TODO navigate replaced with real call). Prior: QA Agent — D9 QA test plan complete (2026-05-09).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — Builder Agent (Step 5 — live build) | QA test plan complete. Builder must apply all CRITICAL + HIGH fixes during wiring: C-1 (iOS autofill), C-2 (resend re-fetches otp_token), H-1 (remove State 2b for v1), H-2 (rate-limit Variant 8 state), H-3 (back-nav otp_token lifecycle). M-1 through M-4 also addressed in same session. |
+| 1 | D9 — Security Agent (Step 6 — security audit) | Live screen built. Security audit required before device testing can begin. Consent endpoints (`POST /consent/request`, `POST /consent/verify`) must also be confirmed deployed on backend before device testing. |
 
 ---
 
