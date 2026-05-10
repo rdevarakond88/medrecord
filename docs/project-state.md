@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Security re-audit v2 complete (2026-05-09). CLEAR TO MERGE TO MAIN.
-**Last Updated:** 2026-05-09
+**Phase:** D4 (Visit Detail) — Merged to main via PR #3 (2026-05-10). Next: D9 (Consent Request Flow).
+**Last Updated:** 2026-05-10
 
 ---
 
@@ -24,13 +24,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Security Agent — D4 security re-audit v2 (2026-05-09). CLEAR TO MERGE TO MAIN. All post-audit Builder fixes (DT2-1, DT2-2, DT3-1 through DT3-5) reviewed — no new security vulnerabilities. D4-KL-1 (enqueueOperation gap, LOW) documented as accepted expo-sqlite limitation.
+**Last Session:** PM — D4 merge to main via PR #3 (2026-05-10). Merge commit: 5fa8359. All D4 work (VisitDetailScreen, visit_records table, records API/DB layer, sync worker record support) now on main.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **D4 merge to main (PR)** | Security re-audit v2 CLEAR. D4 ready for PR to main. |
-| 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 1 | D9 (Consent Request) — PM pre-flight (Step 1) | Unlocks multi-doctor use cases; D3 `handleRequestAccess` has TODO stub pointing here |
 
 ---
 
