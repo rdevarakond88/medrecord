@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — Builder M-1+M-2 fixes applied (2026-05-10). CLEAR TO MERGE — 0 critical, 0 high, 0 medium open. Consent endpoints (`POST /consent/request`, `POST /consent/verify`) must be confirmed deployed on backend before device testing.
+**Phase:** D9 (Consent Request Flow) — Backend deployed (2026-05-10). Both consent endpoints live (HTTP 401 on unauth — confirmed not 404). Ready for Device Tester session.
 **Last Updated:** 2026-05-10
 
 ---
@@ -12,25 +12,24 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 |---|---|
 | API base URL (live) | `https://medrecord-api.onrender.com/v1` |
 | API base URL (frontend hardcoded) | `https://medrecord-api.onrender.com/v1` ✅ — updated 2026-03-18 |
-| Deployment status | **UP** — HTTP 200 confirmed 2026-05-03. Render cold-starts on first request (~20-30s); use 30s curl timeout for pre-flight. |
+| Deployment status | **UP** — HTTP 200 confirmed 2026-05-10. Render cold-starts on first request (~20-30s); use 30s curl timeout for pre-flight. |
 | Hosting provider | Render.com — service: `medrecord-api`, DB: `medrecord-db` |
-| Health check | `curl --max-time 30 https://medrecord-api.onrender.com/v1/health` → HTTP 200 ✅ (2026-05-03) |
+| Health check | `curl --max-time 30 https://medrecord-api.onrender.com/v1/health` → HTTP 200 ✅ (2026-05-10) |
 | Test doctor name | Dr. Test Doctor |
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
-| Blocker for device testing | **POST /consent/request and POST /consent/verify not confirmed deployed** — must verify before D9 device testing. |
-| Next action | D9 — confirm consent endpoints deployed, then Device Tester session. |
+| Consent endpoints | `POST /consent/request` → HTTP 401 ✅ (2026-05-10). `POST /consent/verify` → HTTP 401 ✅ (2026-05-10). Blocker cleared. |
+| Next action | D9 — Device Tester session. |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — D9 M-1+M-2 security fixes applied (2026-05-10). M-1: Confirm button disabled (style + onPress=undefined) when expiryExpired===true. M-2: patientMobile removed from ConsentRequest route params; handleStartNewVisit re-reads mobile from SQLite via getPatientByLocalId(). Commit: 5dac76f. Prior: Security Agent — D9 audit v2 CLEAR TO MERGE (2026-05-09).
+**Last Session:** Backend Agent — D9 consent endpoints deployed (2026-05-10). POST /consent/request + POST /consent/verify implemented (two-step OTP flow, replaces C-1 bypass). ConsentOtpRequest table pushed to production DB. Commit: 631d001. Prior: Builder Agent — D9 M-1+M-2 fixes (5dac76f).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — Confirm consent endpoints deployed on backend | Before device testing: `curl -X POST https://medrecord-api.onrender.com/v1/consent/request` must return 400/401 (not 404). Unblock if endpoints are confirmed up. |
-| 2 | D9 — Device Tester session | After backend endpoints confirmed deployed. |
+| 1 | D9 — Device Tester session | Both consent endpoints confirmed live (HTTP 401). Pre-flight blocker cleared. |
 
 ---
 
