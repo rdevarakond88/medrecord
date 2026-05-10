@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — Backend deployed (2026-05-10). Both consent endpoints live (HTTP 401 on unauth — confirmed not 404). Ready for Device Tester session.
+**Phase:** D9 (Consent Request Flow) — Device test session 1 complete (2026-05-10). 4 bugs found (2 MEDIUM, 2 LOW). Builder Agent session required before merge.
 **Last Updated:** 2026-05-10
 
 ---
@@ -19,17 +19,17 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Consent endpoints | `POST /consent/request` → HTTP 401 ✅ (2026-05-10). `POST /consent/verify` → HTTP 401 ✅ (2026-05-10). Blocker cleared. |
-| Next action | D9 — Device Tester session. |
+| Next action | D9 — Builder Agent session (fix BUG-D9-DT1-1 through DT1-4). |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Backend Agent — D9 consent endpoints deployed (2026-05-10). POST /consent/request + POST /consent/verify implemented (two-step OTP flow, replaces C-1 bypass). ConsentOtpRequest table pushed to production DB. Commit: 631d001. Prior: Builder Agent — D9 M-1+M-2 fixes (5dac76f).
+**Last Session:** Device Tester — D9 device test session 1 complete (2026-05-10). 19 PASS, 2 FAIL, 14 SKIP. 4 bugs: BUG-D9-DT1-1 (LOW — envelope icon in State 2), BUG-D9-DT1-2 (MEDIUM — backspace doesn't clear OTP box digit), BUG-D9-DT1-3 (LOW — back-nav from State 6 produces silent verify no-op), BUG-D9-DT1-4 (MEDIUM — POST /consent/verify fails silently with no connectivity). Session doc: `reviews/D9-device-test-session-1.md`.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — Device Tester session | Both consent endpoints confirmed live (HTTP 401). Pre-flight blocker cleared. |
+| 1 | D9 — Builder Agent session | Fix BUG-D9-DT1-1 through DT1-4 (2 MEDIUM, 2 LOW). Device test session 2 to verify after. |
 
 ---
 
