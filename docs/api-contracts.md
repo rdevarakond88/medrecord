@@ -394,19 +394,79 @@ Check if requesting doctor has consent for this patient.
 }
 ```
 
-### POST /consent
-Grant consent (called after patient verifies via OTP in-clinic).
+### POST /consent/request
+Doctor initiates a consent request. Server sends a 6-digit OTP SMS to the patient's registered mobile number.
+The returned `otp_token` is scoped server-side to the `(doctor_id, patient_id)` pair — a token generated
+for one doctor cannot be used by a different doctor.
+
+> **SECURITY NOTE:** The previous `POST /consent` endpoint (which accepted a client-supplied
+> `granted_by: "patient"` claim and required no OTP verification) has been **removed** from the
+> client-facing API. It must not be exposed externally. The two-step flow below is the only supported
+> consent grant path. (Fixes C-1 — consent bypass identified in D9 security audit 2026-05-09.)
+
+Auth: Doctor JWT required.
+Rate limit: 10 requests per `(doctor_id, patient_id)` per hour (see security-spec §OTP Security).
+
 ```json
 // Request
+POST /consent/request
 {
-  "patient_id": "uuid",
-  "doctor_id": "uuid",         // or clinic_id
-  "scope": "read_all",
-  "granted_by": "patient"
+  "patient_id": "uuid"
 }
 
-// Response 201
-{ "consent": { ...full consent object... } }
+// Response 200
+{
+  "otp_token": "string",  // opaque token — pass unchanged to POST /consent/verify
+  "expires_in": 600       // seconds until OTP expires
+                          // NOTE (H-2): 10 minutes recommended for consent OTPs (vs 5 min for auth
+                          // OTPs). PM to confirm this value before backend build — update here and
+                          // in docs/security-spec.md §Consent OTP Security when decided.
+}
+
+// Response 429 — rate limit exhausted
+{
+  "error": "rate_limit_exhausted",
+  "retry_after_seconds": number
+}
+```
+
+### POST /consent/verify
+Doctor submits the 6-digit OTP typed by the patient. Server verifies the OTP, creates the consent grant
+internally, and returns the consent object. OTP is purged on successful verification.
+
+Max 3 wrong OTP attempts before `otp_token` is invalidated — subsequent calls return 410.
+Server validates the `otp_token` belongs to the requesting doctor; a different doctor's token is rejected.
+
+> **SECURITY NOTE:** The server must never accept a client-supplied `granted_by` field. Consent is
+> created only after internal server-side OTP verification succeeds.
+
+Auth: Doctor JWT required.
+
+```json
+// Request
+POST /consent/verify
+{
+  "otp_token": "string",  // token from POST /consent/request
+  "otp": "string"         // 6-digit code entered by patient
+}
+
+// Response 200 — OTP correct, consent granted
+{
+  "consent_id": "uuid",
+  "granted_at": "2024-01-15T10:30:00Z",
+  "scope": "read_all"
+}
+
+// Response 400 — wrong OTP, attempts still remaining
+{
+  "error": "invalid_otp",
+  "attempts_remaining": 2  // counts down 2 → 1 → (next wrong attempt = 410)
+}
+
+// Response 410 — OTP expired OR all 3 attempts exhausted; token destroyed, must call /request again
+{
+  "error": "otp_expired_or_exhausted"
+}
 ```
 
 ### DELETE /consent/:id
