@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — D5-M-1 UNIQUE constraint fix (2026-05-10). Changed `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)` in patients table. Added schema migration with PRAGMA guard (table recreation). Updated `ON CONFLICT` target and fallback lookup in `patients.ts`. Zero new TypeScript errors.
+**Last Session:** Builder Agent — Backend: patient update sync (2026-05-10). Added patient `update` branch to `backend/src/routes/sync.ts` POST /sync. `patientUpdatePayloadSchema` (server_id + doctor_id + mobile_number + updated_at). IDOR check, ownership guard (createdBy), idempotency, UNIQUE mobile conflict, audit log (last 4 digits only). `api-contracts.md` updated with update payload spec. Zero TS errors.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
@@ -32,7 +32,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~1~~ | ~~**Builder: Patient mobile edit**~~ | ~~DONE 2026-05-10 — commit a6f35d6~~ |
 | ~~2~~ | ~~**Builder: D6 syncLogger removal**~~ | ~~DONE 2026-05-10 — syncLogger.ts deleted; all call sites removed from 4 files; SyncDebugPanel removed from D3; useSyncStore cleaned up.~~ |
 | ~~3~~ | ~~**Builder: D5-M-1 UNIQUE constraint fix**~~ | ~~DONE 2026-05-10 — `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)`. Schema migration with PRAGMA guard. `ON CONFLICT` + fallback lookup updated in patients.ts.~~ |
-| 4 | **Backend: patient update sync** | POST /sync does not yet handle patient 'update' operations. Required before D3 mobile corrections propagate server-side. Flagged by D3 mobile-edit build (2026-05-10). |
+| ~~4~~ | ~~**Backend: patient update sync**~~ | ~~DONE 2026-05-10 — `patientUpdatePayloadSchema` + update branch added to POST /sync in `backend/src/routes/sync.ts`. IDOR check, ownership guard, idempotency, UNIQUE conflict, audit log (last 4 digits only). api-contracts.md updated. Build: zero TS errors.~~ |
 | 5 | **EAS build + cert pinning smoke test** | First EAS production binary. Validate cert pinning works. Run core flow smoke test. Highest field risk. |
 | 6 | **Device test: EAS build smoke test** | Confirm cert pinning, login → D9 consent flow in production binary. |
 

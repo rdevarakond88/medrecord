@@ -531,12 +531,28 @@ Batch sync from device. Processes queued offline operations in order.
 }
 ```
 
-**Supported entity types:**
-| entity_type | Description |
-|---|---|
-| `patient` | New patient registration |
-| `visit` | New visit created offline |
-| `audit_event` | DPDP Act 2023 compliance audit log entry (see below) |
+**Supported operations per entity type:**
+
+| entity_type | operation | Description |
+|---|---|---|
+| `patient` | `create` | New patient registration |
+| `patient` | `update` | Patient mobile number correction (D3 mobile edit — see payload below) |
+| `visit` | `create` | New visit created offline |
+| `audit_event` | `create` | DPDP Act 2023 compliance audit log entry (see below) |
+
+**patient `update` payload:**
+```json
+{
+  "local_id":      "uuid",                  // patient's local UUID
+  "server_id":     "uuid" | null,           // null if create hasn't synced yet
+  "mobile_number": "9876543210",            // new mobile number (10 digits, 6–9 prefix)
+  "doctor_id":     "uuid",                  // must match the authenticated doctor (IDOR check)
+  "updated_at":    "2024-01-15T09:00:00Z"
+}
+```
+**Authorization:** Only the doctor who originally registered the patient (`created_by` in DB) may update the mobile number. Server returns `error` with `"Not authorized to update this patient"` for any other doctor.
+**Conflict:** If the new mobile number is already registered to a *different* patient, server returns `conflict` with that patient's `server_id`.
+**Idempotency:** If the patient's mobile is already the target value, server returns `success` without writing.
 
 **audit_event entity:**
 The server MUST store all `audit_event` operations in a persistent audit log table.
