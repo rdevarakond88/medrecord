@@ -105,6 +105,9 @@ export default function VisitDetailScreen() {
   const [isFinishing,         setIsFinishing]         = useState(false);
   // D4-SA-H1: live consent — re-read from SQLite after records load; not nav param alone
   const [consentGrantedLive,  setConsentGrantedLive]  = useState(consentGranted);
+  // BUG-D4-DT3-5: live own-visit flag — re-derived from visits_draft to guard against
+  // stale is_own_visit = 0 in the visits table (migration default on pre-existing rows).
+  const [isOwnVisitLive,      setIsOwnVisitLive]      = useState(isOwnVisit);
   // D4-SA-H2: session expiry banner
   const [sessionExpired,      setSessionExpired]      = useState(false);
   const isSavingRef   = useRef(false);  // synchronous tap guard — prevents double-submit on note saves
@@ -161,6 +164,19 @@ export default function VisitDetailScreen() {
         setConsentGrantedLive(freshPatient.consent_granted);
       }
 
+      // BUG-D4-DT3-5: if nav param says not own visit, cross-check visits_draft.
+      // Stale is_own_visit = 0 (from DB migration default) in the visits table
+      // can cause D3 offline path to pass isOwnVisit: false for the current doctor's
+      // own visit. If visits_draft has a row for this serverId + doctorId, it IS theirs.
+      if (!isOwnVisit) {
+        const draftRow = await db.getFirstAsync<{ local_id: string }>(
+          `SELECT local_id FROM visits_draft
+           WHERE server_id = ? AND doctor_id = ? LIMIT 1`,
+          [visitServerId, user.id],
+        );
+        if (draftRow) setIsOwnVisitLive(true);
+      }
+
       // DPDP Act 2023 §8 — log that this doctor viewed the visit records (once per mount)
       if (!viewLoggedRef.current) {
         viewLoggedRef.current = true;
@@ -181,6 +197,7 @@ export default function VisitDetailScreen() {
   // ── Save note handler ─────────────────────────────────────────
   const handleSaveNote = useCallback(async (text: string) => {
     if (!token || !user) return;
+    if (!text.trim()) return;         // defensive guard — Cancel must not reach here
     if (isSavingRef.current) return;  // tap guard
     isSavingRef.current = true;
     setIsSaving(true);
@@ -189,25 +206,27 @@ export default function VisitDetailScreen() {
     const localId = Crypto.randomUUID();
 
     try {
-      // D4-SA-C1: both SQLite writes are atomic — if app is killed between them,
-      // neither write commits; the note is never left without a sync queue entry.
+      // 1. SQLite write — note is never lost even if network call fails.
+      // Transaction protects insertLocalNote from a partial write if app is killed.
+      // BUG-D3-DT11-1 established that enqueueOperation must be called OUTSIDE
+      // withTransactionAsync — the sync_queue INSERT fails silently when nested.
       await db.withTransactionAsync(async () => {
-        // 1. SQLite write first — note is never lost even if network call fails
         await insertLocalNote(db, visitServerId, user.id, text, localId, user.name);
+      });
 
-        // 2. Enqueue for background sync (covers the offline case where sync worker
-        //    will pick up the note when connectivity is restored)
-        await enqueueOperation(db, {
-          doctor_id:       user.id,
-          entity_type:     'record',
-          entity_local_id: localId,
-          operation:       'create',
-          payload: {
-            type:         'note',
-            visit_id:     visitServerId,
-            content_text: text,
-          },
-        });
+      // 2. Enqueue for background sync (covers offline case — sync worker picks up
+      //    the note when connectivity is restored). Called outside the transaction
+      //    per BUG-D3-DT11-1: expo-sqlite sync_queue INSERTs fail inside withTransactionAsync.
+      await enqueueOperation(db, {
+        doctor_id:       user.id,
+        entity_type:     'record',
+        entity_local_id: localId,
+        operation:       'create',
+        payload: {
+          type:         'note',
+          visit_id:     visitServerId,
+          content_text: text,
+        },
       });
 
       // 3. If online, POST immediately and mark as synced (avoids sync worker delay)
@@ -330,9 +349,9 @@ export default function VisitDetailScreen() {
   const isOpen            = visitStatus === 'open';
   // D4-SA-H1: consent gate uses live SQLite value, not stale nav param.
   // Per consent-layer-spec.md: "View records by other doctors: ❌ without consent"
-  const showClinicalContent = isOwnVisit || consentGrantedLive;
+  const showClinicalContent = isOwnVisitLive || consentGrantedLive;
   // canEditNotes: note edit/delete affordance only on own open visits
-  const canEditNotes = isOwnVisit && isOpen;
+  const canEditNotes = isOwnVisitLive && isOpen;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -377,12 +396,12 @@ export default function VisitDetailScreen() {
               </View>
 
               <Text style={styles.patientName} numberOfLines={1} ellipsizeMode="tail">{patientName}</Text>
-              {isOwnVisit && (
+              {isOwnVisitLive && (
                 <Text style={styles.doctorName}>{user.name}</Text>
               )}
               <Text style={styles.clinicName}>{clinicName}</Text>
 
-              {!isOwnVisit && !consentGrantedLive && (
+              {!isOwnVisitLive && !consentGrantedLive && (
                 <View style={styles.consentBanner} accessibilityLabel="No consent granted">
                   <Text style={styles.consentBannerText}>
                     Patient consent not granted — clinical content from this visit is hidden.
@@ -475,7 +494,7 @@ export default function VisitDetailScreen() {
         {/* ── Bottom action bar (open own visits only) ─────────────────────── */}
         {/*   Row 1: [+ Scan]  [+ Note]  — additive actions                   */}
         {/*   Row 2: [    Finish Visit   ] — full-width, disabled until first record */}
-        {isOpen && isOwnVisit && !isLoading && (
+        {isOpen && isOwnVisitLive && !isLoading && (
           <View style={styles.bottomBar}>
             <View style={styles.bottomBarAddRow}>
               {/* Add Scan — stub in v1 (adding scans to synced visits requires D7 rework) */}

@@ -99,8 +99,16 @@ export async function getCachedVisits(
          patient_server_id = ?
          OR (patient_server_id IS NULL AND patient_id = ?)
        )
+       AND (
+         server_id IS NULL
+         OR NOT EXISTS (
+           SELECT 1 FROM visits
+           WHERE server_id = visits_draft.server_id
+             AND cached_by_doctor_id = ?
+         )
+       )
      ORDER BY visit_date DESC`,
-    [patientServerId, doctorId, doctorId, patientServerId, patientLocalId],
+    [patientServerId, doctorId, doctorId, patientServerId, patientLocalId, doctorId],
   );
 
   // SQLite stores booleans as integers — normalise to JS

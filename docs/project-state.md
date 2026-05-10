@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D4 (Visit Detail) — Device test session 3 complete (2026-05-03). 5 bugs found. Builder session required before merge.
-**Last Updated:** 2026-05-03
+**Phase:** D4 (Visit Detail) — Builder fixes complete (2026-05-09). BUG-D4-DT3-1 through DT3-5 fixed. Device test session 4 required.
+**Last Updated:** 2026-05-09
 
 ---
 
@@ -24,14 +24,13 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — D4 device test session 3 (2026-05-03). 5 bugs found: BUG-D4-DT3-1 (HIGH — edit note reverts), BUG-D4-DT3-2 (MEDIUM — ghost draft card in D3), BUG-D4-DT3-3 (HIGH — offline note not enqueued), BUG-D4-DT3-4 (HIGH — Cancel saves instead of discards), BUG-D4-DT3-5 (MEDIUM — consent banner on own visit). Session doc: `reviews/D4-device-test-session-3.md`.
+**Last Session:** Builder Agent — D4 bug fixes (2026-05-09). BUG-D4-DT3-1 through DT3-5 fixed. All 3 HIGH + 2 MEDIUM bugs from device test session 3 addressed.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder Agent — fix BUG-D4-DT3-1 through BUG-D4-DT3-5** | 3 HIGH + 2 MEDIUM bugs from D4 device test session 3. Required before merge. |
-| 2 | D4 device test session 4 | Verify fixes after Builder session. |
-| 3 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
+| 1 | **D4 device test session 4** | Verify fixes BUG-D4-DT3-1 through DT3-5. BUG-D4-DT3-4 (Cancel saves) needs clean re-run to confirm. |
+| 2 | D9 (Consent Request) — build Steps 2–10 | Unlocks multi-doctor use cases |
 
 ---
 
@@ -104,7 +103,7 @@ _Carry these into every build/mockup session for these screens._
 | Screen | Status | Notes |
 |---|---|---|
 | D6 — New Visit | **DEVICE TESTING COMPLETE (2026-03-28, session 6). BUG-D6-DT5-1 fix verified. Zero bugs. Clear to merge to main. Security re-audit v3 (2026-04-11): CLEAR TO MERGE TO MAIN.** All CRITICAL/HIGH verified fixed. MEDIUM finding: debug syncLogger still active in production builds — must remove `src/sync/syncLogger.ts` and call sites before v1 launch. Items #49, #60 permanently deferred (simulation, v1 acceptable). Sessions: `reviews/D6-device-test-session-2.md` through `reviews/D6-device-test-session-6.md`. | Tier 1 Critical. `src/screens/doctor/NewVisitScreen.tsx`. Checklist: `reviews/D6-VALIDATION-CHECKLIST.md`. |
-| D4 — Visit Detail | **Builder QA fixes complete (2026-04-19). C1+H1+H2+H3+H4+M1 closed.** MEDIUM debt: M2, M3, M4 — fix before v1 launch. QA test plan: `reviews/D4-qa-test-plan.md`. Security audit: all closed (2026-04-19). Live screen: `src/screens/doctor/VisitDetailScreen.tsx`. **Device test session 1 (2026-05-02): BLOCKED. Device test session 2 (2026-05-02): BLOCKED. Builder session 3 (2026-05-03): BUG-D4-DT2-1 + BUG-D4-DT2-2 FIXED. Device test session 3 (2026-05-03): COMPLETE — 5 bugs found. BUG-D4-DT3-1 (HIGH — edit note reverts to original), BUG-D4-DT3-2 (MEDIUM — ghost draft card in D3 after sync/finish), BUG-D4-DT3-3 (HIGH — offline note not enqueued in sync_queue), BUG-D4-DT3-4 (HIGH — Cancel saves instead of discards; needs clean re-run), BUG-D4-DT3-5 (MEDIUM — consent banner on own visit). Builder session required. Session docs: `reviews/D4-device-test-session.md` through `reviews/D4-device-test-session-3.md`.** | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
+| D4 — Visit Detail | **Builder QA fixes complete (2026-04-19). C1+H1+H2+H3+H4+M1 closed.** MEDIUM debt: M2, M3, M4 — fix before v1 launch. QA test plan: `reviews/D4-qa-test-plan.md`. Security audit: all closed (2026-04-19). Live screen: `src/screens/doctor/VisitDetailScreen.tsx`. **Device test session 1 (2026-05-02): BLOCKED. Device test session 2 (2026-05-02): BLOCKED. Builder session 3 (2026-05-03): BUG-D4-DT2-1 + BUG-D4-DT2-2 FIXED. Device test session 3 (2026-05-03): COMPLETE — 5 bugs found. Builder session 4 (2026-05-09): BUG-D4-DT3-1 through DT3-5 FIXED. BUG-D4-DT3-1 (edit note reverts): `sync_status='local_edit'` added; upsertRecordsFromServer no longer overwrites locally-edited notes. BUG-D4-DT3-2 (ghost draft card in D3): getCachedVisits UNION ALL now excludes visits_draft rows whose server_id already exists in visits table. BUG-D4-DT3-3 (offline note not enqueued): enqueueOperation moved outside withTransactionAsync per BUG-D3-DT11-1 pattern. BUG-D4-DT3-4 (Cancel saves): defensive text guard added; original test was ambiguous — needs clean re-run in session 4. BUG-D4-DT3-5 (consent banner on own visit): isOwnVisitLive state added; loadRecords cross-checks visits_draft to guard against stale is_own_visit=0 in visits table. Device test session 4 required. Session docs: `reviews/D4-device-test-session.md` through `reviews/D4-device-test-session-3.md`.** | Tier 3. Required before "View Full Visit" button in D3 can be wired. |
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |

@@ -26,7 +26,7 @@ export interface LocalRecord {
   ocr_status:      string | null;  // null for notes
   created_by_name: string | null;  // display name; null for records predating this field
   created_at:      string;         // ISO 8601 timestamp
-  sync_status:     'synced' | 'pending' | 'failed' | 'deleted';
+  sync_status:     'synced' | 'pending' | 'failed' | 'deleted' | 'local_edit';
 }
 
 /**
@@ -58,8 +58,10 @@ export async function getCachedRecords(
  * Existing 'synced' rows are updated; rows with sync_status='pending' are
  * left untouched so locally-added notes are not overwritten by a stale fetch.
  *
- * ON CONFLICT DO UPDATE WHERE sync_status != 'pending' ensures this invariant
+ * ON CONFLICT DO UPDATE WHERE sync_status NOT IN ('pending', 'local_edit') ensures this invariant
  * without a separate read-then-write — one atomic upsert per record.
+ * 'local_edit' rows are locally-edited notes (BUG-D4-DT3-1 fix) — the server does not have
+ * the updated text yet (PATCH /records/:id is not implemented), so we must not overwrite them.
  */
 export async function upsertRecordsFromServer(
   db: SQLite.SQLiteDatabase,
@@ -87,7 +89,7 @@ export async function upsertRecordsFromServer(
          created_by_name = excluded.created_by_name,
          sync_status     = 'synced',
          cached_at       = excluded.cached_at
-       WHERE sync_status != 'pending'`,
+       WHERE sync_status NOT IN ('pending', 'local_edit')`,
       [r.id, visitId, doctorId, r.type, r.content_text,
        r.ocr_status, r.created_by_name, r.created_at, now],
     );
@@ -149,6 +151,10 @@ export async function markRecordSynced(
  * The updated text is visible in D4 immediately but will not propagate to
  * other devices until the backend endpoint exists (tracked as D4 MEDIUM debt).
  *
+ * Sets sync_status = 'local_edit' to prevent upsertRecordsFromServer from
+ * overwriting the edited text when D4 re-fetches the visit records from the
+ * server (the server still holds the original text — BUG-D4-DT3-1 root cause).
+ *
  * Uses the record's current `id` (which may be the local UUID for a pending
  * note, or the server UUID for a synced note).
  */
@@ -162,6 +168,7 @@ export async function updateLocalNoteText(
   await db.runAsync(
     `UPDATE visit_records
      SET content_text = ?,
+         sync_status  = 'local_edit',
          cached_at    = ?
      WHERE id = ? AND doctor_id = ?`,
     [newText, now, recordId, doctorId],
