@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — Builder session 2 complete (2026-05-10). BUG-D9-DT2-1 FIXED. Device test session 3 required to verify BUG-D9-DT2-1 fix and BUG-D9-DT1-4 (offline verify — untested due to hotspot constraint).
+**Phase:** D9 (Consent Request Flow) — Device test session 3 complete (2026-05-10). BUG-D9-DT3-1 found: gestureEnabled: false via dynamic setOptions also ineffective on iOS NativeStack — swipe-back from failure state (State 6) still dismisses screen. Both known approaches (beforeRemove + gestureEnabled) exhausted. Builder session 3 required for alternative architecture fix. BUG-D9-DT1-4 still untested (hotspot constraint).
 **Last Updated:** 2026-05-10
 
 ---
@@ -19,17 +19,18 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Consent endpoints | `POST /consent/request` → HTTP 401 ✅ (2026-05-10). `POST /consent/verify` → HTTP 401 ✅ (2026-05-10). Blocker cleared. |
-| Next action | D9 — Device test session 3 (verify BUG-D9-DT2-1 fix + BUG-D9-DT1-4). |
+| Next action | D9 — Builder session 3 (fix BUG-D9-DT3-1 — alternative swipe-block architecture). |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder — D9 Builder session 2 complete (2026-05-10). BUG-D9-DT2-1 FIXED: added `gestureEnabled: false` useEffect for `otp_input` + `failure` states. NativeStack does not honour `e.preventDefault()` for iOS swipe; disabling the gesture is the correct approach. `beforeRemove` retained for JS-level header back-button interception in failure state.
+**Last Session:** Device Tester — D9 Device test session 3 complete (2026-05-10). BUG-D9-DT3-1 found: `gestureEnabled: false` via `navigation.setOptions()` in a useEffect does NOT block iOS swipe on NativeStack — same console error and dismissal behaviour as the beforeRemove approach. Both approaches exhausted. TC-FIX-4 (BUG-D9-DT1-4) skipped again — hotspot constraint unchanged.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — Device test session 3 | Verify BUG-D9-DT2-1 fix (swipe-back from failure state) + BUG-D9-DT1-4 (offline error on verify — untestable session 2; needs WiFi-independent connection). |
+| 1 | D9 — Builder session 3 | Fix BUG-D9-DT3-1: find alternative architecture for blocking iOS swipe from failure state. Dynamic setOptions and beforeRemove both confirmed ineffective on NativeStack. Options: static gestureEnabled:false in App.tsx + programmatic back; modal overlay for failure state; navigation.replace on failure entry. Also re-verify BUG-D9-DT1-4 fix still in place. |
+| 2 | D9 — Device test session 4 | Verify BUG-D9-DT3-1 fix + BUG-D9-DT1-4 (requires WiFi — cannot test while iPhone is hotspot source). |
 
 ---
 
