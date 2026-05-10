@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — C-1 + H-1 fixed (2026-05-09). api-contracts.md updated: POST /consent removed; POST /consent/request + POST /consent/verify added. H-2 (OTP expiry) pending PM decision. Next: PM session to decide consent OTP expiry (recommend 10 min), then QA Agent (Step 7).
+**Phase:** D9 (Consent Request Flow) — C-1 + H-1 fixed. H-2 (consent OTP expiry) decided: **10 minutes** (PM 2026-05-09). security-spec.md §Consent OTP Security added. api-contracts.md `expires_in: 600` confirmed. Next: QA Agent (Step 7).
 **Last Updated:** 2026-05-09
 
 ---
@@ -19,18 +19,17 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Blocker for device testing | None |
-| Next action | D9 — PM decides consent OTP expiry (recommend 10 min); document in security-spec.md + update mockup Failure state text. Then QA Agent (Step 7). |
+| Next action | D9 — QA Agent (Step 7). H-2 resolved (consent OTP = 10 min, 2026-05-09). |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — D9 C-1+H-1 fix (2026-05-09). api-contracts.md updated: POST /consent (bypass path) removed; POST /consent/request + POST /consent/verify added with full response shapes, rate-limit 429 contract, attempt-exhaustion 410 contract, and server-side security notes. H-2 (consent OTP expiry) left as NOTE in contract — PM decision required before backend build. Prior: Security Agent (2026-05-09): BLOCKED on C-1. Prior: Builder Step 4 (2026-05-09): all MUST FIX + SHOULD FIX persona items applied to mockup.
+**Last Session:** PM Agent — D9 consent OTP expiry decided: 10 minutes (2026-05-09). security-spec.md §Consent OTP Security added. api-contracts.md NOTE placeholder replaced with confirmed value. H-2 closed. Prior: Builder Agent — D9 C-1+H-1 fix (2026-05-09). api-contracts.md updated: POST /consent removed; POST /consent/request + POST /consent/verify added.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — PM decision | Decide consent OTP expiry (recommend 10 min vs 5 min for auth OTPs); document in security-spec.md §Consent OTP Security; update D9 mockup Failure state text to match. |
-| 2 | D9 — QA Agent (Step 7) | After OTP expiry decided. |
+| 1 | D9 — QA Agent (Step 7) | H-2 resolved. H-3 (rate-limit exhaustion UI state) open — QA Agent should determine if error toast is sufficient for v1 or if a distinct UI state is required. |
 
 ---
 

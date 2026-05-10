@@ -417,10 +417,7 @@ POST /consent/request
 // Response 200
 {
   "otp_token": "string",  // opaque token — pass unchanged to POST /consent/verify
-  "expires_in": 600       // seconds until OTP expires
-                          // NOTE (H-2): 10 minutes recommended for consent OTPs (vs 5 min for auth
-                          // OTPs). PM to confirm this value before backend build — update here and
-                          // in docs/security-spec.md §Consent OTP Security when decided.
+  "expires_in": 600       // seconds until OTP expires (10 minutes — confirmed; see security-spec §Consent OTP Security)
 }
 
 // Response 429 — rate limit exhausted

@@ -43,6 +43,16 @@ Primary threats for a healthcare records app in India's semi-urban market:
 - OTPs stored as bcrypt hash on server (never plaintext)
 - OTPs purged from database immediately after successful verification
 
+### Consent OTP Security
+Consent OTPs follow the same base rules as auth OTPs with two differences:
+
+- **OTP expiry: 10 minutes** (vs 5 min for auth OTPs)
+- **Rate limit: max 10 consent OTP requests per `(doctor_id, patient_id)` per hour** (vs 5 per mobile for auth)
+
+Rationale: Consent OTPs are an in-person, synchronous flow — both doctor and patient are physically present. SMS delivery delays in rural/low-signal areas (1–3 min) plus the time for a patient to locate their phone and read or dictate the code make a 5-minute window unreliably short. The security downside is minimal: the OTP is delivered to the patient's registered mobile, both parties are co-located, and attempt limits and rate limits are still enforced.
+
+All other rules apply identically: 6-digit numeric, bcrypt-hashed server-side, purged on successful verification, invalidated after 3 wrong attempts.
+
 ---
 
 ## Transport Security
