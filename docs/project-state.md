@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — Security audit complete (2026-05-09). CLEAR TO MERGE — 0 critical, 0 high findings. Two MEDIUM items (M-1 Confirm button on expired OTP, M-2 full mobile in nav params) must be fixed by Builder before device testing. Consent endpoints (`POST /consent/request`, `POST /consent/verify`) must be confirmed deployed on backend before device testing.
-**Last Updated:** 2026-05-09
+**Phase:** D9 (Consent Request Flow) — Builder M-1+M-2 fixes applied (2026-05-10). CLEAR TO MERGE — 0 critical, 0 high, 0 medium open. Consent endpoints (`POST /consent/request`, `POST /consent/verify`) must be confirmed deployed on backend before device testing.
+**Last Updated:** 2026-05-10
 
 ---
 
@@ -19,19 +19,18 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Blocker for device testing | **POST /consent/request and POST /consent/verify not confirmed deployed** — must verify before D9 device testing. |
-| Next action | D9 — Security Agent (Step 6). Live screen built and registered. Consent endpoints still need backend confirmation before device testing. |
+| Next action | D9 — confirm consent endpoints deployed, then Device Tester session. |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Security Agent — D9 security audit v2 complete (2026-05-09). Verdict: CLEAR TO MERGE — 0 critical, 0 high. Two MEDIUM findings (M-1 Confirm button active on expired OTP; M-2 full patientMobile in nav params). All prior mockup audit C/H/M findings verified closed in live build. Report: `reviews/D9-security-audit-v2.md`. Prior: Builder Agent — D9 live screen built (2026-05-09).
+**Last Session:** Builder Agent — D9 M-1+M-2 security fixes applied (2026-05-10). M-1: Confirm button disabled (style + onPress=undefined) when expiryExpired===true. M-2: patientMobile removed from ConsentRequest route params; handleStartNewVisit re-reads mobile from SQLite via getPatientByLocalId(). Commit: 5dac76f. Prior: Security Agent — D9 audit v2 CLEAR TO MERGE (2026-05-09).
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — Builder Agent (fix security M-1 + M-2) | M-1: disable Confirm button when otpSecondsLeft === 0. M-2: remove patientMobile from ConsentRequest nav params; re-read from SQLite in handleStartNewVisit. Both are small targeted fixes. |
-| 2 | D9 — Confirm consent endpoints deployed on backend | Before device testing: `curl -X POST https://medrecord-api.onrender.com/v1/consent/request` must return 400/401 (not 404). Unblock if endpoints are confirmed up. |
-| 3 | D9 — Device Tester session | After Builder fixes applied and backend endpoints confirmed deployed. |
+| 1 | D9 — Confirm consent endpoints deployed on backend | Before device testing: `curl -X POST https://medrecord-api.onrender.com/v1/consent/request` must return 400/401 (not 404). Unblock if endpoints are confirmed up. |
+| 2 | D9 — Device Tester session | After backend endpoints confirmed deployed. |
 
 ---
 
