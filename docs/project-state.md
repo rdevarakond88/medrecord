@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — Mockup built (2026-05-09). Next: Persona Critic — Step 3.
+**Phase:** D9 (Consent Request Flow) — Persona Critique complete (2026-05-09). Score: 3.4/5. Verdict: Revise and re-evaluate. Next: Builder — Step 4 (apply MUST FIX + SHOULD FIX items, then Security Agent).
 **Last Updated:** 2026-05-09
 
 ---
@@ -19,17 +19,17 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Blocker for device testing | None |
-| Next action | D9 Persona Critic (Step 3) |
+| Next action | D9 Builder (Step 4) — apply persona critique fixes |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder — D9 mockup (2026-05-09). 7 state variants built: requesting, waiting (with 30s resend countdown), otp_input (patient-facing — radically simplified, no surrounding context), verifying, success, failure, patient_not_available. Mockup: `mockups/D9ConsentRequestScreen.tsx`. Prior: PM pre-flight (2026-05-09), D4 merge to main via PR #3 (2026-05-10), commit 5fa8359.
+**Last Session:** Persona Critic — D9 (2026-05-09). Score: 3.4/5. Verdict: Revise and re-evaluate. 3 MUST FIX, 3 SHOULD FIX, 2 NICE TO HAVE. Critique: `reviews/D9-persona-critique.md`. Prior: Builder — D9 mockup (2026-05-09). 7 state variants: requesting, waiting, otp_input (patient-facing), verifying, success, failure, patient_not_available. Mockup: `mockups/D9ConsentRequestScreen.tsx`.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — Persona Critic (Step 3) | Mockup complete; 7 state variants ready for scoring. Critical: otp_input patient-facing state must score well for low-literacy users. |
+| 1 | D9 — Builder (Step 4) | Apply persona critique MUST FIX + SHOULD FIX items, then hand to Security Agent. |
 
 ---
 
@@ -107,7 +107,7 @@ _Carry these into every build/mockup session for these screens._
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
-| D9 — Consent Request Flow | **PM pre-flight complete (2026-05-09). Mockup built (2026-05-09) — `mockups/D9ConsentRequestScreen.tsx`. 7 states: requesting, waiting (30s resend), otp_input (patient-facing), verifying, success, failure, patient_not_available. Sub-flow A (push) deferred to v2. Two API contract gaps (POST /consent/request + POST /consent/verify) must be added before wiring step. Next: Persona Critic (Step 3).** | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
+| D9 — Consent Request Flow | **PM pre-flight complete (2026-05-09). Mockup built (2026-05-09) — `mockups/D9ConsentRequestScreen.tsx`. 7 states: requesting, waiting (30s resend), otp_input (patient-facing), verifying, success, failure, patient_not_available. Sub-flow A (push) deferred to v2. Two API contract gaps (POST /consent/request + POST /consent/verify) must be added before wiring step. Persona Critique complete (2026-05-09) — score 3.4/5, verdict: Revise and re-evaluate. Critique: `reviews/D9-persona-critique.md`. Next: Builder (Step 4) — apply MUST FIX + SHOULD FIX items.** | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
 
 ---
@@ -494,6 +494,22 @@ _Carry these into every build/mockup session for these screens._
 | **D5-PC-SF-2:** No post-save affordance — user has no indication where they'll land after tapping the button. | D5 | Persona critique — Dr. Sinha | Add hint text below button: "You'll be taken directly to a new visit for this patient." (already in mockup — verify persists in live build). |
 | **D5-PC-SF-3:** No "add more later" note — no signal that additional details (blood group, allergies, address) can be added from the patient profile after save. | D5 | Persona critique — Dr. Nair, Sunita | Add informational line below form. |
 | **D5-PC-SF-4:** Age derived from DOB is hardcoded "39 years" in mockup — must be computed dynamically in live build. | D5 | Persona critique — Dr. Nair | Compute from DOB at render time in live build. |
+
+### MUST FIX — D9 persona critique (apply before live build)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D9-PC-MF-1:** OTP entry screen (Variant 3) is English-only — blocks non-English-speaking patients from completing the task without staff translation. Add Hindi subtitle under primary instruction: "अपना 6-अंकों का कोड डालें" and under hint: "MedRecord के SMS से कोड देखें." | D9 | Persona critique — Sunita, Shantabai | Critical accessibility gap. Spec requires this screen to work for low-literacy patients in 10 seconds. |
+| **D9-PC-MF-2:** Disabled "Confirm" button provides no feedback — tapping it with fewer than 6 digits entered shows nothing. Show inline hint on tap: "Please enter all 6 digits." Without this, elderly patients will assume the phone is broken. | D9 | Persona critique — Shantabai | |
+| **D9-PC-MF-3:** No framing in Waiting state that consent is a one-time step for new patients — Dr. Sinha will resist this as ongoing overhead for every visit. Add 1-line framing: "Unlocks full patient history — one-time setup for new patients." Also confirm consent caching in spec and implementation — returning patients must never trigger this flow again. | D9 | Persona critique — Dr. Sinha | Inherent workflow friction; mitigable via framing + confirmed caching. |
+
+### SHOULD FIX — D9 persona critique (apply before live build)
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D9-PC-SF-1:** No mobile number correction path — if the registered mobile is wrong, staff cannot fix it mid-flow. Add "Wrong number? Go back to edit" link in the Waiting state. | D9 | Persona critique — Sunita | Real Day-1 operational gap. |
+| **D9-PC-SF-2:** Doctor has no feedback after handing phone to patient — after tapping "Patient is ready — show them the entry screen", the doctor sees nothing. Add a "Waiting for patient to enter code…" holding state on the doctor's side. | D9 | Persona critique — Dr. Nair | |
+| **D9-PC-SF-3:** Success screen footnote implies a patient app the user may not have — "You can remove this access at any time from the MedRecord app." Revise to: "To remove access later, contact the clinic." | D9 | Persona critique — Arjun | |
 
 ---
 
