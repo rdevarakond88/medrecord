@@ -268,6 +268,40 @@ export async function setPatientServerId(
 }
 
 /**
+ * Update a patient's mobile number locally.
+ *
+ * Called by D3 mobile-edit modal when staff correct a wrong mobile number.
+ * Writes to SQLite first (offline-first); the caller enqueues an 'update'
+ * sync operation so the correction reaches the server on reconnect.
+ *
+ * NOTE: The backend POST /sync endpoint does not yet handle patient 'update'
+ * operations — it must be extended before mobile corrections propagate to
+ * the server. This is a known pre-launch gap (D3-mobile-edit build notes).
+ *
+ * Returns { success: true } on update, { success: false, conflict: true }
+ * when another patient already has that mobile number (UNIQUE constraint).
+ */
+export async function updatePatientMobile(
+  db: SQLite.SQLiteDatabase,
+  localId:   string,
+  newMobile: string,
+): Promise<{ success: boolean; conflict: boolean }> {
+  const now = new Date().toISOString();
+  try {
+    const result = await db.runAsync(
+      `UPDATE patients SET mobile_number = ?, updated_at = ? WHERE local_id = ?`,
+      [newMobile, now, localId],
+    );
+    return { success: result.changes > 0, conflict: false };
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
+      return { success: false, conflict: true };
+    }
+    throw err;
+  }
+}
+
+/**
  * Delete all locally cached patients belonging to the given doctor.
  * Called as part of the logout sequence (before clearAuth) to prevent
  * cross-doctor data leakage on shared clinic devices.
