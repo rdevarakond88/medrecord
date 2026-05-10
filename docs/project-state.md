@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** POST-D9. All 8 core doctor-facing screens complete and device-tested (D1, D2, D3, D4, D5, D6, D7, D9). PM Agent Moment 2 + Moment 3 complete (2026-05-10). D9 PR created and merged to main. Pre-launch conditions identified: (1) EAS build + cert pinning validation, (2) patient mobile edit (D3 stub → working form), (3) remove syncLogger, (4) D5-M-1 UNIQUE constraint fix. Next: Builder sessions for pre-launch conditions, then EAS build smoke test.
+**Phase:** POST-D9. All 8 core doctor-facing screens complete and device-tested. syncLogger removed (2026-05-10). Remaining pre-launch: (1) D5-M-1 UNIQUE constraint fix, (2) EAS build + cert pinning validation, (3) backend patient update sync. Next: Builder session for D5-M-1 UNIQUE fix.
 **Last Updated:** 2026-05-10
 
 ---
@@ -24,13 +24,13 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — D3 patient mobile edit complete (2026-05-10). Edit button in D3 now opens a validated bottom-sheet modal. Saves to SQLite + enqueues 'update' sync operation. Backend gap flagged: POST /sync must handle patient 'update' before corrections reach server. Commit: a6f35d6.
+**Last Session:** Builder Agent — syncLogger removal complete (2026-05-10). Removed `src/sync/syncLogger.ts`, all `syncLog` call sites (NewVisitScreen, syncWorker, useSyncWorker, useLogout), `SyncDebugPanel` from PatientDetailScreen, and `debugLog`/`addDebugLog` from useSyncStore. Zero new TypeScript errors.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
 | ~~1~~ | ~~**Builder: Patient mobile edit**~~ | ~~DONE 2026-05-10 — commit a6f35d6~~ |
-| 2 | **Builder: D6 syncLogger removal** | `src/sync/syncLogger.ts` + call sites in `NewVisitScreen.tsx` lines 64, 342, 344, 368, 372. Must remove before EAS production build. |
+| ~~2~~ | ~~**Builder: D6 syncLogger removal**~~ | ~~DONE 2026-05-10 — syncLogger.ts deleted; all call sites removed from 4 files; SyncDebugPanel removed from D3; useSyncStore cleaned up.~~ |
 | 3 | **Builder: D5-M-1 UNIQUE constraint fix** | `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)` with schema migration. Required for multi-doctor clinics. |
 | 4 | **Backend: patient update sync** | POST /sync does not yet handle patient 'update' operations. Required before D3 mobile corrections propagate server-side. Flagged by D3 mobile-edit build (2026-05-10). |
 | 5 | **EAS build + cert pinning smoke test** | First EAS production binary. Validate cert pinning works. Run core flow smoke test. Highest field risk. |

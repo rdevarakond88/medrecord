@@ -488,9 +488,6 @@ export default function PatientDetailScreen() {
         <ErrorBanner message={fetchError} onRetry={() => void fetchData()} />
       )}
 
-      {/* DEBUG — sync diagnostics overlay. Remove before merge (BUG-D3-DT8-1). */}
-      <SyncDebugPanel />
-
       {/* ── Navigation header ── */}
       <View style={styles.navHeader}>
         <TouchableOpacity
@@ -1733,83 +1730,3 @@ const styles = StyleSheet.create({
   },
 });
 
-// ─────────────────────────────────────────────────────────────
-// SyncDebugPanel — visible on-device sync diagnostics
-// DEBUG — remove this component and its call site before merging D3 to main.
-// Purpose: diagnose BUG-D3-DT8-1 (iOS sync worker never completes) by
-// surfacing the sync trigger chain on screen without needing Metro console.
-//
-// What each prefix means:
-//   T0 mount  — initial sync check when SyncWorkerMount mounts
-//   T1 AppState → active  — foreground trigger
-//   T2 NetInfo  — connectivity change trigger
-//   T3 5min  — interval trigger
-//   runSyncWorker called / ABORT / SKIP / drain: N rows
-//   POST /sync OK / ERR
-// ─────────────────────────────────────────────────────────────
-
-function SyncDebugPanel(): React.JSX.Element {
-  const debugLog   = useSyncStore((s) => s.debugLog);
-  const isSyncing  = useSyncStore((s) => s.isSyncing);
-  const lastSyncAt = useSyncStore((s) => s.lastSyncAt);
-
-  // Show most recent lines first; cap at 12 to capture errors from earlier runs.
-  // Store keeps 50 entries (up from 20) so [ERR] lines are not pushed off.
-  const lines = [...debugLog].reverse().slice(0, 12);
-
-  const statusText = isSyncing
-    ? 'SYNCING...'
-    : lastSyncAt
-      ? `last OK ${lastSyncAt.slice(11, 19)}`
-      : 'idle';
-
-  return (
-    <View style={debugPanelStyles.panel}>
-      <Text style={debugPanelStyles.header}>
-        {'[DEBUG] SYNC — '}{statusText}
-      </Text>
-      {lines.length === 0 ? (
-        <Text style={debugPanelStyles.line}>No events yet</Text>
-      ) : (
-        lines.map((line, i) => (
-          <Text
-            key={i}
-            style={[
-              debugPanelStyles.line,
-              line.includes('[ERR]') && debugPanelStyles.errorLine,
-            ]}
-            numberOfLines={2}
-          >
-            {line}
-          </Text>
-        ))
-      )}
-    </View>
-  );
-}
-
-const debugPanelStyles = StyleSheet.create({
-  panel: {
-    backgroundColor: '#FFFDE7',   // pale yellow — clearly a debug element
-    borderBottomWidth: 1,
-    borderBottomColor: '#F9A825',
-    paddingHorizontal: 10,
-    paddingVertical:    5,
-  },
-  header: {
-    fontSize:   11,
-    fontWeight: '700',
-    color:      '#BF360C',   // deep orange — stands out
-    marginBottom: 2,
-  },
-  line: {
-    fontSize:    10,
-    color:       '#333',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fontFamily: ('monospace' as any),
-  },
-  errorLine: {
-    color:      '#B71C1C',  // deep red — [ERR] lines stand out at a glance
-    fontWeight: '700',
-  },
-});

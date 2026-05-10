@@ -61,7 +61,6 @@ import { getPatientByLocalId } from '../../db/patients';
 import { getScansForVisit, deleteScan } from '../../db/scans';
 import { createVisit } from '../../api/visits';
 import { enqueueOperation } from '../../sync/syncQueue';
-import { syncLog } from '../../sync/syncLogger';
 import { ApiError } from '../../api/apiClient';
 import type { RootStackParamList } from '../../../App';
 
@@ -338,10 +337,6 @@ export default function NewVisitScreen() {
       // not the local SQLite UUID — the server uses it as a FK to create the visit.
       // chief_complaint and note_text must be undefined (not null) because the server
       // schema uses z.string().optional(), which rejects null values.
-      if (!patientServerId) {
-        syncLog(`[WARN] enqueue: patientServerId is null — visit will sync when patient syncs to server; visitLocalId:${visitLocalId}`);
-      }
-      syncLog(`enqueue: calling enqueueOperation — visitLocalId:${visitLocalId} doctorId:${user.id}`);
       await enqueueOperation(db, {
         doctor_id:       user.id,
         entity_type:     'visit',
@@ -357,20 +352,6 @@ export default function NewVisitScreen() {
           consent_granted: freshConsentGranted,  // M-1: use re-read value
         },
       });
-
-      // Verify the enqueue row actually landed — if 0 rows, log clearly so
-      // BUG-D3-DT11-1 root cause is visible in SyncDebugPanel on next test.
-      const enqueueVerify = await db.getFirstAsync<{ count: number }>(
-        `SELECT COUNT(*) AS count FROM sync_queue
-         WHERE entity_local_id = ? AND doctor_id = ? AND status = 'pending'`,
-        [visitLocalId, user.id],
-      );
-      syncLog(`enqueue: verify — pending rows in sync_queue: ${enqueueVerify?.count ?? 0}`);
-      if (!enqueueVerify || enqueueVerify.count === 0) {
-        // Visit is safely persisted in visits_draft — do not block navigation.
-        // Log clearly so the device test session can pinpoint the failure.
-        syncLog(`[ERR] enqueue: verify FAILED — sync_queue row missing after enqueueOperation returned; visit will not sync`);
-      }
 
       // ── 3. Online server call ────────────────────────────────────────────
       // Only attempted when patientServerId is available — offline-only patients

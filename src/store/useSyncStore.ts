@@ -19,26 +19,17 @@ interface SyncState {
   lastSyncAt:  string | null;
   failedCount: number;
 
-  // DEBUG — visible on-device log (last 20 events). Remove before merge.
-  debugLog:    string[];
-
   setSyncing:     (v: boolean) => void;
   setLastSyncAt:  (v: string)  => void;
   setFailedCount: (v: number)  => void;
-  addDebugLog:    (line: string) => void;
 }
 
 export const useSyncStore = create<SyncState>((set) => ({
   isSyncing:   false,
   lastSyncAt:  null,
   failedCount: 0,
-  debugLog:    [],
 
   setSyncing:     (isSyncing)   => set({ isSyncing }),
   setLastSyncAt:  (lastSyncAt)  => set({ lastSyncAt }),
   setFailedCount: (failedCount) => set({ failedCount }),
-  // Keep the last 50 log lines — enough to capture 5+ failed sync runs
-  // (each run generates ~6-8 lines) without growing unbounded.
-  addDebugLog: (line) =>
-    set((s) => ({ debugLog: [...s.debugLog.slice(-49), line] })),
 }));
