@@ -10,6 +10,7 @@
  *   DOCTOR-FACING STATES (doctor holds the phone):
  *   1. D9ConsentRequesting       — sending OTP request; spinner
  *   2. D9ConsentWaiting          — SMS sent; countdown to resend; patient-not-available fallback
+ *   2b.D9ConsentDoctorWaiting    — after handoff; doctor sees "patient is entering code" holding state
  *   6. D9ConsentFailure          — OTP wrong / expired; retry or skip options
  *   7. D9ConsentPatientNotAvailable — graceful exit; doctor can still create new visit
  *
@@ -26,6 +27,9 @@
  *   - Fallback exit ("Patient not available") is a first-class option, not a back-button edge case.
  *   - Success auto-exits; patient doesn't need to hand phone back before D3 reloads.
  *   - OTP boxes: 6 individual boxes, auto-advance on digit entry, backspace retreats.
+ *   - Consent is cached server-side after first grant. Returning patients MUST NOT trigger
+ *     this flow again — D3 checks consent status on open; this screen is only shown when
+ *     consent is absent or expired. (MUST FIX — Dr. Sinha: one-time cost confirmation.)
  *
  * Placeholder data: realistic Indian clinical context
  */
@@ -199,8 +203,20 @@ export function D9ConsentWaiting() {
                 <Text style={styles.maskedMobile}>{PATIENT.maskedMobile}</Text>.
                 Ask your patient to check their phone.
               </Text>
+              {/* SHOULD FIX — mobile number correction path (Sunita) */}
+              <TouchableOpacity
+                style={styles.wrongNumberRow}
+                accessibilityLabel="Wrong number — go back to edit patient"
+                accessibilityRole="button"
+              >
+                <Text style={styles.wrongNumberText}>Wrong number? Go back to edit</Text>
+              </TouchableOpacity>
             </View>
           </View>
+          {/* MUST FIX — one-time framing for Dr. Sinha: consent is cached, not repeated */}
+          <Text style={styles.consentFramingText}>
+            Unlocks full patient history — one-time setup for new patients.
+          </Text>
         </View>
 
         {/* Instruction */}
@@ -257,6 +273,46 @@ export function D9ConsentWaiting() {
 }
 
 // ---------------------------------------------------------------------------
+// Variant 2b — Doctor Waiting (doctor-facing, after handoff to patient)
+//
+// SHOULD FIX: After tapping "Patient is ready", the doctor-side goes dark.
+// This state gives the doctor a holding screen so they know the flow is in
+// progress, with an escape hatch if the patient cannot complete it.
+// ---------------------------------------------------------------------------
+export function D9ConsentDoctorWaiting() {
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <DoctorHeader />
+      <View style={styles.centeredContent}>
+        <PatientCard maskedMobile={PATIENT.maskedMobile} />
+
+        <View style={styles.doctorWaitingCard}>
+          <ActivityIndicator size="small" color={Colors.primaryBlue} />
+          <Text style={styles.doctorWaitingTitle}>
+            Your patient is entering the code now
+          </Text>
+          <Text style={styles.doctorWaitingBody}>
+            This screen will update automatically once the code is verified.
+            Hand the phone back to your patient if they need it.
+          </Text>
+        </View>
+
+        <View style={styles.divider} />
+
+        <TouchableOpacity
+          style={styles.skipRow}
+          accessibilityLabel="Patient cannot complete — skip consent for now"
+          accessibilityRole="button"
+        >
+          <Text style={styles.skipText}>Patient having trouble?</Text>
+          <Text style={styles.skipLink}>Skip — start visit without history</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Variant 3 — OTP Input (PATIENT-FACING)
 //
 // This state is handed to the patient. It must expose ZERO surrounding
@@ -292,6 +348,16 @@ export function D9ConsentOtpInput() {
 
   const isComplete = digits.every(d => d !== '');
 
+  // MUST FIX: always handle tap; show error when incomplete instead of silently ignoring.
+  const handleConfirm = useCallback(() => {
+    if (!isComplete) {
+      setErrorMsg('Please enter all 6 digits.');
+      return;
+    }
+    setErrorMsg(null);
+    // live screen: submit OTP to server
+  }, [isComplete]);
+
   return (
     // KeyboardAvoidingView so OTP boxes stay visible above the keyboard
     <KeyboardAvoidingView
@@ -309,11 +375,18 @@ export function D9ConsentOtpInput() {
           <Text style={styles.patientBrandName}>MedRecord</Text>
 
           {/* Primary instruction — large, clear */}
+          {/* MUST FIX: Hindi subtitles for low-literacy patients (Shantabai, Sunita) */}
           <Text style={styles.patientInstruction}>
             Enter your 6-digit code
           </Text>
+          <Text style={styles.patientInstructionHindi}>
+            अपना 6-अंकों का कोड डालें
+          </Text>
           <Text style={styles.patientHint}>
             Check the SMS from MedRecord on your phone
+          </Text>
+          <Text style={styles.patientHintHindi}>
+            MedRecord के SMS से कोड देखें
           </Text>
 
           {/* OTP boxes */}
@@ -344,13 +417,13 @@ export function D9ConsentOtpInput() {
             <Text style={styles.patientErrorText}>{errorMsg}</Text>
           )}
 
-          {/* Confirm button */}
+          {/* Confirm button — always tappable; shows error if < 6 digits (MUST FIX) */}
           <TouchableOpacity
             style={[
               styles.patientConfirmButton,
               !isComplete && styles.patientConfirmButtonDisabled,
             ]}
-            disabled={!isComplete}
+            onPress={handleConfirm}
             accessibilityLabel="Confirm code"
             accessibilityRole="button"
           >
@@ -408,8 +481,9 @@ export function D9ConsentSuccess() {
         <Text style={styles.successBody}>
           Your doctor can now view your health records to provide better care.
         </Text>
+        {/* SHOULD FIX: don't imply a patient app that may not be installed (Arjun) */}
         <Text style={styles.successFootnote}>
-          You can remove this access at any time from the MedRecord app.
+          To remove access later, contact the clinic.
         </Text>
       </View>
     </SafeAreaView>
@@ -530,6 +604,7 @@ export function D9ConsentPatientNotAvailable() {
 type FlowState =
   | 'requesting'
   | 'waiting'
+  | 'doctor_waiting'
   | 'otp_input'
   | 'verifying'
   | 'success'
@@ -539,6 +614,7 @@ type FlowState =
 const STATES: FlowState[] = [
   'requesting',
   'waiting',
+  'doctor_waiting',
   'otp_input',
   'verifying',
   'success',
@@ -549,6 +625,7 @@ const STATES: FlowState[] = [
 const STATE_LABELS: Record<FlowState, string> = {
   requesting:           '1 Requesting',
   waiting:              '2 Waiting',
+  doctor_waiting:       '2b Dr Waiting',
   otp_input:            '3 OTP Input',
   verifying:            '4 Verifying',
   success:              '5 Success',
@@ -564,6 +641,7 @@ export default function D9ConsentRequestScreen() {
     switch (state) {
       case 'requesting':           return <D9ConsentRequesting />;
       case 'waiting':              return <D9ConsentWaiting />;
+      case 'doctor_waiting':       return <D9ConsentDoctorWaiting />;
       case 'otp_input':            return <D9ConsentOtpInput />;
       case 'verifying':            return <D9ConsentVerifying />;
       case 'success':              return <D9ConsentSuccess />;
@@ -770,6 +848,25 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     letterSpacing: 1,
   },
+  wrongNumberRow: {
+    marginTop: 8,
+  },
+  wrongNumberText: {
+    fontSize: 13,
+    color: Colors.primaryBlue,
+    fontWeight: '500',
+    textDecorationLine: 'underline',
+  },
+  consentFramingText: {
+    fontSize: 13,
+    color: Colors.primaryBlue,
+    fontStyle: 'italic',
+    marginTop: 10,
+    lineHeight: 18,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
   instructionCard: {
     backgroundColor: '#EFF6FF',
     borderRadius: 12,
@@ -842,6 +939,30 @@ const styles = StyleSheet.create({
     color: Colors.warning,
   },
 
+  // ── Variant 2b — Doctor Waiting ────────────────────────────────────────────
+
+  doctorWaitingCard: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    alignItems: 'center',
+    gap: 14,
+  },
+  doctorWaitingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  doctorWaitingBody: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
   // ── Variants 3–5 — PATIENT-FACING ─────────────────────────────────────────
 
   patientSafeArea: {
@@ -869,13 +990,28 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     textAlign: 'center',
     lineHeight: 36,
-    marginBottom: 12,
+    marginBottom: 6,
+  },
+  patientInstructionHindi: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 28,
+    marginBottom: 18,
   },
   patientHint: {
     fontSize: 16,
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
+    marginBottom: 4,
+  },
+  patientHintHindi: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
     marginBottom: 36,
   },
 

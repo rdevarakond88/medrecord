@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — Persona Critique complete (2026-05-09). Score: 3.4/5. Verdict: Revise and re-evaluate. Next: Builder — Step 4 (apply MUST FIX + SHOULD FIX items, then Security Agent).
+**Phase:** D9 (Consent Request Flow) — Builder Step 4 complete (2026-05-09). All MUST FIX + SHOULD FIX persona critique items applied to mockup. Next: Security Agent (Step 6).
 **Last Updated:** 2026-05-09
 
 ---
@@ -19,17 +19,17 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Blocker for device testing | None |
-| Next action | D9 Builder (Step 4) — apply persona critique fixes |
+| Next action | D9 Security Agent (Step 6) — audit revised mockup |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Persona Critic — D9 (2026-05-09). Score: 3.4/5. Verdict: Revise and re-evaluate. 3 MUST FIX, 3 SHOULD FIX, 2 NICE TO HAVE. Critique: `reviews/D9-persona-critique.md`. Prior: Builder — D9 mockup (2026-05-09). 7 state variants: requesting, waiting, otp_input (patient-facing), verifying, success, failure, patient_not_available. Mockup: `mockups/D9ConsentRequestScreen.tsx`.
+**Last Session:** Builder — D9 Step 4 (2026-05-09). All 3 MUST FIX + 3 SHOULD FIX persona critique items applied to `mockups/D9ConsentRequestScreen.tsx`. Changes: Hindi subtitles on patient OTP screen, tap-feedback on disabled Confirm button, one-time framing text + "Wrong number?" link in Waiting state, new doctor-side holding state (2b: D9ConsentDoctorWaiting, 8 states total), success footnote revised to remove patient-app implication. Consent caching confirmed in design comments. Prior: Persona Critic — D9 (2026-05-09) score 3.4/5. Critique: `reviews/D9-persona-critique.md`.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — Builder (Step 4) | Apply persona critique MUST FIX + SHOULD FIX items, then hand to Security Agent. |
+| 1 | D9 — Security Agent (Step 6) | Audit revised mockup before live build. |
 
 ---
 
@@ -107,7 +107,7 @@ _Carry these into every build/mockup session for these screens._
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
-| D9 — Consent Request Flow | **PM pre-flight complete (2026-05-09). Mockup built (2026-05-09) — `mockups/D9ConsentRequestScreen.tsx`. 7 states: requesting, waiting (30s resend), otp_input (patient-facing), verifying, success, failure, patient_not_available. Sub-flow A (push) deferred to v2. Two API contract gaps (POST /consent/request + POST /consent/verify) must be added before wiring step. Persona Critique complete (2026-05-09) — score 3.4/5, verdict: Revise and re-evaluate. Critique: `reviews/D9-persona-critique.md`. Next: Builder (Step 4) — apply MUST FIX + SHOULD FIX items.** | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
+| D9 — Consent Request Flow | **PM pre-flight complete (2026-05-09). Mockup built + revised (2026-05-09) — `mockups/D9ConsentRequestScreen.tsx`. 8 states: requesting, waiting (30s resend), doctor_waiting (new — doctor holding state post-handoff), otp_input (patient-facing), verifying, success, failure, patient_not_available. Sub-flow A (push) deferred to v2. Two API contract gaps (POST /consent/request + POST /consent/verify) must be added before wiring step. Persona Critique complete (2026-05-09) — score 3.4/5, verdict: Revise and re-evaluate. Critique: `reviews/D9-persona-critique.md`. Builder Step 4 complete (2026-05-09) — all MUST FIX + SHOULD FIX applied. Next: Security Agent (Step 6).** | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
 
 ---
