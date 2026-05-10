@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** POST-D9. All 8 core doctor-facing screens complete and device-tested. syncLogger removed (2026-05-10). Remaining pre-launch: (1) D5-M-1 UNIQUE constraint fix, (2) EAS build + cert pinning validation, (3) backend patient update sync. Next: Builder session for D5-M-1 UNIQUE fix.
+**Phase:** POST-D9. All 8 core doctor-facing screens complete and device-tested. syncLogger removed (2026-05-10). D5-M-1 UNIQUE constraint fixed (2026-05-10). Remaining pre-launch: (1) EAS build + cert pinning validation, (2) backend patient update sync. Next: EAS build + cert pinning smoke test.
 **Last Updated:** 2026-05-10
 
 ---
@@ -24,14 +24,14 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — syncLogger removal complete (2026-05-10). Removed `src/sync/syncLogger.ts`, all `syncLog` call sites (NewVisitScreen, syncWorker, useSyncWorker, useLogout), `SyncDebugPanel` from PatientDetailScreen, and `debugLog`/`addDebugLog` from useSyncStore. Zero new TypeScript errors.
+**Last Session:** Builder Agent — D5-M-1 UNIQUE constraint fix (2026-05-10). Changed `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)` in patients table. Added schema migration with PRAGMA guard (table recreation). Updated `ON CONFLICT` target and fallback lookup in `patients.ts`. Zero new TypeScript errors.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
 | ~~1~~ | ~~**Builder: Patient mobile edit**~~ | ~~DONE 2026-05-10 — commit a6f35d6~~ |
 | ~~2~~ | ~~**Builder: D6 syncLogger removal**~~ | ~~DONE 2026-05-10 — syncLogger.ts deleted; all call sites removed from 4 files; SyncDebugPanel removed from D3; useSyncStore cleaned up.~~ |
-| 3 | **Builder: D5-M-1 UNIQUE constraint fix** | `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)` with schema migration. Required for multi-doctor clinics. |
+| ~~3~~ | ~~**Builder: D5-M-1 UNIQUE constraint fix**~~ | ~~DONE 2026-05-10 — `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)`. Schema migration with PRAGMA guard. `ON CONFLICT` + fallback lookup updated in patients.ts.~~ |
 | 4 | **Backend: patient update sync** | POST /sync does not yet handle patient 'update' operations. Required before D3 mobile corrections propagate server-side. Flagged by D3 mobile-edit build (2026-05-10). |
 | 5 | **EAS build + cert pinning smoke test** | First EAS production binary. Validate cert pinning works. Run core flow smoke test. Highest field risk. |
 | 6 | **Device test: EAS build smoke test** | Confirm cert pinning, login → D9 consent flow in production binary. |

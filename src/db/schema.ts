@@ -26,7 +26,7 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
       local_id        TEXT PRIMARY KEY,
       doctor_id       TEXT NOT NULL DEFAULT '',
       server_id       TEXT,
-      mobile_number   TEXT NOT NULL UNIQUE,
+      mobile_number   TEXT NOT NULL,
       name            TEXT,
       date_of_birth   TEXT,
       gender          TEXT,
@@ -34,7 +34,8 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
       last_visit_date TEXT,
       synced_at       TEXT,
       created_at      TEXT NOT NULL,
-      updated_at      TEXT NOT NULL
+      updated_at      TEXT NOT NULL,
+      UNIQUE(doctor_id, mobile_number)
     );
 
     CREATE INDEX IF NOT EXISTS idx_patient_mobile
@@ -266,6 +267,58 @@ export async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<voi
     );
   } catch {
     // Column already exists — safe to ignore.
+  }
+
+  // Migration: D5-M-1 — UNIQUE(mobile_number) → UNIQUE(doctor_id, mobile_number).
+  // A column-level UNIQUE constraint cannot be dropped in SQLite — table recreation is
+  // required. Guard: PRAGMA index_info detects whether the old single-column unique is
+  // still present. On fresh installs the CREATE TABLE above already has the new constraint,
+  // so the guard returns false and this block is skipped.
+  try {
+    const indexes = await db.getAllAsync<{ name: string; unique: number }>(
+      `PRAGMA index_list(patients)`,
+    );
+    let hasSingleMobileUnique = false;
+    for (const idx of indexes) {
+      if (!idx.unique) continue;
+      const cols = await db.getAllAsync<{ name: string }>(
+        `PRAGMA index_info('${idx.name}')`,
+      );
+      if (cols.length === 1 && cols[0].name === 'mobile_number') {
+        hasSingleMobileUnique = true;
+        break;
+      }
+    }
+    if (hasSingleMobileUnique) {
+      await db.withTransactionAsync(async () => {
+        await db.execAsync(`
+          DROP TABLE IF EXISTS patients_new;
+          CREATE TABLE patients_new (
+            local_id        TEXT PRIMARY KEY,
+            doctor_id       TEXT NOT NULL DEFAULT '',
+            server_id       TEXT,
+            mobile_number   TEXT NOT NULL,
+            name            TEXT,
+            date_of_birth   TEXT,
+            gender          TEXT,
+            consent_granted INTEGER NOT NULL DEFAULT 0,
+            last_visit_date TEXT,
+            synced_at       TEXT,
+            created_at      TEXT NOT NULL,
+            updated_at      TEXT NOT NULL,
+            UNIQUE(doctor_id, mobile_number)
+          );
+          INSERT INTO patients_new SELECT * FROM patients;
+          DROP TABLE patients;
+          ALTER TABLE patients_new RENAME TO patients;
+          CREATE INDEX IF NOT EXISTS idx_patient_mobile ON patients (mobile_number);
+          CREATE INDEX IF NOT EXISTS idx_patient_last_visit ON patients (last_visit_date DESC);
+          CREATE INDEX IF NOT EXISTS idx_patient_doctor ON patients (doctor_id);
+        `);
+      });
+    }
+  } catch {
+    // Migration already complete — safe to ignore.
   }
 
   // Create indexes that reference migrated columns — must run AFTER the ALTER TABLE

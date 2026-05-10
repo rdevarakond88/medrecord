@@ -101,8 +101,7 @@ export async function upsertPatientFromServer(
        (local_id, doctor_id, server_id, mobile_number, name, date_of_birth, gender,
         consent_granted, last_visit_date, synced_at, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(mobile_number) DO UPDATE SET
-       doctor_id       = COALESCE(doctor_id, excluded.doctor_id),
+     ON CONFLICT(doctor_id, mobile_number) DO UPDATE SET
        server_id       = excluded.server_id,
        name            = COALESCE(excluded.name, name),
        date_of_birth   = COALESCE(excluded.date_of_birth, date_of_birth),
@@ -237,11 +236,11 @@ export async function insertLocalPatient(
     return { localId: patient.local_id, wasInserted: true };
   }
 
-  // INSERT was a no-op — the mobile_number already exists. Look up the existing
-  // row to get the real local_id so downstream callers use the correct ID.
+  // INSERT was a no-op — this doctor already has a row for that mobile number.
+  // Scope by doctor_id to match the composite unique constraint.
   const existing = await db.getFirstAsync<{ local_id: string }>(
-    `SELECT local_id FROM patients WHERE mobile_number = ?`,
-    [patient.mobile_number],
+    `SELECT local_id FROM patients WHERE mobile_number = ? AND doctor_id = ?`,
+    [patient.mobile_number, patient.doctor_id],
   );
   return {
     localId: existing?.local_id ?? patient.local_id,
