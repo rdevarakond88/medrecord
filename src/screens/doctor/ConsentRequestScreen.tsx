@@ -22,8 +22,14 @@
  * Device-testing fixes (2026-05-10 Builder session):
  *   DT1-1  State 2 icon changed ✉ → 💬 (SMS, not email)
  *   DT1-2  handleKeyPress now clears previous box digit on backspace from empty box
- *   DT1-3  beforeRemove intercepts back from 'failure' state → returns to State 2
+ *   DT1-3  beforeRemove intercepts JS-level goBack from 'failure' → returns to State 2
+ *          (NativeStack iOS swipe handled separately — see DT2-1)
  *   DT1-4  NetInfo check in handleConfirm → immediate error on no connectivity
+ *
+ * Device-testing fixes (2026-05-10 Builder session 2):
+ *   DT2-1  gestureEnabled: false in otp_input + failure states — NativeStack does not
+ *          honour e.preventDefault() for the iOS swipe gesture; disabling the gesture
+ *          is the only reliable intercept. Re-enabled on any other state transition.
  */
 
 import React, {
@@ -205,6 +211,14 @@ export default function ConsentRequestScreen({ route, navigation }: Props) {
     });
     return unsubscribe;
   }, [navigation]);
+
+  // DT2-1: NativeStack does not honour e.preventDefault() for the iOS swipe gesture.
+  // Disabling the gesture entirely is the only reliable way to prevent swipe-back from
+  // otp_input/failure from bypassing the beforeRemove handler and popping to D3.
+  useEffect(() => {
+    const gestureEnabled = flowState !== 'otp_input' && flowState !== 'failure';
+    navigation.setOptions({ gestureEnabled });
+  }, [flowState, navigation]);
 
   // ─────────────────────────────────────────────────────────────
   // Initial consent request — fires on mount
