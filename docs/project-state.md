@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D9 (Consent Request Flow) — SECURITY RE-AUDIT v3 COMPLETE (2026-05-10). CLEAR TO MERGE TO MAIN. Device testing complete, zero open bugs. Security re-audit v3: 0 critical/high/medium findings. Next: PM Agent / merge to main.
+**Phase:** POST-D9. All 8 core doctor-facing screens complete and device-tested (D1, D2, D3, D4, D5, D6, D7, D9). PM Agent Moment 2 + Moment 3 complete (2026-05-10). D9 PR created and merged to main. Pre-launch conditions identified: (1) EAS build + cert pinning validation, (2) patient mobile edit (D3 stub → working form), (3) remove syncLogger, (4) D5-M-1 UNIQUE constraint fix. Next: Builder sessions for pre-launch conditions, then EAS build smoke test.
 **Last Updated:** 2026-05-10
 
 ---
@@ -19,17 +19,21 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | Test mobile number | `9999999999` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Consent endpoints | `POST /consent/request` → HTTP 401 ✅ (2026-05-10). `POST /consent/verify` → HTTP 401 ✅ (2026-05-10). Blocker cleared. |
-| Next action | D9 — Security re-audit v3 COMPLETE (2026-05-10). CLEAR TO MERGE. Next: PM Agent / merge to main. |
+| Next action | POST-D9 — PM Moment 2 + Moment 3 complete (2026-05-10). D9 merged to main. Next: Builder sessions for pre-launch conditions (see Recommended Next Session Order). |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Security Agent — D9 Security re-audit v3 complete (2026-05-10). CLEAR TO MERGE. M-1 + M-2 (prior MEDIUM) confirmed closed. Device-testing fixes (DT1-3 beforeRemove State 6, DT3-1 gestureEnabled:false) are security-positive. Zero critical/high/medium findings. Audit: `reviews/D9-security-audit-v3.md`.
+**Last Session:** PM Agent — Moment 2 (D9 post-flow) + Moment 3 (pre-launch gate) complete (2026-05-10). D9 Overall: Strong. All 8 core screens complete. Pre-launch verdict: Yes with conditions. Four conditions before pilot: (1) EAS build + cert pinning, (2) patient mobile edit (D3 stub), (3) D6 syncLogger removal, (4) D5-M-1 UNIQUE constraint fix. Review: `reviews/D9-pm-review-v3.md`.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | D9 — PM Agent / merge to main | D9 is feature-complete. Security re-audit v3 cleared. PM agent closes out the flow and initiates merge. |
+| 1 | **Builder: Patient mobile edit** | D3 edit button is a stub. Needed before D9 SMS delivery can be corrected in field. Minimum: modal with validated mobile field, SQLite save + sync queue. |
+| 2 | **Builder: D6 syncLogger removal** | `src/sync/syncLogger.ts` + call sites in `NewVisitScreen.tsx` lines 64, 342, 344, 368, 372. Must remove before EAS production build. |
+| 3 | **Builder: D5-M-1 UNIQUE constraint fix** | `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)` with schema migration. Required for multi-doctor clinics. |
+| 4 | **EAS build + cert pinning smoke test** | First EAS production binary. Validate cert pinning works. Run core flow smoke test. Highest field risk. |
+| 5 | **Device test: EAS build smoke test** | Confirm cert pinning, login → D9 consent flow in production binary. |
 
 ---
 
@@ -107,7 +111,7 @@ _Carry these into every build/mockup session for these screens._
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
-| D9 — Consent Request Flow | **DEVICE TESTING COMPLETE (2026-05-10). Security re-audit v3 COMPLETE (2026-05-10). CLEAR TO MERGE TO MAIN.** QA + Security audit v2 done 2026-05-09. Device test sessions 1–4 complete. Builder sessions 1–3 (device-testing fixes: DT1-1 through DT1-4, DT2-1/DT3-1 gestureEnabled:false). Security re-audit v3 — 0 critical/high/medium. Prior M-1 (expired OTP Confirm) + M-2 (full mobile in nav params) confirmed closed. DT1-3 (beforeRemove for State 6) + DT3-1 (gestureEnabled:false in App.tsx) are security-positive. BUG-D9-DT1-4 accepted as untested-but-correct-by-construction debt (hotspot constraint; fix mirrors D6 verified pattern). Sessions: `reviews/D9-device-test-session-1.md` through `reviews/D9-device-test-session-4.md`. Audits: `reviews/D9-security-audit-v2.md`, `reviews/D9-security-audit-v3.md`. Live screen: `src/screens/doctor/ConsentRequestScreen.tsx`. | Tier 3. D3 `handleRequestAccess` has TODO stub pointing here. |
+| D9 — Consent Request Flow | **MERGED TO MAIN (2026-05-10). PM Moment 2 + Moment 3 complete. Device testing COMPLETE (sessions 1–4). Security re-audit v3 — 0 critical/high/medium. D3 `handleRequestAccess` fully wired to D9 (not a stub).** Pre-launch conditions: (1) patient mobile edit in D3, (2) EAS build + cert pinning, (3) D5-M-1 UNIQUE fix, (4) D6 syncLogger removal. Reviews: `reviews/D9-pm-review-v3.md`, `reviews/D9-security-audit-v3.md`. Sessions: `reviews/D9-device-test-session-1.md` through `reviews/D9-device-test-session-4.md`. Live screen: `src/screens/doctor/ConsentRequestScreen.tsx`. | Tier 3. MERGED. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
 
 ---
