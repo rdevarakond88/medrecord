@@ -2,52 +2,53 @@
  * Certificate-pinned fetch wrapper for the MedRecord API.
  * Spec: docs/security-spec.md — Transport Security
  *
- * Uses react-native-ssl-pinning to prevent MITM attacks on shared clinic WiFi,
- * which is a real threat in Indian semi-urban clinics with shared routers.
- * Pins the leaf cert + one intermediate CA for api.medrecord.in (H-2 pre-merge fix).
+ * Pins the Google Trust Services WE1 intermediate CA cert, which signs
+ * Render.com's TLS chain for medrecord-api.onrender.com. Pinning the
+ * intermediate (not the leaf) avoids breakage on Render's 90-day
+ * Let's Encrypt leaf rotations. The WE1 cert is valid until Feb 20, 2029.
  *
- * ── BEFORE DEPLOYMENT ───────────────────────────────────────────────────────
- * 1. Export the production certificate chain from api.medrecord.in:
- *      openssl s_client -connect api.medrecord.in:443 -showcerts < /dev/null
+ * ── CERT ROTATION CHECKLIST ─────────────────────────────────────────────────
+ * Run this check when either of these events happen:
+ *   • You receive a TLS handshake failure in production (cert mismatch)
+ *   • The WE1 cert expiry date (2029-02-20) is within 90 days
  *
- * 2. Save leaf cert + one intermediate to .cer (DER) files:
- *      openssl x509 -in leaf.pem    -outform DER -out api_medrecord_leaf.cer
- *      openssl x509 -in inter.pem   -outform DER -out api_medrecord_intermediate.cer
+ * To re-extract the intermediate CA:
+ *   openssl s_client -connect medrecord-api.onrender.com:443 -showcerts < /dev/null 2>/dev/null \
+ *     | awk 'BEGIN{p=0} /-----BEGIN CERTIFICATE-----/{p++} p==2{print} /-----END CERTIFICATE-----/ && p==2{p=0}' \
+ *     > /tmp/intermediate.pem
+ *   openssl x509 -in /tmp/intermediate.pem -outform DER -out assets/certs/api_medrecord_intermediate.cer
+ *   openssl x509 -in assets/certs/api_medrecord_intermediate.cer -inform DER -noout -subject -dates
  *
- * 3. Bundle them in native assets:
- *      iOS:     ios/<AppName>/Assets/  (add both .cer files to Xcode target)
- *      Android: android/app/src/main/assets/
+ * Then rebuild via EAS: eas build --profile preview --platform ios
  *
- * 4. The API_CERT_NAMES array below references the filenames without the .cer extension.
- *    No code change needed after step 3 — just rebuild.
+ * ── CERT BUNDLING ───────────────────────────────────────────────────────────
+ * The DER-format cert lives in assets/certs/api_medrecord_intermediate.cer.
+ * plugins/withSslPinning.js copies it to native directories during EAS prebuild:
+ *   iOS:     ios/MedRecord/api_medrecord_intermediate.cer
+ *   Android: android/app/src/main/assets/api_medrecord_intermediate.cer
  *
  * ── EXPO GO COMPATIBILITY ───────────────────────────────────────────────────
- * react-native-ssl-pinning is a native module. It does NOT work in Expo Go.
- * Required build command: eas build --profile development  (custom dev client)
- *
- * ── INSTALLATION ────────────────────────────────────────────────────────────
- * npx expo install react-native-ssl-pinning
+ * react-native-ssl-pinning is a native module — not available in Expo Go.
+ * The try/catch below falls back to standard fetch (no cert pinning) in Expo Go.
+ * Cert pinning is only active in EAS builds (development client or production).
  * ────────────────────────────────────────────────────────────────────────────
  */
 
 // react-native-ssl-pinning is a native module — not available in Expo Go.
-// Fall back to standard fetch so device testing works in Expo Go.
-// Cert pinning must be validated in an EAS custom dev client before production (UE-6).
+// Falls back to standard fetch so Expo Go device testing still works.
 let sslFetch: typeof fetch | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   sslFetch = require('react-native-ssl-pinning').fetch;
 } catch {
-  // Expo Go — native module not bundled; pinnedFetch will use standard fetch below
+  // Expo Go — native module not bundled; pinnedFetch uses standard fetch below
 }
 
-// Certificate filenames (without .cer extension) bundled in native assets.
-// Leaf cert: rotates with every TLS cert renewal (~90 days on Let's Encrypt, ~1 year otherwise).
-// Intermediate: stable for the CA's intermediate lifetime (typically 5+ years).
-// Pinning both provides a backup if the leaf is reissued between app releases.
+// The intermediate CA cert filename (without .cer extension).
+// This file is bundled in native assets by plugins/withSslPinning.js.
+// Pinning the intermediate avoids breakage on Render's 90-day leaf rotations.
 const API_CERT_NAMES = [
-  'api_medrecord_leaf',          // leaf cert for api.medrecord.in
-  'api_medrecord_intermediate',  // intermediate CA — backup pin
+  'api_medrecord_intermediate', // Google Trust Services WE1 — valid until 2029-02-20
 ];
 
 export interface PinnedRequestInit {
@@ -61,17 +62,16 @@ export interface PinnedRequestInit {
  * Returns an object with .ok, .status, and .json() matching the subset
  * of the fetch Response interface that apiFetch() relies on.
  *
- * Throws PinningError on TLS pin mismatch — caller (apiFetch) propagates
- * to React Query error state, triggering the existing 401 / error handling path.
+ * Throws on TLS pin mismatch — caller (apiFetch) propagates to React Query
+ * error state, triggering the existing error handling path.
  */
 export async function pinnedFetch(
   url: string,
   init: PinnedRequestInit = {},
 ): Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }> {
   // Expo Go fallback — native module unavailable, use standard fetch (no cert pinning).
-  // 30-second AbortController timeout prevents the request from hanging indefinitely
-  // (e.g. Render.com free-tier cold-start). A timeout throws an AbortError, which
-  // the sync worker treats as a transient failure and resets to 'pending' for retry.
+  // 30-second AbortController timeout prevents hangs on Render.com cold-starts.
+  // AbortError is treated as a transient failure by the sync worker → reset to 'pending'.
   if (!sslFetch) {
     const controller = new AbortController();
     const timeoutId  = setTimeout(() => controller.abort(), 30_000);
@@ -97,11 +97,10 @@ export async function pinnedFetch(
     headers:         init.headers ?? {},
     body:            init.body,
     sslPinning:      { certs: API_CERT_NAMES },
-    timeoutInterval: 15_000,
+    timeoutInterval: 30_000,
   });
 
   // react-native-ssl-pinning returns { status, bodyString, headers }
-  // Cast to any because the library's type definitions are incomplete.
   const bodyString: string = (response as any).bodyString ?? '';
 
   return {

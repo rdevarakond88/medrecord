@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** POST-D9. All 8 core doctor-facing screens complete and device-tested. syncLogger removed (2026-05-10). D5-M-1 UNIQUE constraint fixed (2026-05-10). Remaining pre-launch: (1) EAS build + cert pinning validation, (2) backend patient update sync. Next: EAS build + cert pinning smoke test.
+**Phase:** POST-D9. All 8 core doctor-facing screens complete and device-tested. EAS build infrastructure configured (2026-05-10): eas.json, app.json (bundle IDs), react-native-ssl-pinning added, Google Trust Services WE1 intermediate CA cert bundled (valid until 2029-02-20). User must run: `npm install -g eas-cli && eas login && eas init` (fills projectId in app.json), then `npm install`, then `eas build --profile preview --platform ios`. Next: user triggers EAS build → device test smoke test.
 **Last Updated:** 2026-05-10
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — Backend: patient update sync (2026-05-10). Added patient `update` branch to `backend/src/routes/sync.ts` POST /sync. `patientUpdatePayloadSchema` (server_id + doctor_id + mobile_number + updated_at). IDOR check, ownership guard (createdBy), idempotency, UNIQUE mobile conflict, audit log (last 4 digits only). `api-contracts.md` updated with update payload spec. Zero TS errors.
+**Last Session:** Builder Agent — EAS build infrastructure (2026-05-10). Created `eas.json` (development/preview/production profiles). Updated `app.json`: bundle ID `com.medrecord.app` (iOS + Android), added expo-camera plugin, infoPlist camera/mic/photos permissions. Added `react-native-ssl-pinning` to package.json. Extracted Google Trust Services WE1 intermediate CA cert from `medrecord-api.onrender.com` — saved as DER format in `assets/certs/api_medrecord_intermediate.cer` (valid until 2029-02-20). Created `plugins/withSslPinning.js` Expo config plugin that copies cert to iOS and Android native assets during EAS prebuild. Updated `pinnedFetch.ts`: intermediate-only pin strategy, timeout raised to 30s (matches cold-start), removed stale `api.medrecord.in` references. **User action needed:** run `npm install -g eas-cli && eas login && eas init` (fills projectId), then `npm install`, then `eas build --profile preview --platform ios`.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
@@ -33,8 +33,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~2~~ | ~~**Builder: D6 syncLogger removal**~~ | ~~DONE 2026-05-10 — syncLogger.ts deleted; all call sites removed from 4 files; SyncDebugPanel removed from D3; useSyncStore cleaned up.~~ |
 | ~~3~~ | ~~**Builder: D5-M-1 UNIQUE constraint fix**~~ | ~~DONE 2026-05-10 — `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)`. Schema migration with PRAGMA guard. `ON CONFLICT` + fallback lookup updated in patients.ts.~~ |
 | ~~4~~ | ~~**Backend: patient update sync**~~ | ~~DONE 2026-05-10 — `patientUpdatePayloadSchema` + update branch added to POST /sync in `backend/src/routes/sync.ts`. IDOR check, ownership guard, idempotency, UNIQUE conflict, audit log (last 4 digits only). api-contracts.md updated. Build: zero TS errors.~~ |
-| 5 | **EAS build + cert pinning smoke test** | First EAS production binary. Validate cert pinning works. Run core flow smoke test. Highest field risk. |
-| 6 | **Device test: EAS build smoke test** | Confirm cert pinning, login → D9 consent flow in production binary. |
+| ~~5~~ | ~~**EAS build infrastructure**~~ | ~~DONE 2026-05-10 — eas.json + app.json + cert + plugin + pinnedFetch updated. User must complete: `eas login && eas init && npm install && eas build --profile preview --platform ios`.~~ |
+| 6 | **Device test: EAS build smoke test** | After EAS build completes and IPA is installed on device. Verify cert pinning active (not Expo Go fallback), run login → D9 consent flow. |
 
 ---
 
