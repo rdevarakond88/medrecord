@@ -384,7 +384,6 @@ export default function PatientDetailScreen() {
               patientServerId: currentPatientServerId,
               patientName,
               maskedMobile,
-              patientMobile:  patient?.mobile_number ?? '',
             });
           },
         },

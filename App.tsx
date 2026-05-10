@@ -80,7 +80,6 @@ export type RootStackParamList = {
     patientServerId: string | null;
     patientName:     string;
     maskedMobile:    string;
-    patientMobile:   string;
   };
 };
 

@@ -49,6 +49,7 @@ import {
   ConsentRateLimitError,
 } from '../../api/consent';
 import { logConsentRequested } from '../../db/visits';
+import { getPatientByLocalId } from '../../db/patients';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,7 +102,6 @@ export default function ConsentRequestScreen({ route, navigation }: Props) {
     patientServerId,
     patientName,
     maskedMobile,
-    patientMobile,
   } = route.params;
 
   // ── Flow state ────────────────────────────────────────────────
@@ -363,15 +363,17 @@ export default function ConsentRequestScreen({ route, navigation }: Props) {
   const handleWrongNumber = useCallback(() => navigation.goBack(), [navigation]);
 
   // E-5: start visit from State 7 — consent_granted must be false
-  const handleStartNewVisit = useCallback(() => {
+  // M-2: re-read mobile from SQLite here instead of carrying it through nav params
+  const handleStartNewVisit = useCallback(async () => {
+    const patient = await getPatientByLocalId(db, patientLocalId);
     navigation.navigate('NewVisit', {
       patientId:       patientLocalId,
       patientServerId: patientServerId ?? null,
       patientName,
-      patientMobile,
+      patientMobile:   patient?.mobile_number ?? '',
       consentGranted:  false,
     });
-  }, [navigation, patientLocalId, patientServerId, patientName, patientMobile]);
+  }, [db, navigation, patientLocalId, patientServerId, patientName]);
 
   // ─────────────────────────────────────────────────────────────
   // Render helpers
@@ -609,9 +611,9 @@ export default function ConsentRequestScreen({ route, navigation }: Props) {
             <TouchableOpacity
               style={[
                 styles.patientConfirmButton,
-                !isComplete && styles.patientConfirmButtonDisabled,
+                (!isComplete || expiryExpired) && styles.patientConfirmButtonDisabled,
               ]}
-              onPress={() => void handleConfirm()}
+              onPress={expiryExpired ? undefined : () => void handleConfirm()}
               accessibilityLabel="Confirm code"
               accessibilityRole="button"
             >
