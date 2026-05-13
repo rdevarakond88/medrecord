@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** POST-D9. All 8 core doctor-facing screens complete and device-tested. EAS build infrastructure configured (2026-05-10): eas.json, app.json (bundle IDs), react-native-ssl-pinning added, Google Trust Services WE1 intermediate CA cert bundled (valid until 2029-02-20). User must run: `npm install -g eas-cli && eas login && eas init` (fills projectId in app.json), then `npm install`, then `eas build --profile preview --platform ios`. Next: user triggers EAS build → device test smoke test.
-**Last Updated:** 2026-05-10
+**Phase:** D8 in progress. D8 mockup complete (4 variants). Next: Persona Critic review of D8 mockup.
+**Last Updated:** 2026-05-12
 
 ---
 
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — EAS build infrastructure (2026-05-10). Created `eas.json` (development/preview/production profiles). Updated `app.json`: bundle ID `com.medrecord.app` (iOS + Android), added expo-camera plugin, infoPlist camera/mic/photos permissions. Added `react-native-ssl-pinning` to package.json. Extracted Google Trust Services WE1 intermediate CA cert from `medrecord-api.onrender.com` — saved as DER format in `assets/certs/api_medrecord_intermediate.cer` (valid until 2029-02-20). Created `plugins/withSslPinning.js` Expo config plugin that copies cert to iOS and Android native assets during EAS prebuild. Updated `pinnedFetch.ts`: intermediate-only pin strategy, timeout raised to 30s (matches cold-start), removed stale `api.medrecord.in` references. **User action needed:** run `npm install -g eas-cli && eas login && eas init` (fills projectId), then `npm install`, then `eas build --profile preview --platform ios`.
+**Last Session:** Builder Agent — D8 Full Scan View mockup (2026-05-12, commit 1504171). Built `mockups/D8FullScanViewScreen.tsx` with 4 static variants: D8ScanViewOcrSuccess, D8ScanViewOcrFailed, D8ScanViewOcrPending, D8ScanViewCollapsed. Dark image area (imageBg), collapsible OCR bottom sheet, status badges, auth guard. Reuse note: ScanImageViewer component to be extracted in wire session for P3 reuse. OCR text safety confirmed: D8 reads only pre-sanitized `content_text` from DB — no raw OCR exposure.
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
@@ -35,7 +35,9 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~4~~ | ~~**Backend: patient update sync**~~ | ~~DONE 2026-05-10 — `patientUpdatePayloadSchema` + update branch added to POST /sync in `backend/src/routes/sync.ts`. IDOR check, ownership guard, idempotency, UNIQUE conflict, audit log (last 4 digits only). api-contracts.md updated. Build: zero TS errors.~~ |
 | ~~5~~ | ~~**EAS build infrastructure**~~ | ~~DONE 2026-05-10 — eas.json + app.json + cert + plugin + pinnedFetch updated. User must complete: `eas login && eas init && npm install && eas build --profile preview --platform ios`.~~ |
 | 6 | **Device test: EAS build smoke test** | After EAS build completes and IPA is installed on device. Verify cert pinning active (not Expo Go fallback), run login → D9 consent flow. (Deferred — `eas init` blocked by empty ascAppId/appleTeamId in eas.json submit section. Fix is a 2-line deletion in eas.json. Defer until all screens built.) |
-| 7 | **Builder: D8 Full Scan View** | PM pre-flight complete (2026-05-12). Last unbuilt doctor screen. Closes dead-end from D4 "View Full Scan". No new backend dependency. Start with mockup. |
+| ~~7~~ | ~~**Builder: D8 Full Scan View — mockup**~~ | ~~DONE 2026-05-12 — commit 1504171. 4 variants built.~~ |
+| 7b | **Persona Critic: D8 Full Scan View** | Mockup complete. Critic review before wire session. |
+| 7c | **Builder: D8 Full Scan View — wire** | After Persona Critic approves (or fixes applied). Wire real data: filesystem path, SQLite scan record, resolveScanPath(). Extract ScanImageViewer component for P3 reuse. |
 | 8 | **PM pre-flight: P1–P5 Patient App** | After D8 is device-tested and merged. New flow — requires its own PM Moment 1 before any code is written. |
 
 ---
@@ -113,7 +115,7 @@ _Carry these into every build/mockup session for these screens._
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
-| D8 — Full Scan View | **PM pre-flight complete (2026-05-12). Next: Builder Agent — mockup.** Review: `reviews/D8-pm-preflow.md`. | Tier 3. Image viewer + OCR panel. No new backend dependency — reads device filesystem + SQLite. Plan shared image viewer component for reuse in P3. |
+| D8 — Full Scan View | **Mockup complete (2026-05-12, commit 1504171) — 4 variants: OcrSuccess, OcrFailed, OcrPending, Collapsed. Next: Persona Critic.** Review: `reviews/D8-pm-preflow.md`. Mockup: `mockups/D8FullScanViewScreen.tsx`. | Tier 3. Image viewer + OCR panel. No new backend dependency — reads device filesystem + SQLite. Plan shared image viewer component for reuse in P3. |
 | D9 — Consent Request Flow | **MERGED TO MAIN (2026-05-10). PM Moment 2 + Moment 3 complete. Device testing COMPLETE (sessions 1–4). Security re-audit v3 — 0 critical/high/medium. D3 `handleRequestAccess` fully wired to D9 (not a stub).** Pre-launch conditions: (1) patient mobile edit in D3, (2) EAS build + cert pinning, (3) D5-M-1 UNIQUE fix, (4) D6 syncLogger removal. Reviews: `reviews/D9-pm-review-v3.md`, `reviews/D9-security-audit-v3.md`. Sessions: `reviews/D9-device-test-session-1.md` through `reviews/D9-device-test-session-4.md`. Live screen: `src/screens/doctor/ConsentRequestScreen.tsx`. | Tier 3. MERGED. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
 
