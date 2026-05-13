@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D8 wire complete. FullScanViewScreen.tsx live, ScanImageViewer.tsx extracted, D4 wired. Next: Security audit (D8 touches display of scan images and OCR text — no new storage or auth paths, but Security agent must clear before QA).
+**Phase:** D8 security audit complete — CLEAR TO MERGE. 0 CRITICAL, 0 HIGH. 1 MEDIUM (D8-SA-M1: add logScanViewed before v1 launch), 1 LOW (D8-SA-L1: resolveScanPath null guard — backlog). Next: QA Agent (D8).
 **Last Updated:** 2026-05-12
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — D8 Full Scan View wire (2026-05-12). FullScanViewScreen.tsx created (live screen, converted from mockup). ScanImageViewer.tsx extracted to src/components/ for P3 reuse. getScansForServerVisit() added to src/db/scans.ts (join via visits_draft to get local_path). D4 VisitDetailScreen wired: "View full image →" navigates to FullScanView with scanLocalPath, scanLabel, ocrStatus, ocrText, visitDate, patientName. FullScanView registered in App.tsx RootStackParamList + Stack. Zero new TS errors. Positional scan matching (Nth scan in visit_records ↔ Nth scan in scans table) — v1 limitation documented in code comment.
+**Last Session:** Security Agent — D8 Full Scan View security audit (2026-05-12). CLEAR TO MERGE — 0 CRITICAL, 0 HIGH. D8-SA-M1 (no scan_viewed audit event) + D8-SA-L1 (resolveScanPath null-path fallback) documented. Report: `reviews/D8-security-audit.md`.
 
 ### D8 Open Critique Items (must be applied to mockup before wire session)
 
@@ -51,8 +51,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~7b-fix~~ | ~~**Builder: Apply D8 mockup revisions**~~ | ~~DONE 2026-05-12 — all 6 critique items applied. Revised mockup ready for re-evaluation.~~ |
 | ~~7b-v2~~ | ~~**Persona Critic: D8 re-evaluation**~~ | ~~DONE 2026-05-12. Score 3.55/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. reviews/D8-persona-critique-v2.md saved.~~ |
 | ~~7c~~ | ~~**Builder: D8 Full Scan View — wire**~~ | ~~DONE 2026-05-12. FullScanViewScreen.tsx + ScanImageViewer.tsx created. D4 wired. App.tsx registered. Zero TS errors.~~ |
-| 7d | **Security: D8 Full Scan View** | NEXT. D8 displays scan images and OCR text — Security agent must audit before QA. |
-| 7e | **QA: D8 Full Scan View** | After Security audit clears. |
+| ~~7d~~ | ~~**Security: D8 Full Scan View**~~ | ~~DONE 2026-05-12. CLEAR TO MERGE. 0 CRITICAL, 0 HIGH. D8-SA-M1 (logScanViewed) + D8-SA-L1 (resolveScanPath null guard) documented. Audit: `reviews/D8-security-audit.md`.~~ |
+| 7e | **QA: D8 Full Scan View** | NEXT. After Security audit clears. |
 | 7f | **Device test: D8 Full Scan View** | After QA test plan complete + backend pre-flight passes. |
 | 8 | **PM pre-flight: P1–P5 Patient App** | After D8 is device-tested and merged. New flow — requires its own PM Moment 1 before any code is written. |
 
@@ -131,7 +131,7 @@ _Carry these into every build/mockup session for these screens._
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
-| D8 — Full Scan View | **Mockup complete (2026-05-12, commit 1504171) — 4 variants: OcrSuccess, OcrFailed, OcrPending, Collapsed. Next: Persona Critic.** Review: `reviews/D8-pm-preflow.md`. Mockup: `mockups/D8FullScanViewScreen.tsx`. | Tier 3. Image viewer + OCR panel. No new backend dependency — reads device filesystem + SQLite. Plan shared image viewer component for reuse in P3. |
+| D8 — Full Scan View | **Wire complete (2026-05-12). Security audit complete (2026-05-12) — CLEAR TO MERGE. 0 CRITICAL, 0 HIGH. D8-SA-M1 (logScanViewed) + D8-SA-L1 (resolveScanPath null guard) documented. Audit: `reviews/D8-security-audit.md`. Next: QA Agent.** Wire: `src/screens/doctor/FullScanViewScreen.tsx`, `src/components/ScanImageViewer.tsx`. Persona Critic v2 score 3.55/5. | Tier 3. Image viewer + OCR panel. No new backend dependency — reads device filesystem + SQLite. ScanImageViewer reusable for P3. |
 | D9 — Consent Request Flow | **MERGED TO MAIN (2026-05-10). PM Moment 2 + Moment 3 complete. Device testing COMPLETE (sessions 1–4). Security re-audit v3 — 0 critical/high/medium. D3 `handleRequestAccess` fully wired to D9 (not a stub).** Pre-launch conditions: (1) patient mobile edit in D3, (2) EAS build + cert pinning, (3) D5-M-1 UNIQUE fix, (4) D6 syncLogger removal. Reviews: `reviews/D9-pm-review-v3.md`, `reviews/D9-security-audit-v3.md`. Sessions: `reviews/D9-device-test-session-1.md` through `reviews/D9-device-test-session-4.md`. Live screen: `src/screens/doctor/ConsentRequestScreen.tsx`. | Tier 3. MERGED. |
 | P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
 
@@ -243,6 +243,18 @@ _Carry these into every build/mockup session for these screens._
 | ~~**D3-H-1:** Live build API must return two separate visit lists — `myVisits` (doctor's own, always returned) and `otherDoctorVisits` (consent-gated, `chiefComplaint` omitted)~~ | D3 | Security audit D3-C-2 / mockup `VISITS_OWN` + `VISITS_OTHER` | **CLOSED 2026-02-24** — `getPatientVisits()` in `src/api/visits.ts` calls `GET /patients/:serverId/visits` which returns `{ my_visits, other_doctor_visits, consent_granted, checked_at }`. Server must exclude `chief_complaint` from `other_doctor_visits` at the query layer when `consent_granted=false`. |
 | ~~**D3-H-2:** Server-side consent re-verification must complete before visit history renders — nav param must not be used as the sole gate~~ | D3 | Security audit HIGH | **CLOSED 2026-02-24** — Loading skeleton rendered on mount until `getPatientVisits()` resolves. Offline fallback to `getCachedVisits()` only when `isConnected === false`. Nav param `consentGranted` used only in offline fallback; server response is the gate. |
 | ~~**D3-H-3:** Auth guard on mount — synchronous null-render if token or user is absent~~ | D3 | Security audit HIGH | **CLOSED 2026-02-24** — `if (!token \|\| !user) return null` added at `PatientDetailScreen.tsx` after all hooks, matching D2 pattern (PatientSearchScreen.tsx line 244). |
+
+### MEDIUM — D8 live screen security audit (2026-05-12) — fix before v1 launch
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D8-SA-M1:** No `scan_viewed` audit event when doctor opens D8. `security-spec.md` lists "Image downloaded" as auditable. D4 emits `logVisitViewed` at visit-level; no event covers individual scan image access. Patients cannot request a complete access log without this. Fix: add `logScanViewed()` to `src/db/scans.ts`; call in `handleViewScan` (VisitDetailScreen.tsx:302) before navigating. | D8 | D8 security audit | `src/screens/doctor/VisitDetailScreen.tsx:302`, `src/db/scans.ts` |
+
+### LOW — D8 live screen security audit (2026-05-12) — backlog
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D8-SA-L1:** `resolveScanPath()` null-path fallback: `(FileSystem.documentDirectory ?? '') + relativePath` produces an invalid relative URI if `documentDirectory` is null. Results in a broken image — not a security risk. Not observed in Expo SDK 54 practice. | D8 | D8 security audit | `src/db/scans.ts:39` |
 
 ### MEDIUM — Pre-v1 launch (identified in security re-audits 2026-04-11)
 
