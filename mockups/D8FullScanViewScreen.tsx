@@ -105,10 +105,12 @@ const MOCK_USER  = { id: 'doc-001', name: 'Dr. Priya Nair' };
 function ScanHeader({
   label,
   visitDate,
+  patientName,
   onBack,
 }: {
   label: string;
   visitDate: string;
+  patientName: string;
   onBack: () => void;
 }) {
   return (
@@ -123,6 +125,7 @@ function ScanHeader({
       </TouchableOpacity>
       <View style={styles.headerTitle}>
         <Text style={styles.headerLabel} numberOfLines={1}>{label}</Text>
+        <Text style={styles.headerPatientName} numberOfLines={1}>{patientName}</Text>
         <Text style={styles.headerDate}>{visitDate}</Text>
       </View>
       <View style={styles.headerRight} />
@@ -188,7 +191,7 @@ function OcrPanelHandle({
     >
       <View style={styles.panelHandlePill} />
       <View style={styles.panelHandleRow}>
-        <Text style={styles.panelTitle}>Extracted Text</Text>
+        <Text style={styles.panelTitle}>Scan Text</Text>
         {statusNode}
         <Text style={styles.panelChevron}>{expanded ? '↓' : '↑'}</Text>
       </View>
@@ -214,22 +217,24 @@ function OcrPanelBody({
     return (
       <View style={styles.ocrStatusRow}>
         <ActivityIndicator size="small" color={Colors.primaryBlue} />
-        <Text style={styles.ocrStatusText}>Text extraction in progress…</Text>
+        <Text style={styles.ocrStatusText}>Text extraction in progress… (usually under a minute)</Text>
       </View>
     );
   }
   if (ocrStatus === 'failed') {
     return (
-      <View style={styles.ocrStatusRow}>
+      <View style={styles.ocrStatusCol}>
         <Text style={[styles.ocrStatusText, { color: Colors.error }]}>
           Image only — text not extracted
         </Text>
+        <Text style={styles.ocrRecoveryHint}>Ask staff to rescan if text is needed.</Text>
       </View>
     );
   }
   return (
-    <View style={styles.ocrStatusRow}>
+    <View style={styles.ocrStatusCol}>
       <Text style={styles.ocrStatusText}>No extracted text available</Text>
+      <Text style={styles.ocrRecoveryHint}>Ask staff to rescan if text is needed.</Text>
     </View>
   );
 }
@@ -246,6 +251,7 @@ export function D8ScanViewOcrSuccess() {
       <ScanHeader
         label={SCAN.label}
         visitDate={SCAN.visitDate}
+        patientName={PATIENT.name}
         onBack={() => {}}
       />
       <ScanImagePlaceholder label={SCAN.label} />
@@ -269,6 +275,7 @@ export function D8ScanViewOcrFailed() {
       <ScanHeader
         label="Lab Report"
         visitDate={SCAN.visitDate}
+        patientName={PATIENT.name}
         onBack={() => {}}
       />
       <ScanImagePlaceholder label="Lab Report" />
@@ -292,6 +299,7 @@ export function D8ScanViewOcrPending() {
       <ScanHeader
         label="Discharge Summary"
         visitDate={SCAN.visitDate}
+        patientName={PATIENT.name}
         onBack={() => {}}
       />
       <ScanImagePlaceholder label="Discharge Summary" />
@@ -315,6 +323,7 @@ export function D8ScanViewCollapsed() {
       <ScanHeader
         label={SCAN.label}
         visitDate={SCAN.visitDate}
+        patientName={PATIENT.name}
         onBack={() => {}}
       />
       {/* Image takes all remaining space when panel is collapsed */}
@@ -394,6 +403,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.surface,
   },
+  headerPatientName: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+    marginTop: 1,
+  },
   headerDate: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.65)',
@@ -448,7 +462,7 @@ const styles = StyleSheet.create({
   },
   imagePlaceholderHint: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.3)',
+    color: 'rgba(255,255,255,0.6)',
     marginTop: 4,
   },
 
@@ -557,10 +571,9 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   ocrText: {
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
     color: Colors.textPrimary,
-    fontFamily: 'monospace',
   },
   ocrStatusRow: {
     flexDirection: 'row',
@@ -571,9 +584,21 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
     minHeight: 56,
   },
+  ocrStatusCol: {
+    flexDirection: 'column',
+    padding: 16,
+    gap: 6,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    minHeight: 56,
+  },
   ocrStatusText: {
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.textSecondary,
+  },
+  ocrRecoveryHint: {
+    fontSize: 13,
+    color: Colors.textDisabled,
   },
 
   // Dev review labels

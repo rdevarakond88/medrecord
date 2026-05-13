@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D8 in progress. Persona Critic review complete — verdict: Revise and re-evaluate (score 3.3/5). 2 MUST FIX items identified. Next: Builder applies MUST FIX + SHOULD FIX to mockup, then re-evaluate before wire session.
+**Phase:** D8 in progress. Builder applied all 6 Persona Critic items (2 MUST FIX + 4 SHOULD FIX) to mockup. Next: Persona Critic re-evaluates revised mockup.
 **Last Updated:** 2026-05-12
 
 ---
@@ -24,18 +24,18 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Persona Critic Agent — D8 Full Scan View critique (2026-05-12). Score 3.3/5. Verdict: Revise and re-evaluate. 2 MUST FIX items; 4 SHOULD FIX items. Full critique: `reviews/D8-persona-critique.md`.
+**Last Session:** Builder Agent — D8 mockup revisions (2026-05-12). Applied all 6 Persona Critic items: M1 (patientName in header), M2 (OCR font 13pt→15pt, system font), S1 (recovery hint on failed/deferred), S2 ("Scan Text" label), S3 (hint opacity 0.3→0.6), S4 (pending timing hint). Revised mockup ready for Persona Critic re-evaluation.
 
 ### D8 Open Critique Items (must be applied to mockup before wire session)
 
 | ID | Severity | Item | Status |
 |---|---|---|---|
-| D8-PC-M1 | MUST FIX | Patient name missing from header — `patientName` nav param defined but never rendered. Add as dimmed sub-line under document label in `ScanHeader`. | OPEN |
-| D8-PC-M2 | MUST FIX | OCR text font too small: 13pt monospace → minimum 14pt (15pt preferred). Consider switching to system font. | OPEN |
-| D8-PC-S1 | SHOULD FIX | No recovery path on OCR failed/deferred state. Add note: "Ask staff to rescan if text is needed." | OPEN |
-| D8-PC-S2 | SHOULD FIX | "Extracted Text" label → "Scan Text" or "Document Text." | OPEN |
-| D8-PC-S3 | SHOULD FIX | "Pinch to zoom" hint opacity: rgba(255,255,255,0.3) → rgba(255,255,255,0.6). | OPEN |
-| D8-PC-S4 | SHOULD FIX | Pending state: add "(usually under a minute)" to avoid open-ended spinner anxiety. | OPEN |
+| D8-PC-M1 | MUST FIX | Patient name missing from header — `patientName` nav param defined but never rendered. Add as dimmed sub-line under document label in `ScanHeader`. | **CLOSED 2026-05-12** |
+| D8-PC-M2 | MUST FIX | OCR text font too small: 13pt monospace → minimum 14pt (15pt preferred). Consider switching to system font. | **CLOSED 2026-05-12** — 15pt system font |
+| D8-PC-S1 | SHOULD FIX | No recovery path on OCR failed/deferred state. Add note: "Ask staff to rescan if text is needed." | **CLOSED 2026-05-12** |
+| D8-PC-S2 | SHOULD FIX | "Extracted Text" label → "Scan Text" or "Document Text." | **CLOSED 2026-05-12** — "Scan Text" |
+| D8-PC-S3 | SHOULD FIX | "Pinch to zoom" hint opacity: rgba(255,255,255,0.3) → rgba(255,255,255,0.6). | **CLOSED 2026-05-12** |
+| D8-PC-S4 | SHOULD FIX | Pending state: add "(usually under a minute)" to avoid open-ended spinner anxiety. | **CLOSED 2026-05-12** |
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
@@ -48,7 +48,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | 6 | **Device test: EAS build smoke test** | After EAS build completes and IPA is installed on device. Verify cert pinning active (not Expo Go fallback), run login → D9 consent flow. (Deferred — `eas init` blocked by empty ascAppId/appleTeamId in eas.json submit section. Fix is a 2-line deletion in eas.json. Defer until all screens built.) |
 | ~~7~~ | ~~**Builder: D8 Full Scan View — mockup**~~ | ~~DONE 2026-05-12 — commit 1504171. 4 variants built.~~ |
 | ~~7b~~ | ~~**Persona Critic: D8 Full Scan View**~~ | ~~DONE 2026-05-12. Score 3.3/5. Revise verdict — 2 MUST FIX, 4 SHOULD FIX. See D8 Open Critique Items above.~~ |
-| 7b-fix | **Builder: Apply D8 mockup revisions** | Apply D8-PC-M1 (patient name in header), D8-PC-M2 (font size), and all SHOULD FIX items to `mockups/D8FullScanViewScreen.tsx`. Then Persona Critic re-evaluates. |
+| ~~7b-fix~~ | ~~**Builder: Apply D8 mockup revisions**~~ | ~~DONE 2026-05-12 — all 6 critique items applied. Revised mockup ready for re-evaluation.~~ |
 | 7c | **Builder: D8 Full Scan View — wire** | After revised mockup passes Persona Critic re-evaluation. Wire real data: filesystem path, SQLite scan record, resolveScanPath(). Extract ScanImageViewer component for P3 reuse. | 
 | 8 | **PM pre-flight: P1–P5 Patient App** | After D8 is device-tested and merged. New flow — requires its own PM Moment 1 before any code is written. |
 
