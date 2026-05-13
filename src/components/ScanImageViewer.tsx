@@ -28,34 +28,47 @@ interface ScanImageViewerProps {
 }
 
 export default function ScanImageViewer({ uri, accessibilityLabel }: ScanImageViewerProps) {
-  const { width, height } = useWindowDimensions();
-  const [hintVisible, setHintVisible] = useState(true);
+  const { width } = useWindowDimensions();
+  const [hintVisible,      setHintVisible]      = useState(true);
+  const [imageError,       setImageError]       = useState(false);
+  const [containerHeight,  setContainerHeight]  = useState(0);
 
   return (
-    <View style={styles.root}>
-      {/* ScrollView zoom is iOS-native. On Android, pinch gesture events are
-          dispatched but maximumZoomScale is not honoured — image displays at 1x
-          without crashing. Full Android zoom requires react-native-gesture-handler
-          (deferred to v2 alongside S3 image hosting). */}
-      <ScrollView
-        contentContainerStyle={{ width, height }}
-        minimumZoomScale={1}
-        maximumZoomScale={4}
-        pinchGestureEnabled
-        centerContent
-        bouncesZoom
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
-        onScrollBeginDrag={() => setHintVisible(false)}
-      >
-        <Image
-          source={{ uri }}
-          style={{ width, height }}
-          resizeMode="contain"
-          accessibilityLabel={accessibilityLabel ?? 'Scan image'}
-        />
-      </ScrollView>
-      {hintVisible && (
+    <View
+      style={styles.root}
+      onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}
+    >
+      {imageError ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Image could not be loaded</Text>
+          <Text style={styles.errorHint}>Ask staff to rescan if needed.</Text>
+        </View>
+      ) : containerHeight > 0 ? (
+        /* ScrollView zoom is iOS-native. On Android, pinch gesture events are
+           dispatched but maximumZoomScale is not honoured — image displays at 1x
+           without crashing. Full Android zoom requires react-native-gesture-handler
+           (deferred to v2 alongside S3 image hosting). */
+        <ScrollView
+          contentContainerStyle={{ width, height: containerHeight }}
+          minimumZoomScale={1}
+          maximumZoomScale={4}
+          pinchGestureEnabled
+          centerContent
+          bouncesZoom
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={() => setHintVisible(false)}
+        >
+          <Image
+            source={{ uri }}
+            style={{ width, height: containerHeight }}
+            resizeMode="contain"
+            accessibilityLabel={accessibilityLabel ?? 'Scan image'}
+            onError={() => { setImageError(true); setHintVisible(false); }}
+          />
+        </ScrollView>
+      ) : null}
+      {hintVisible && !imageError && containerHeight > 0 && (
         <View pointerEvents="none" style={styles.hintOverlay}>
           <Text style={styles.hintText}>Pinch to zoom</Text>
         </View>
@@ -68,6 +81,24 @@ const styles = StyleSheet.create({
   root: {
     flex:            1,
     backgroundColor: '#111827',
+  },
+  errorContainer: {
+    flex:           1,
+    justifyContent: 'center',
+    alignItems:     'center',
+    padding:        32,
+  },
+  errorTitle: {
+    fontSize:     16,
+    fontWeight:   '600',
+    color:        'rgba(255,255,255,0.85)',
+    textAlign:    'center',
+    marginBottom: 8,
+  },
+  errorHint: {
+    fontSize:  14,
+    color:     'rgba(255,255,255,0.5)',
+    textAlign: 'center',
   },
   hintOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -149,6 +149,41 @@ export async function clearDoctorScans(doctorId: string): Promise<void> {
 }
 
 /**
+ * Write a scan_viewed audit event to the local audit_events table.
+ * Called by D4 handleViewScan immediately before navigating to D8.
+ *
+ * DPDP Act 2023 §8 — security-spec.md lists "Image uploaded/downloaded" as auditable.
+ * D8-SA-M1 fix: individual scan image access must be logged so patients can request
+ * an access history that distinguishes visit-level views from scan-image opens.
+ */
+export async function logScanViewed(
+  db: SQLite.SQLiteDatabase,
+  params: {
+    scanId:    string;
+    visitId:   string;
+    doctorId:  string;
+    patientId: string;
+    label:     string;
+  },
+): Promise<void> {
+  const id  = Crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `INSERT OR IGNORE INTO audit_events
+       (id, event_type, doctor_id, patient_id, metadata, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      'scan_viewed',
+      params.doctorId,
+      params.patientId,
+      JSON.stringify({ scanId: params.scanId, visitId: params.visitId, label: params.label }),
+      now,
+    ],
+  );
+}
+
+/**
  * Write a scan_created audit event to the local audit_events table.
  * Called by D7 immediately after insertVisitScan() inside withTransactionAsync().
  *

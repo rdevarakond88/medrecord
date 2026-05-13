@@ -197,6 +197,11 @@ export default function FullScanViewScreen() {
   const absoluteUri = resolveScanPath(scanLocalPath);
   const displayDate = formatDateForDisplay(visitDate) ?? visitDate;
   const typedStatus = (ocrStatus as OcrStatus) ?? 'deferred';
+  // D8-QA-M1: treat success+empty-text as 'deferred' so badge and body stay in sync.
+  // Backend can set ocr_status='success' with content_text='' on a blank page — the
+  // badge must not say "Text extracted ✓" when there is nothing to show.
+  const effectiveStatus: OcrStatus =
+    typedStatus === 'success' && !ocrText ? 'deferred' : typedStatus;
 
   return (
     <SafeAreaView style={styles.root}>
@@ -215,16 +220,16 @@ export default function FullScanViewScreen() {
       {expanded ? (
         <View style={styles.panel}>
           <OcrPanelHandle
-            ocrStatus={typedStatus}
+            ocrStatus={effectiveStatus}
             expanded
             onToggle={() => setExpanded(false)}
           />
-          <OcrPanelBody ocrStatus={typedStatus} ocrText={ocrText} />
+          <OcrPanelBody ocrStatus={effectiveStatus} ocrText={ocrText} />
         </View>
       ) : (
         <View style={styles.panelCollapsed}>
           <OcrPanelHandle
-            ocrStatus={typedStatus}
+            ocrStatus={effectiveStatus}
             expanded={false}
             onToggle={() => setExpanded(true)}
           />

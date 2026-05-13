@@ -69,7 +69,7 @@ import {
 import { getPatientByServerId } from '../../db/patients';
 import { logVisitViewed, updateVisitStatus } from '../../db/visits';
 import { enqueueOperation, markSyncEntrySuccess } from '../../sync/syncQueue';
-import { getScansForServerVisit } from '../../db/scans';
+import { getScansForServerVisit, logScanViewed } from '../../db/scans';
 
 // ─── Navigation types ──────────────────────────────────────────────────────
 
@@ -299,11 +299,20 @@ export default function VisitDetailScreen() {
       );
       return;
     }
+    // D8-SA-M1: log individual scan image access before navigation
+    await logScanViewed(db, {
+      scanId:    localScan.id,
+      visitId:   visitServerId,
+      doctorId:  user.id,
+      patientId: patientServerId,
+      label:     localScan.label,
+    });
     navigation.navigate('FullScanView', {
       scanLocalPath: localScan.localPath,
       scanLabel:     localScan.label,
       ocrStatus:     record.ocr_status ?? 'deferred',
-      ocrText:       record.content_text,
+      // D8-QA-M1: normalise empty string → null so D8 badge/body stay in sync
+      ocrText:       record.content_text || null,
       visitDate,
       patientName,
     });
