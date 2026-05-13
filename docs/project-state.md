@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D8 in progress. Builder applied all 6 Persona Critic items (2 MUST FIX + 4 SHOULD FIX) to mockup. Next: Persona Critic re-evaluates revised mockup.
+**Phase:** D8 in progress. Persona Critic v2 complete — revised mockup scores 3.5/5, passes threshold. Next: Builder wires D8 (real data: filesystem path, SQLite scan record, resolveScanPath(), ScanImageViewer component extraction).
 **Last Updated:** 2026-05-12
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — D8 mockup revisions (2026-05-12). Applied all 6 Persona Critic items: M1 (patientName in header), M2 (OCR font 13pt→15pt, system font), S1 (recovery hint on failed/deferred), S2 ("Scan Text" label), S3 (hint opacity 0.3→0.6), S4 (pending timing hint). Revised mockup ready for Persona Critic re-evaluation.
+**Last Session:** Persona Critic Agent — D8 Full Scan View v2 re-evaluation (2026-05-12). All 6 v1 critique items verified closed. Score: 3.55/5 (rounded 3.5/5). Verdict: Ship as-is — proceed to Builder wire session. No MUST FIX or SHOULD FIX items remain. NICE TO HAVE: share button (headerRight slot reserved), failed-state badge amber polish, zoom controls, panel expand-to-full. Critique saved to reviews/D8-persona-critique-v2.md.
 
 ### D8 Open Critique Items (must be applied to mockup before wire session)
 
@@ -49,7 +49,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~7~~ | ~~**Builder: D8 Full Scan View — mockup**~~ | ~~DONE 2026-05-12 — commit 1504171. 4 variants built.~~ |
 | ~~7b~~ | ~~**Persona Critic: D8 Full Scan View**~~ | ~~DONE 2026-05-12. Score 3.3/5. Revise verdict — 2 MUST FIX, 4 SHOULD FIX. See D8 Open Critique Items above.~~ |
 | ~~7b-fix~~ | ~~**Builder: Apply D8 mockup revisions**~~ | ~~DONE 2026-05-12 — all 6 critique items applied. Revised mockup ready for re-evaluation.~~ |
-| 7c | **Builder: D8 Full Scan View — wire** | After revised mockup passes Persona Critic re-evaluation. Wire real data: filesystem path, SQLite scan record, resolveScanPath(). Extract ScanImageViewer component for P3 reuse. | 
+| ~~7b-v2~~ | ~~**Persona Critic: D8 re-evaluation**~~ | ~~DONE 2026-05-12. Score 3.55/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. reviews/D8-persona-critique-v2.md saved.~~ |
+| 7c | **Builder: D8 Full Scan View — wire** | NEXT. Wire real data: filesystem path, SQLite scan record, resolveScanPath(). Extract ScanImageViewer component for P3 reuse. | 
 | 8 | **PM pre-flight: P1–P5 Patient App** | After D8 is device-tested and merged. New flow — requires its own PM Moment 1 before any code is written. |
 
 ---
