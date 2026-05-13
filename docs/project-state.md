@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D8 security audit complete — CLEAR TO MERGE. 0 CRITICAL, 0 HIGH. 1 MEDIUM (D8-SA-M1: add logScanViewed before v1 launch), 1 LOW (D8-SA-L1: resolveScanPath null guard — backlog). Next: QA Agent (D8).
+**Phase:** D8 QA complete — 1 HIGH + 2 MEDIUM bugs found. Builder session required before device testing. See reviews/D8-qa-test-plan.md. Next: Builder Agent (D8 — fix D8-QA-H1, D8-QA-M1, D8-QA-M2, and D8-SA-M1).
 **Last Updated:** 2026-05-12
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Security Agent — D8 Full Scan View security audit (2026-05-12). CLEAR TO MERGE — 0 CRITICAL, 0 HIGH. D8-SA-M1 (no scan_viewed audit event) + D8-SA-L1 (resolveScanPath null-path fallback) documented. Report: `reviews/D8-security-audit.md`.
+**Last Session:** QA Agent — D8 Full Scan View (2026-05-12). 1 HIGH (D8-QA-H1: no image error handler), 2 MEDIUM (D8-QA-M1: badge/body mismatch on empty ocrText; D8-QA-M2: image sized to full window height). Builder session required. Test plan: `reviews/D8-qa-test-plan.md`.
 
 ### D8 Open Critique Items (must be applied to mockup before wire session)
 
@@ -52,8 +52,9 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~7b-v2~~ | ~~**Persona Critic: D8 re-evaluation**~~ | ~~DONE 2026-05-12. Score 3.55/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. reviews/D8-persona-critique-v2.md saved.~~ |
 | ~~7c~~ | ~~**Builder: D8 Full Scan View — wire**~~ | ~~DONE 2026-05-12. FullScanViewScreen.tsx + ScanImageViewer.tsx created. D4 wired. App.tsx registered. Zero TS errors.~~ |
 | ~~7d~~ | ~~**Security: D8 Full Scan View**~~ | ~~DONE 2026-05-12. CLEAR TO MERGE. 0 CRITICAL, 0 HIGH. D8-SA-M1 (logScanViewed) + D8-SA-L1 (resolveScanPath null guard) documented. Audit: `reviews/D8-security-audit.md`.~~ |
-| 7e | **QA: D8 Full Scan View** | NEXT. After Security audit clears. |
-| 7f | **Device test: D8 Full Scan View** | After QA test plan complete + backend pre-flight passes. |
+| ~~7e~~ | ~~**QA: D8 Full Scan View**~~ | ~~DONE 2026-05-12. 1 HIGH (D8-QA-H1: no image error handler), 2 MEDIUM (D8-QA-M1, D8-QA-M2). Builder session required before device testing. Plan: `reviews/D8-qa-test-plan.md`.~~ |
+| 7e-fix | **Builder: D8 QA fixes** | NEXT. Fix D8-QA-H1 (image error handler), D8-QA-M1 (empty ocrText badge/body), D8-QA-M2 (image height sizing), D8-SA-M1 (logScanViewed). |
+| 7f | **Device test: D8 Full Scan View** | After Builder fixes + backend pre-flight passes. |
 | 8 | **PM pre-flight: P1–P5 Patient App** | After D8 is device-tested and merged. New flow — requires its own PM Moment 1 before any code is written. |
 
 ---
