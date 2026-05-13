@@ -94,6 +94,36 @@ export async function deleteScan(
 }
 
 /**
+ * Return scans for a server-synced visit, ordered by creation time.
+ * Used by D4 to resolve local_path when navigating to D8 (Full Scan View).
+ *
+ * The join via visits_draft is required because scans.visit_local_id references
+ * the local draft visit ID, while D4 operates on server visit IDs. The positional
+ * ordering (oldest-first) mirrors the scan record ordering in visit_records so D4
+ * can match by index. This works reliably for v1 because scans are captured
+ * sequentially (one D7 session at a time) and there is no concurrent multi-device
+ * scan creation (S3 deferred to v2).
+ *
+ * Returns an empty array if no local scans exist (e.g. the visit was created by
+ * another doctor on a different device — D8 shows an "image not available" alert).
+ */
+export async function getScansForServerVisit(
+  db: SQLite.SQLiteDatabase,
+  serverVisitId: string,
+  doctorId: string,
+): Promise<Array<{ id: string; localPath: string; label: string }>> {
+  const rows = await db.getAllAsync<{ id: string; local_path: string; label: string }>(
+    `SELECT s.id, s.local_path, s.label
+     FROM scans s
+     INNER JOIN visits_draft vd ON s.visit_local_id = vd.local_id
+     WHERE vd.server_id = ? AND s.doctor_id = ?
+     ORDER BY s.created_at ASC`,
+    [serverVisitId, doctorId],
+  );
+  return rows.map((r) => ({ id: r.id, localPath: r.local_path, label: r.label }));
+}
+
+/**
  * Delete all scan records for the given doctor from SQLite.
  * Called during logout alongside clearDoctorScans() (filesystem cleanup) so both
  * the scans table rows and the image files are removed atomically per doctor.

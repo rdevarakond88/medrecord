@@ -33,6 +33,7 @@ import DocumentScannerScreen from './src/screens/doctor/DocumentScannerScreen';
 import NewPatientFormScreen from './src/screens/doctor/NewPatientFormScreen';
 import VisitDetailScreen from './src/screens/doctor/VisitDetailScreen';
 import ConsentRequestScreen from './src/screens/doctor/ConsentRequestScreen';
+import FullScanViewScreen from './src/screens/doctor/FullScanViewScreen';
 import { useSyncWorker } from './src/sync/useSyncWorker';
 import { refreshAccessToken } from './src/api/auth';
 import { ApiError } from './src/api/apiClient';
@@ -80,6 +81,14 @@ export type RootStackParamList = {
     patientServerId: string | null;
     patientName:     string;
     maskedMobile:    string;
+  };
+  FullScanView: {
+    scanLocalPath: string;       // relative path — resolveScanPath() in FullScanViewScreen
+    scanLabel:     string;       // document type label (Prescription, Lab Report, etc.)
+    ocrStatus:     string;       // 'deferred' | 'pending' | 'success' | 'failed'
+    ocrText:       string | null; // sanitised OCR text (content_text from visit_records)
+    visitDate:     string;       // ISO 8601
+    patientName:   string;
   };
 };
 
@@ -192,6 +201,7 @@ function App() {
                 Dynamic setOptions() does not propagate to the native layer after push. */}
             <Stack.Screen name="ConsentRequest"    component={ConsentRequestScreen}
                           options={{ gestureEnabled: false }} />
+            <Stack.Screen name="FullScanView"      component={FullScanViewScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </QueryClientProvider>

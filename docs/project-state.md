@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D8 in progress. Persona Critic v2 complete — revised mockup scores 3.5/5, passes threshold. Next: Builder wires D8 (real data: filesystem path, SQLite scan record, resolveScanPath(), ScanImageViewer component extraction).
+**Phase:** D8 wire complete. FullScanViewScreen.tsx live, ScanImageViewer.tsx extracted, D4 wired. Next: Security audit (D8 touches display of scan images and OCR text — no new storage or auth paths, but Security agent must clear before QA).
 **Last Updated:** 2026-05-12
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Persona Critic Agent — D8 Full Scan View v2 re-evaluation (2026-05-12). All 6 v1 critique items verified closed. Score: 3.55/5 (rounded 3.5/5). Verdict: Ship as-is — proceed to Builder wire session. No MUST FIX or SHOULD FIX items remain. NICE TO HAVE: share button (headerRight slot reserved), failed-state badge amber polish, zoom controls, panel expand-to-full. Critique saved to reviews/D8-persona-critique-v2.md.
+**Last Session:** Builder Agent — D8 Full Scan View wire (2026-05-12). FullScanViewScreen.tsx created (live screen, converted from mockup). ScanImageViewer.tsx extracted to src/components/ for P3 reuse. getScansForServerVisit() added to src/db/scans.ts (join via visits_draft to get local_path). D4 VisitDetailScreen wired: "View full image →" navigates to FullScanView with scanLocalPath, scanLabel, ocrStatus, ocrText, visitDate, patientName. FullScanView registered in App.tsx RootStackParamList + Stack. Zero new TS errors. Positional scan matching (Nth scan in visit_records ↔ Nth scan in scans table) — v1 limitation documented in code comment.
 
 ### D8 Open Critique Items (must be applied to mockup before wire session)
 
@@ -50,7 +50,10 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~7b~~ | ~~**Persona Critic: D8 Full Scan View**~~ | ~~DONE 2026-05-12. Score 3.3/5. Revise verdict — 2 MUST FIX, 4 SHOULD FIX. See D8 Open Critique Items above.~~ |
 | ~~7b-fix~~ | ~~**Builder: Apply D8 mockup revisions**~~ | ~~DONE 2026-05-12 — all 6 critique items applied. Revised mockup ready for re-evaluation.~~ |
 | ~~7b-v2~~ | ~~**Persona Critic: D8 re-evaluation**~~ | ~~DONE 2026-05-12. Score 3.55/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. reviews/D8-persona-critique-v2.md saved.~~ |
-| 7c | **Builder: D8 Full Scan View — wire** | NEXT. Wire real data: filesystem path, SQLite scan record, resolveScanPath(). Extract ScanImageViewer component for P3 reuse. | 
+| ~~7c~~ | ~~**Builder: D8 Full Scan View — wire**~~ | ~~DONE 2026-05-12. FullScanViewScreen.tsx + ScanImageViewer.tsx created. D4 wired. App.tsx registered. Zero TS errors.~~ |
+| 7d | **Security: D8 Full Scan View** | NEXT. D8 displays scan images and OCR text — Security agent must audit before QA. |
+| 7e | **QA: D8 Full Scan View** | After Security audit clears. |
+| 7f | **Device test: D8 Full Scan View** | After QA test plan complete + backend pre-flight passes. |
 | 8 | **PM pre-flight: P1–P5 Patient App** | After D8 is device-tested and merged. New flow — requires its own PM Moment 1 before any code is written. |
 
 ---
