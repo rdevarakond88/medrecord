@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — Persona Critic: P4 re-evaluation COMPLETE (3.8/5, Ship as-is). Next: Builder: P5 mockup.
+**Phase:** P1–P5 Patient App — Builder: P5 mockup COMPLETE. Next: Persona Critic: P5.
 **Last Updated:** 2026-05-16
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Persona Critic — P4 re-evaluation (2026-05-16). Score 3.8/5. Verdict: Ship as-is. One SHOULD FIX (P4-PC-v2-S1: scopeNote 13→14px). Critique: `reviews/P4-persona-critique-v2.md`.
+**Last Session:** Builder — P5 mockup (2026-05-16). `PatientProfileScreen.tsx` created. Viewing + editing states. Language modal (6 options). Text size: read-only info row (system font scaling — no custom toggle). P4-PC-v2-S1 applied (scopeNote 14px). P1-PC-S1/S2/S3 applied to PatientLoginScreen. Tab bars in P2/P4 wired to PatientProfile. App.tsx registered.
 
 ### P4 Open Critique Items (apply before Builder: wire step)
 
@@ -34,7 +34,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | P4-PC-S1 | SHOULD FIX | Section labels "ACTIVE ACCESS" / "PENDING REQUESTS" are jargon. Replace with "Your Doctors" / "New Requests". | **CLOSED 2026-05-16** — section labels updated; letterSpacing removed; fontSize 12→13 |
 | P4-PC-S2 | SHOULD FIX | No scope explanation on active consent cards — ambiguous what "access" covers. Add: "Can view all your health records" under each doctor card. | **CLOSED 2026-05-16** — scopeNote added to ConsentCard |
 | P4-PC-S3 | SHOULD FIX | "Access since" text at 13px below 14px minimum for patient/elderly audience. Increase to 14px. | **CLOSED 2026-05-16** — accessSince fontSize 13→14 |
-| P4-PC-v2-S1 | SHOULD FIX | scopeNote "Can view all your health records" renders at 13px — below 14px minimum for elderly audience. Increase fontSize 13 → 14. Apply before wire step alongside P1-PC open items. | Open |
+| P4-PC-v2-S1 | SHOULD FIX | scopeNote "Can view all your health records" renders at 13px — below 14px minimum for elderly audience. Increase fontSize 13 → 14. Apply before wire step alongside P1-PC open items. | **CLOSED 2026-05-16** — fontSize 13→14 |
 
 ---
 
@@ -64,9 +64,9 @@ _Update this section whenever backend status changes. Every device testing sessi
 
 | ID | Severity | Item | Status |
 |---|---|---|---|
-| P1-PC-S1 | SHOULD FIX | Add one-line value proposition below "For Patients" subtitle — e.g., "Access your medical records" — so first-time patients understand the app before logging in. | Open |
-| P1-PC-S2 | SHOULD FIX | "Change number" link too small (13px, textSecondary). Increase to 14px minimum; ensure 44×44px tap target (WCAG AA). | Open |
-| P1-PC-S3 | SHOULD FIX | Loading text generic "Please wait…" for both phases. Differentiate: "Sending OTP…" / "Verifying…". | Open |
+| P1-PC-S1 | SHOULD FIX | Add one-line value proposition below "For Patients" subtitle — e.g., "Access your medical records" — so first-time patients understand the app before logging in. | **CLOSED 2026-05-16** — tagline "Access your medical records anytime" added below subtitle |
+| P1-PC-S2 | SHOULD FIX | "Change number" link too small (13px, textSecondary). Increase to 14px minimum; ensure 44×44px tap target (WCAG AA). | **CLOSED 2026-05-16** — fontSize 13→14; minHeight 44; paddingVertical Spacing.xs→Spacing.sm |
+| P1-PC-S3 | SHOULD FIX | Loading text generic "Please wait…" for both phases. Differentiate: "Sending OTP…" / "Verifying…". | **CLOSED 2026-05-16** — loadingAction state added; "Sending OTP…" vs "Verifying…" |
 
 ---
 
@@ -114,8 +114,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~16~~ | ~~**Persona Critic: P4 mockup**~~ | ~~DONE 2026-05-16. Score 3.0/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 3 SHOULD FIX. See P4 Open Critique Items. Critique: `reviews/P4-persona-critique.md`.~~ |
 | ~~16b~~ | ~~**Builder: Apply P4 mockup revisions**~~ | ~~DONE 2026-05-16 — P4-PC-M1: "Remove Access"/"Allow"/"Don't Allow" vocabulary + matching Alerts + info note. P4-PC-S1: "Your Doctors"/"New Requests" section labels. P4-PC-S2: scope note "Can view all your health records" on active consent cards. P4-PC-S3: accessSince 13→14px. Zero TS errors.~~ |
 | ~~16c~~ | ~~**Persona Critic: P4 re-evaluation**~~ | ~~DONE 2026-05-16. Score 3.8/5. Verdict: Ship as-is. One SHOULD FIX (P4-PC-v2-S1: scopeNote 13→14px). Critique: `reviews/P4-persona-critique-v2.md`.~~ |
-| 17 | **Builder: P5 mockup (Patient Profile)** | **NEXT** — Settings + accessibility. Use system font scaling (allowFontScaling) — no custom toggle. Apply P4-PC-v2-S1 (scopeNote fontSize) and P1-PC open items before or during this session. |
-| 18 | **Persona Critic: P5 mockup** | Mandatory — must run after Builder: P5. |
+| ~~17~~ | ~~**Builder: P5 mockup (Patient Profile)**~~ | ~~DONE 2026-05-16 — `PatientProfileScreen.tsx`. Viewing + editing states, language modal, text-size info row. P4-PC-v2-S1 + P1-PC-S1/S2/S3 applied. Tab bars wired. App.tsx registered. Zero TS errors.~~ |
+| 18 | **Persona Critic: P5 mockup** | **NEXT** — Mandatory after Builder: P5. |
 | 19 | **Backend Agent: patient-facing endpoints** | After all P mockups approved by Persona Critic. Endpoints needed: patient JWT, patient timeline, patient record detail, patient consent list. Required before any P-screen device testing. |
 | 20 | **Device test: P1–P5 Patient App** | After backend is deployed and all screens pass Security + QA. |
 

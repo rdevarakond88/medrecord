@@ -26,7 +26,6 @@ import {
   StyleSheet,
   FlatList,
   SafeAreaView,
-  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -453,9 +452,7 @@ export default function PatientTimelineScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.tabItem}
-          onPress={() =>
-            Alert.alert('Profile', 'Patient profile screen coming soon.')
-          }
+          onPress={() => navigation.navigate('PatientProfile')}
           accessibilityRole="tab"
           accessibilityLabel="Profile tab"
           accessibilityState={{ selected: false }}

@@ -58,7 +58,8 @@ import type { RootStackParamList } from '../../../App';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Phase    = 'phone_entry' | 'loading' | 'otp_entry';
+type Phase         = 'phone_entry' | 'loading' | 'otp_entry';
+type LoadingAction = 'sending' | 'verifying';
 type OtpError = null | 'wrong_otp' | 'otp_expired' | 'too_many_attempts' | 'no_connection';
 type SendError = null | 'send_failed' | 'rate_limited' | 'no_connection';
 
@@ -140,10 +141,11 @@ export default function PatientLoginScreen() {
   const [otp,           setOtp]           = useState('');
   const [otpToken,      setOtpToken]      = useState<string | null>(null);
   const [otpSentBanner, setOtpSentBanner] = useState(false);
-  const [resendSeconds, setResendSeconds] = useState(RESEND_SECONDS);
-  const [canResend,     setCanResend]     = useState(false);
-  const [phoneError,    setPhoneError]    = useState<string | null>(null);
-  const [resendError,   setResendError]   = useState<SendError>(null);
+  const [resendSeconds,  setResendSeconds]  = useState(RESEND_SECONDS);
+  const [canResend,      setCanResend]      = useState(false);
+  const [phoneError,     setPhoneError]     = useState<string | null>(null);
+  const [resendError,    setResendError]    = useState<SendError>(null);
+  const [loadingAction,  setLoadingAction]  = useState<LoadingAction>('sending');
 
   const phoneInputRef   = useRef<TextInput>(null);
   const otpInputRef     = useRef<TextInput>(null);
@@ -201,6 +203,7 @@ export default function PatientLoginScreen() {
       return;
     }
 
+    setLoadingAction('sending');
     setPhase('loading');
     setOtpError(null);
     if (isResend) {
@@ -238,6 +241,7 @@ export default function PatientLoginScreen() {
     if (otp.length !== 6 || !otpToken) return;
     if (isVerifyingRef.current) return;
     isVerifyingRef.current = true;
+    setLoadingAction('verifying');
     setPhase('loading');
     setOtpError(null);
 
@@ -310,6 +314,7 @@ export default function PatientLoginScreen() {
               MedRecord
             </Text>
             <Text style={styles.subtitleText}>For Patients</Text>
+            <Text style={styles.taglineText}>Access your medical records anytime</Text>
           </View>
 
           {/* ── OTP sent banner ────────────────────────────────────────── */}
@@ -503,7 +508,9 @@ export default function PatientLoginScreen() {
           {phase === 'loading' && (
             <View style={styles.loadingBlock}>
               <ActivityIndicator size="large" color={Colors.primaryBlue} />
-              <Text style={styles.loadingText}>Please wait…</Text>
+              <Text style={styles.loadingText}>
+                {loadingAction === 'sending' ? 'Sending OTP…' : 'Verifying…'}
+              </Text>
             </View>
           )}
 
@@ -578,6 +585,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.textSecondary,
     marginTop: 6,
+  },
+  taglineText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginTop: 4,
   },
 
   otpSentBanner: {
@@ -727,10 +739,12 @@ const styles = StyleSheet.create({
   changeNumberBtn: {
     alignItems: 'center',
     marginTop: Spacing.xl,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   changeNumberLink: {
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.textSecondary,
     textDecorationLine: 'underline',
   },

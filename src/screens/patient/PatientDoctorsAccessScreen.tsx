@@ -310,9 +310,7 @@ export default function PatientDoctorsAccessScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.tabItem}
-          onPress={() =>
-            Alert.alert('Profile', 'Patient profile screen coming soon.')
-          }
+          onPress={() => navigation.navigate('PatientProfile')}
           accessibilityRole="tab"
           accessibilityLabel="Profile tab"
           accessibilityState={{ selected: false }}
@@ -446,7 +444,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   scopeNote: {
-    fontSize:     13,
+    fontSize:     14,
     color:        Colors.textSecondary,
     marginBottom: 4,
   },

@@ -15,6 +15,7 @@
  *   NewPatientForm  → D5 NewPatientFormScreen
  *   PatientLogin    → P1 PatientLoginScreen   (mockup — patient OTP login)
  *   PatientTimeline → P2 PatientTimelineScreen (stub — patient home)
+ *   PatientProfile  → P5 PatientProfileScreen (mockup — patient settings)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -40,6 +41,7 @@ import PatientLoginScreen from './src/screens/patient/PatientLoginScreen';
 import PatientTimelineScreen from './src/screens/patient/PatientTimelineScreen';
 import PatientVisitDetailScreen from './src/screens/patient/PatientVisitDetailScreen';
 import PatientDoctorsAccessScreen from './src/screens/patient/PatientDoctorsAccessScreen';
+import PatientProfileScreen from './src/screens/patient/PatientProfileScreen';
 import { useSyncWorker } from './src/sync/useSyncWorker';
 import { refreshAccessToken } from './src/api/auth';
 import { ApiError } from './src/api/apiClient';
@@ -106,6 +108,7 @@ export type RootStackParamList = {
     clinicName: string;
   };
   PatientDoctorsAccess: undefined;
+  PatientProfile:       undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -223,6 +226,7 @@ function App() {
             <Stack.Screen name="PatientTimeline"      component={PatientTimelineScreen} />
             <Stack.Screen name="PatientVisitDetail"   component={PatientVisitDetailScreen} />
             <Stack.Screen name="PatientDoctorsAccess" component={PatientDoctorsAccessScreen} />
+            <Stack.Screen name="PatientProfile"       component={PatientProfileScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </QueryClientProvider>
