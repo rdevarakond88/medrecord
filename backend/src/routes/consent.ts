@@ -259,4 +259,63 @@ router.delete('/consent/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ─── POST /consent/pending-request ───────────────────────────────────────────
+// Doctor creates an async consent request for a patient who has the Patient App
+// (consent-layer-spec Flow 2A). No OTP — appears in patient's P4 screen.
+
+const pendingRequestSchema = z.object({
+  patient_id: z.string().uuid('patient_id must be a valid UUID'),
+});
+
+router.post(
+  '/consent/pending-request',
+  requireAuth,
+  consentRequestLimiter,
+  validate(pendingRequestSchema),
+  async (req, res) => {
+    const doctorId  = req.auth!.sub;
+    const patientId = (req.body as z.infer<typeof pendingRequestSchema>).patient_id;
+
+    try {
+      const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+      if (!patient) {
+        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Patient not found' } });
+        return;
+      }
+
+      // Reject if active consent already exists
+      const activeConsent = await prisma.consent.findFirst({
+        where: { patientId, doctorId, revokedAt: null },
+      });
+      if (activeConsent) {
+        res.status(409).json({ error: { code: 'CONFLICT', message: 'Active consent already exists' } });
+        return;
+      }
+
+      // Replace any prior unresponded pending request for this (doctor, patient) pair
+      await prisma.consentPendingRequest.updateMany({
+        where:  { doctorId, patientId, status: 'pending' },
+        data:   { status: 'denied', respondedAt: new Date() }, // superseded by new request
+      });
+
+      const pendingReq = await prisma.consentPendingRequest.create({
+        data: { doctorId, patientId },
+      });
+
+      await logAudit({
+        event:     'consent.pending_request_created',
+        actorId:   doctorId,
+        actorRole: 'doctor',
+        patientId,
+        ipAddress: req.ip,
+      });
+
+      res.json({ request_id: pendingReq.id, created_at: pendingReq.createdAt.toISOString() });
+    } catch (err) {
+      console.error('[POST /consent/pending-request]', err);
+      res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to create consent request' } });
+    }
+  },
+);
+
 export default router;

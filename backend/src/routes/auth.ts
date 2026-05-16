@@ -131,6 +131,63 @@ router.post('/auth/verify-otp', otpVerifyLimiter, validate(verifyOtpSchema), asy
       data:  { usedAt: new Date() },
     });
 
+    // Route to doctor or patient based on OTP role
+    if (otpRecord.role === 'patient') {
+      const patient = await prisma.patient.findFirst({
+        where: { mobileNumber: otpRecord.mobileNumber, deletedAt: null },
+      });
+
+      if (!patient) {
+        await logAudit({
+          event:    'auth.new_user',
+          metadata: { mobile_number: otpRecord.mobileNumber, role: 'patient' },
+          ipAddress: req.ip,
+        });
+        res.json({ status: 'new_user' });
+        return;
+      }
+
+      const rawRefreshToken  = uuidv4();
+      const refreshTokenHash = hashRefreshToken(rawRefreshToken);
+
+      await prisma.patientRefreshToken.create({
+        data: {
+          patientId: patient.id,
+          tokenHash: refreshTokenHash,
+          expiresAt: getRefreshTokenExpiry(),
+        },
+      });
+
+      const accessToken = signAccessToken({
+        sub:       patient.id,
+        role:      'patient',
+        clinic_id: null,
+        device_id: null,
+      });
+
+      await logAudit({
+        event:     'auth.login',
+        actorId:   patient.id,
+        actorRole: 'patient',
+        patientId: patient.id,
+        ipAddress: req.ip,
+      });
+
+      res.json({
+        access_token:  accessToken,
+        refresh_token: rawRefreshToken,
+        expires_in:    86400,
+        user: {
+          id:            patient.id,
+          role:          'patient',
+          name:          patient.name,
+          mobile_number: patient.mobileNumber,
+        },
+      });
+      return;
+    }
+
+    // Doctor flow
     const doctor = await prisma.doctor.findFirst({
       where: { mobileNumber: otpRecord.mobileNumber, deletedAt: null },
     });
@@ -198,57 +255,103 @@ router.post('/auth/refresh', validate(refreshSchema), async (req, res) => {
   try {
     const tokenHash = hashRefreshToken(refresh_token);
 
-    const stored = await prisma.refreshToken.findUnique({
+    // Try doctor token first
+    const doctorStored = await prisma.refreshToken.findUnique({
       where: { tokenHash },
       include: { doctor: true },
     });
 
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired refresh token' } });
+    if (doctorStored) {
+      if (doctorStored.revokedAt || doctorStored.expiresAt < new Date()) {
+        res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired refresh token' } });
+        return;
+      }
+      if (doctorStored.doctor.deletedAt) {
+        res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Account not found' } });
+        return;
+      }
+
+      await prisma.refreshToken.update({
+        where: { id: doctorStored.id },
+        data:  { revokedAt: new Date() },
+      });
+
+      const rawNewToken  = uuidv4();
+      const newTokenHash = hashRefreshToken(rawNewToken);
+
+      await prisma.refreshToken.create({
+        data: {
+          doctorId:  doctorStored.doctor.id,
+          tokenHash: newTokenHash,
+          expiresAt: getRefreshTokenExpiry(),
+        },
+      });
+
+      const accessToken = signAccessToken({
+        sub:       doctorStored.doctor.id,
+        role:      'doctor',
+        clinic_id: doctorStored.doctor.clinicId,
+        device_id: null,
+      });
+
+      await logAudit({
+        event:     'auth.token_refreshed',
+        actorId:   doctorStored.doctor.id,
+        actorRole: 'doctor',
+        ipAddress: req.ip,
+      });
+
+      res.json({ access_token: accessToken, refresh_token: rawNewToken, expires_in: 86400 });
       return;
     }
 
-    if (stored.doctor.deletedAt) {
+    // Try patient token
+    const patientStored = await prisma.patientRefreshToken.findUnique({
+      where: { tokenHash },
+      include: { patient: true },
+    });
+
+    if (!patientStored || patientStored.revokedAt || patientStored.expiresAt < new Date()) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired refresh token' } });
+      return;
+    }
+    if (patientStored.patient.deletedAt) {
       res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Account not found' } });
       return;
     }
 
-    // Rotate: revoke old, issue new
-    await prisma.refreshToken.update({
-      where: { id: stored.id },
+    await prisma.patientRefreshToken.update({
+      where: { id: patientStored.id },
       data:  { revokedAt: new Date() },
     });
 
-    const rawNewToken     = uuidv4();
-    const newTokenHash    = hashRefreshToken(rawNewToken);
+    const rawNewToken  = uuidv4();
+    const newTokenHash = hashRefreshToken(rawNewToken);
 
-    await prisma.refreshToken.create({
+    await prisma.patientRefreshToken.create({
       data: {
-        doctorId:  stored.doctor.id,
+        patientId: patientStored.patient.id,
         tokenHash: newTokenHash,
         expiresAt: getRefreshTokenExpiry(),
       },
     });
 
     const accessToken = signAccessToken({
-      sub:       stored.doctor.id,
-      role:      'doctor',
-      clinic_id: stored.doctor.clinicId,
+      sub:       patientStored.patient.id,
+      role:      'patient',
+      clinic_id: null,
       device_id: null,
     });
 
     await logAudit({
       event:     'auth.token_refreshed',
-      actorId:   stored.doctor.id,
-      actorRole: 'doctor',
+      actorId:   patientStored.patient.id,
+      actorRole: 'patient',
+      patientId: patientStored.patient.id,
       ipAddress: req.ip,
     });
 
-    res.json({
-      access_token:  accessToken,
-      refresh_token: rawNewToken,
-      expires_in:    86400,
-    });
+    res.json({ access_token: accessToken, refresh_token: rawNewToken, expires_in: 86400 });
   } catch (err) {
     console.error('[refresh]', err);
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Token refresh failed' } });

@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — Persona Critic: P5 re-evaluation COMPLETE. Score 3.64/5, Ship as-is. Next: Backend Agent — patient-facing endpoints.
+**Phase:** P1–P5 Patient App — Backend Agent COMPLETE. Patient-facing endpoints deployed (patient JWT, timeline, visit detail, consents, profile). Next: Security Agent — P1–P5 screens.
 **Last Updated:** 2026-05-16
 
 ---
@@ -12,19 +12,24 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 |---|---|
 | API base URL (live) | `https://medrecord-api.onrender.com/v1` |
 | API base URL (frontend hardcoded) | `https://medrecord-api.onrender.com/v1` ✅ — updated 2026-03-18 |
-| Deployment status | **UP** — HTTP 200 confirmed 2026-05-10. Render cold-starts on first request (~20-30s); use 30s curl timeout for pre-flight. |
+| Deployment status | **UP** — HTTP 200 confirmed 2026-05-16. Patient-facing endpoints deployed (pushed to dev branch; Render will redeploy automatically). Render cold-starts on first request (~20-30s); use 30s curl timeout for pre-flight. |
 | Hosting provider | Render.com — service: `medrecord-api`, DB: `medrecord-db` |
-| Health check | `curl --max-time 30 https://medrecord-api.onrender.com/v1/health` → HTTP 200 ✅ (2026-05-10) |
+| Health check | `curl --max-time 60 https://medrecord-api.onrender.com/v1/health` → HTTP 200 ✅ (2026-05-16) |
 | Test doctor name | Dr. Test Doctor |
-| Test mobile number | `9999999999` |
+| Test doctor mobile | `9999999999` |
+| Test patient name | Priya Sharma |
+| Test patient mobile | `8888888888` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
-| Consent endpoints | `POST /consent/request` → HTTP 401 ✅ (2026-05-10). `POST /consent/verify` → HTTP 401 ✅ (2026-05-10). Blocker cleared. |
-| Next action | POST-D9 — PM Moment 2 + Moment 3 complete (2026-05-10). D9 merged to main. Next: Builder sessions for pre-launch conditions (see Recommended Next Session Order). |
+| Patient endpoints | POST /auth/send-otp (role:"patient") + POST /auth/verify-otp → patient JWT. GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond. |
+| Consent endpoints | POST /consent/request → HTTP 401 ✅. POST /consent/verify → HTTP 401 ✅. POST /consent/pending-request → async patient-app flow. |
+| Next action | Security Agent — P1–P5 screens. |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Persona Critic — P5 re-evaluation (2026-05-16). Score 3.64/5. Verdict: Ship as-is. All 4 v1 critique items confirmed resolved. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P5-persona-critique-v2.md`.
+**Last Session:** Backend Agent — Patient-facing endpoints (2026-05-16). Patient JWT auth (POST /auth/verify-otp role:patient), PatientRefreshToken, ConsentPendingRequest models added to schema. New routes: GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond, POST /consent/pending-request. Test patient (8888888888 / Priya Sharma) added to seed. Zero TS errors. Pushed to dev for Render redeploy.
+
+**Previous Session:** Persona Critic — P5 re-evaluation (2026-05-16). Score 3.64/5. Verdict: Ship as-is. All 4 v1 critique items confirmed resolved. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P5-persona-critique-v2.md`.
 
 ### P5 Open Critique Items (apply before Persona Critic re-evaluation)
 
@@ -129,8 +134,10 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~18~~ | ~~**Persona Critic: P5 mockup**~~ | ~~DONE 2026-05-16. Score 3.2/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 3 SHOULD FIX. See P5 Open Critique Items. Critique: `reviews/P5-persona-critique.md`.~~ |
 | ~~18b~~ | ~~**Builder: Apply P5 mockup revisions**~~ | ~~DONE 2026-05-16 — P5-PC-M1 (keyboardType default + auto-slash), P5-PC-S1 (LANGUAGE_NATIVE bilingual labels), P5-PC-S2 (textSizeNote 14px), P5-PC-S3 (infoHint/editHint 13px). Zero TS errors.~~ |
 | ~~18c~~ | ~~**Persona Critic: P5 re-evaluation**~~ | ~~DONE 2026-05-16. Score 3.64/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P5-persona-critique-v2.md`.~~ |
-| 19 | **Backend Agent: patient-facing endpoints** | **NEXT** — All P1–P5 mockups approved by Persona Critic. Endpoints needed: patient JWT, patient timeline, patient record detail, patient consent list. Required before any P-screen device testing. |
-| 20 | **Device test: P1–P5 Patient App** | After backend is deployed and all screens pass Security + QA. |
+| ~~19~~ | ~~**Backend Agent: patient-facing endpoints**~~ | ~~DONE 2026-05-16 — patient JWT (role:patient in verify-otp), PatientRefreshToken, ConsentPendingRequest. Routes: /patient/profile, /patient/timeline, /patient/visits/:id, /patient/consents, /patient/consent-requests/:id/respond, /consent/pending-request. Zero TS errors.~~ |
+| 20 | **Security Agent: P1–P5 Patient App** | **NEXT** — All screens built and backend deployed. Security audit required before QA and device testing. |
+| 21 | **QA: P1–P5 Patient App** | After Security audit passes. |
+| 22 | **Device test: P1–P5 Patient App** | After all screens pass Security + QA. |
 
 ---
 

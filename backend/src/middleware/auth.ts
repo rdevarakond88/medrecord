@@ -26,3 +26,23 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token expired or invalid' } });
   }
 }
+
+export function requirePatientAuth(req: Request, res: Response, next: NextFunction): void {
+  requireAuth(req, res, () => {
+    if (req.auth?.role !== 'patient') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Patient access required' } });
+      return;
+    }
+    next();
+  });
+}
+
+export function requireDoctorAuth(req: Request, res: Response, next: NextFunction): void {
+  requireAuth(req, res, () => {
+    if (req.auth?.role !== 'doctor') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Doctor access required' } });
+      return;
+    }
+    next();
+  });
+}

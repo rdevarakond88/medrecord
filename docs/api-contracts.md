@@ -473,6 +473,189 @@ Revoke consent. Patient-initiated only.
 { "revoked_at": "2024-01-20T14:00:00Z" }
 ```
 
+### POST /consent/pending-request
+Doctor creates an async consent request for a patient who has the Patient App installed
+(consent-layer-spec Flow 2A). No OTP is sent — the request appears in the patient's P4 screen.
+
+Auth: Doctor JWT required.
+Rate limit: 10 requests per `(doctor_id, patient_id)` per hour.
+
+```json
+// Request
+POST /consent/pending-request
+{ "patient_id": "uuid" }
+
+// Response 200
+{ "request_id": "uuid", "created_at": "2024-01-15T10:00:00Z" }
+
+// Response 404 — patient not found
+{ "error": { "code": "NOT_FOUND", "message": "Patient not found" } }
+
+// Response 409 — active consent already exists
+{ "error": { "code": "CONFLICT", "message": "Active consent already exists" } }
+```
+
+---
+
+## Patient App Endpoints
+
+All endpoints in this section require a **Patient JWT** (`role: "patient"` in the token).
+The JWT `sub` claim is the patient UUID.
+
+### Patient JWT shape (POST /auth/verify-otp with role="patient")
+When `role="patient"` is sent to `POST /auth/send-otp`, and the mobile matches a patient
+record in the database, `POST /auth/verify-otp` returns:
+
+```json
+// Response 200 — existing patient
+{
+  "access_token":  "eyJ...",
+  "refresh_token": "eyJ...",
+  "expires_in":    86400,
+  "user": {
+    "id":            "uuid",          // server patient_id
+    "role":          "patient",
+    "name":          "Priya Sharma",  // null if not yet set
+    "mobile_number": "9876543210"
+  }
+}
+
+// Response 200 — mobile not registered as a patient
+{ "status": "new_user" }
+```
+
+### GET /patient/profile
+Patient's own profile.
+```json
+// Response 200
+{
+  "profile": {
+    "id":                 "uuid",
+    "name":               "Priya Sharma",        // null if not set
+    "mobile_number":      "9876543210",
+    "date_of_birth":      "1988-03-14",          // null if not set; YYYY-MM-DD
+    "preferred_language": "English"              // default: "English"
+  }
+}
+```
+
+### PATCH /patient/profile
+Update patient's own name, date of birth, or language preference.
+```json
+// Request
+{
+  "name":               "Priya Sharma",    // optional
+  "date_of_birth":      "1988-03-14",      // optional; YYYY-MM-DD
+  "preferred_language": "Hindi"            // optional; one of: English, Hindi, Tamil, Telugu, Kannada, Bengali
+}
+
+// Response 200
+{ "profile": { ...updated profile object... } }
+```
+
+### GET /patient/timeline
+All visits for this patient across all doctors, newest first.
+```json
+// Response 200
+{
+  "visits": [
+    {
+      "id":          "uuid",
+      "visit_date":  "2024-01-15",                   // YYYY-MM-DD
+      "doctor_name": "Dr. Anand Krishnamurthy",
+      "clinic_name": "Krishnamurthy Clinic, Pune",   // null if not linked to clinic
+      "summary":     "Fever and body ache — 3 days", // chief_complaint; null if not set
+      "records": [
+        { "id": "uuid", "type": "scan", "ocr_preview": "Tab. Paracetamol..." },  // first 100 chars of content_text
+        { "id": "uuid", "type": "note", "preview": "Patient reports..." }         // first 100 chars of content_text
+      ]
+    }
+  ]
+}
+```
+
+**Security:** Only visits where `visit.patient_id = JWT sub` are returned.
+**Records:** Only records where `is_visible_to_patient = true` are included.
+
+### GET /patient/visits/:id
+Full detail for a single visit including all visible records.
+```json
+// Response 200
+{
+  "visit": {
+    "id":          "uuid",
+    "visit_date":  "2024-01-15",
+    "doctor_name": "Dr. Sharma",
+    "clinic_name": "Sharma Clinic",
+    "summary":     "Fever and cough",
+    "records": [
+      {
+        "id":           "uuid",
+        "type":         "scan",
+        "content_text": "Tab. Paracetamol 500mg...",   // null if OCR not available
+        "ocr_status":   "success",                     // null for note records
+        "created_at":   "2024-01-15T10:45:00Z"
+      }
+    ]
+  }
+}
+
+// Response 403 — visit does not belong to this patient
+{ "error": { "code": "FORBIDDEN", "message": "Access denied" } }
+```
+
+**Security:** `visit.patient_id` must equal JWT sub. Records filtered to `is_visible_to_patient = true`.
+
+### GET /patient/consents
+Active consent grants for this patient, plus pending async consent requests.
+```json
+// Response 200
+{
+  "active": [
+    {
+      "id":          "uuid",
+      "doctor_name": "Dr. Sharma",
+      "clinic_name": "Sharma Clinic",   // null if no clinic
+      "granted_at":  "2024-01-10T09:00:00Z"
+    }
+  ],
+  "pending": [
+    {
+      "id":             "uuid",          // ConsentPendingRequest.id
+      "doctor_name":    "Dr. Rajesh Sharma",
+      "clinic_name":    "Sharma Medical Centre",
+      "requested_at":   "2026-05-14T10:00:00Z"
+    }
+  ]
+}
+```
+
+### POST /patient/consent-requests/:id/respond
+Patient approves or denies a pending consent request (from P4 screen).
+```json
+// Request
+{ "action": "approve" | "deny" }
+
+// Response 200 — approved
+{ "consent_id": "uuid", "granted_at": "2026-05-15T10:30:00Z" }
+
+// Response 200 — denied
+{ "denied": true }
+
+// Response 404 — request not found or already actioned
+// Response 403 — request does not belong to this patient
+```
+
+### DELETE /patient/consents/:id
+Patient revokes an active consent grant.
+```json
+// Response 200
+{ "revoked_at": "2026-05-15T10:30:00Z" }
+
+// Response 404 — consent not found or already revoked
+// Response 403 — consent does not belong to this patient
+```
+
 ---
 
 ## Sync Endpoint

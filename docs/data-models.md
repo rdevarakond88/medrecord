@@ -22,6 +22,7 @@ patient {
   gender              ENUM('male','female','other','prefer_not_to_say') ← optional
   aadhaar_hash        VARCHAR(64)                   ← SHA-256 hash, optional, separate table preferred
   profile_photo_url   TEXT                          ← optional, S3 url
+  preferred_language  VARCHAR(50)                   ← default "English"; updated via PATCH /patient/profile
   created_at          TIMESTAMP
   updated_at          TIMESTAMP
   deleted_at          TIMESTAMP                     ← soft delete
@@ -147,6 +148,29 @@ consent {
 - One row per grant. Revocation creates a `revoked_at` timestamp, never deletes the row
 - Audit trail is append-only
 - `scope = 'read_all'` is the default for simplicity in v1; finer scopes available for v2
+
+---
+
+### ConsentPendingRequest
+Async consent request for patients who have the Patient App installed (consent-layer-spec Flow 2A).
+Doctor creates this via `POST /consent/pending-request`. Patient sees it in P4 and responds via
+`POST /patient/consent-requests/:id/respond`. Distinct from `ConsentOtpRequest` (inline OTP flow).
+
+```
+consent_pending_request {
+  id          UUID (PK)
+  doctor_id   UUID FK → doctor
+  patient_id  UUID FK → patient
+  status      ENUM('pending','approved','denied') DEFAULT 'pending'
+  created_at  TIMESTAMP
+  responded_at TIMESTAMP          ← null until patient responds
+}
+```
+
+**Notes:**
+- One pending request per (doctor, patient) pair — creating a new one replaces an unresponded prior one
+- On approval: a `Consent` row is created and this row's status is set to 'approved'
+- On denial: status set to 'denied', no Consent row created
 
 ---
 
