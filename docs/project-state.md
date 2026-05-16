@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — Builder: P5 mockup COMPLETE. Next: Persona Critic: P5.
+**Phase:** P1–P5 Patient App — Persona Critic: P5 COMPLETE. Score 3.2/5. Revise and re-evaluate — 1 MUST FIX (P5-PC-M1: DOB number-pad keyboard blocks "/" entry), 3 SHOULD FIX. Next: Builder: Apply P5 mockup revisions.
 **Last Updated:** 2026-05-16
 
 ---
@@ -24,7 +24,18 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder — P5 mockup (2026-05-16). `PatientProfileScreen.tsx` created. Viewing + editing states. Language modal (6 options). Text size: read-only info row (system font scaling — no custom toggle). P4-PC-v2-S1 applied (scopeNote 14px). P1-PC-S1/S2/S3 applied to PatientLoginScreen. Tab bars in P2/P4 wired to PatientProfile. App.tsx registered.
+**Last Session:** Persona Critic — P5 mockup (2026-05-16). Score 3.2/5. Verdict: Revise and re-evaluate. 1 MUST FIX (P5-PC-M1: DOB `number-pad` keyboard blocks "/" entry — date editing non-functional). 3 SHOULD FIX: P5-PC-S1 (language names in English only), P5-PC-S2 (textSizeNote 13px→14px), P5-PC-S3 (infoHint/editHint 12px too small). Critique: `reviews/P5-persona-critique.md`.
+
+### P5 Open Critique Items (apply before Persona Critic re-evaluation)
+
+| ID | Severity | Item | Status |
+|---|---|---|---|
+| P5-PC-M1 | MUST FIX | `keyboardType="number-pad"` on DOB EditRow blocks "/" input — users cannot type the "DD/MM/YYYY" format. Fix: switch to `keyboardType="default"` with auto-inserted "/" after 2nd and 4th digit, OR use a native date picker. | OPEN |
+| P5-PC-S1 | SHOULD FIX | Language modal options are English-only Roman script. Non-English-reading patients cannot identify their language. Add native script alongside English: "Hindi — हिन्दी", "Tamil — தமிழ்", "Telugu — తెలుగు", "Kannada — ಕನ್ನಡ", "Bengali — বাংলা". | OPEN |
+| P5-PC-S2 | SHOULD FIX | `textSizeNote` renders at 13px — below 14px minimum for informational text on patient screens (same issue as P4-PC-v2-S1). One-line fix: `fontSize: 13 → 14`. | OPEN |
+| P5-PC-S3 | SHOULD FIX | `infoHint` and `editHint` render at 12px — too small for elderly audience. Raise to 13px minimum. | OPEN |
+
+---
 
 ### P4 Open Critique Items (apply before Builder: wire step)
 
@@ -115,7 +126,9 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~16b~~ | ~~**Builder: Apply P4 mockup revisions**~~ | ~~DONE 2026-05-16 — P4-PC-M1: "Remove Access"/"Allow"/"Don't Allow" vocabulary + matching Alerts + info note. P4-PC-S1: "Your Doctors"/"New Requests" section labels. P4-PC-S2: scope note "Can view all your health records" on active consent cards. P4-PC-S3: accessSince 13→14px. Zero TS errors.~~ |
 | ~~16c~~ | ~~**Persona Critic: P4 re-evaluation**~~ | ~~DONE 2026-05-16. Score 3.8/5. Verdict: Ship as-is. One SHOULD FIX (P4-PC-v2-S1: scopeNote 13→14px). Critique: `reviews/P4-persona-critique-v2.md`.~~ |
 | ~~17~~ | ~~**Builder: P5 mockup (Patient Profile)**~~ | ~~DONE 2026-05-16 — `PatientProfileScreen.tsx`. Viewing + editing states, language modal, text-size info row. P4-PC-v2-S1 + P1-PC-S1/S2/S3 applied. Tab bars wired. App.tsx registered. Zero TS errors.~~ |
-| 18 | **Persona Critic: P5 mockup** | **NEXT** — Mandatory after Builder: P5. |
+| ~~18~~ | ~~**Persona Critic: P5 mockup**~~ | ~~DONE 2026-05-16. Score 3.2/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 3 SHOULD FIX. See P5 Open Critique Items. Critique: `reviews/P5-persona-critique.md`.~~ |
+| 18b | **Builder: Apply P5 mockup revisions** | **NEXT** — Fix P5-PC-M1 (DOB keyboard), P5-PC-S1 (native language scripts), P5-PC-S2/S3 (font sizes). Then re-evaluate. |
+| 18c | **Persona Critic: P5 re-evaluation** | After Builder applies all P5 critique items. |
 | 19 | **Backend Agent: patient-facing endpoints** | After all P mockups approved by Persona Critic. Endpoints needed: patient JWT, patient timeline, patient record detail, patient consent list. Required before any P-screen device testing. |
 | 20 | **Device test: P1–P5 Patient App** | After backend is deployed and all screens pass Security + QA. |
 
