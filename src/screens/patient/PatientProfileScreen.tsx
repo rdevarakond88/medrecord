@@ -65,6 +65,15 @@ const LANGUAGES: Language[] = [
   'English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Bengali',
 ];
 
+const LANGUAGE_NATIVE: Record<Language, string> = {
+  English: 'English',
+  Hindi:   'Hindi — हिन्दी',
+  Tamil:   'Tamil — தமிழ்',
+  Telugu:  'Telugu — తెలుగు',
+  Kannada: 'Kannada — ಕನ್ನಡ',
+  Bengali: 'Bengali — বাংলা',
+};
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function AvatarCircle({ name }: { name: string }) {
@@ -179,7 +188,7 @@ function LanguageModal({
             onPress={() => { onSelect(lang); onClose(); }}
             accessibilityRole="radio"
             accessibilityState={{ checked: lang === selected }}
-            accessibilityLabel={lang}
+            accessibilityLabel={LANGUAGE_NATIVE[lang]}
           >
             <Text
               style={[
@@ -187,7 +196,7 @@ function LanguageModal({
                 lang === selected && styles.langOptionTextSelected,
               ]}
             >
-              {lang}
+              {LANGUAGE_NATIVE[lang]}
             </Text>
             {lang === selected && (
               <Text style={styles.langCheckmark} accessible={false}>✓</Text>
@@ -343,11 +352,17 @@ export default function PatientProfileScreen() {
                 label="Date of Birth"
                 value={draftDob}
                 onChangeText={(t) => {
-                  // Allow digits and slashes, max 10 chars (DD/MM/YYYY)
-                  const cleaned = t.replace(/[^\d/]/g, '').slice(0, 10);
-                  setDraftDob(cleaned);
+                  // Auto-insert "/" after DD and MM so the full keyboard can type DD/MM/YYYY
+                  const digits = t.replace(/\D/g, '').slice(0, 8);
+                  let formatted = digits;
+                  if (digits.length > 4) {
+                    formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+                  } else if (digits.length > 2) {
+                    formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+                  }
+                  setDraftDob(formatted);
                 }}
-                keyboardType="number-pad"
+                keyboardType="default"
                 placeholder="DD/MM/YYYY"
                 hint="Format: DD/MM/YYYY"
               />
@@ -373,11 +388,11 @@ export default function PatientProfileScreen() {
               style={styles.pickerRow}
               onPress={() => setLangModalOpen(true)}
               accessibilityRole="button"
-              accessibilityLabel={`Language: ${draftLanguage}. Tap to change.`}
+              accessibilityLabel={`Language: ${LANGUAGE_NATIVE[draftLanguage]}. Tap to change.`}
             >
               <Text style={styles.pickerLabel}>Language</Text>
               <View style={styles.pickerValueRow}>
-                <Text style={styles.pickerValue}>{draftLanguage}</Text>
+                <Text style={styles.pickerValue}>{LANGUAGE_NATIVE[draftLanguage]}</Text>
                 <Text style={styles.pickerChevron} accessible={false}>›</Text>
               </View>
             </TouchableOpacity>
@@ -653,7 +668,7 @@ const styles = StyleSheet.create({
     color:      Colors.textPrimary,
   },
   infoHint: {
-    fontSize:  12,
+    fontSize:  13,
     color:     Colors.textDisabled,
     marginTop: 4,
   },
@@ -680,7 +695,7 @@ const styles = StyleSheet.create({
     minHeight:         48,
   },
   editHint: {
-    fontSize:  12,
+    fontSize:  13,
     color:     Colors.textDisabled,
     marginTop: 6,
   },
@@ -725,7 +740,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   textSizeNote: {
-    fontSize:  13,
+    fontSize:  14,
     color:     Colors.textDisabled,
     marginTop: 4,
   },
