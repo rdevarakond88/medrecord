@@ -39,6 +39,7 @@ import FullScanViewScreen from './src/screens/doctor/FullScanViewScreen';
 import PatientLoginScreen from './src/screens/patient/PatientLoginScreen';
 import PatientTimelineScreen from './src/screens/patient/PatientTimelineScreen';
 import PatientVisitDetailScreen from './src/screens/patient/PatientVisitDetailScreen';
+import PatientDoctorsAccessScreen from './src/screens/patient/PatientDoctorsAccessScreen';
 import { useSyncWorker } from './src/sync/useSyncWorker';
 import { refreshAccessToken } from './src/api/auth';
 import { ApiError } from './src/api/apiClient';
@@ -96,14 +97,15 @@ export type RootStackParamList = {
     patientName:   string;
   };
   // Patient App routes
-  PatientLogin:    undefined;
-  PatientTimeline: undefined;
+  PatientLogin:         undefined;
+  PatientTimeline:      undefined;
   PatientVisitDetail: {
     visitId:    string;
     date:       string;   // formatted display date, e.g. "10/05/2026"
     doctorName: string;
     clinicName: string;
   };
+  PatientDoctorsAccess: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -220,6 +222,7 @@ function App() {
             <Stack.Screen name="PatientLogin"         component={PatientLoginScreen} />
             <Stack.Screen name="PatientTimeline"      component={PatientTimelineScreen} />
             <Stack.Screen name="PatientVisitDetail"   component={PatientVisitDetailScreen} />
+            <Stack.Screen name="PatientDoctorsAccess" component={PatientDoctorsAccessScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </QueryClientProvider>

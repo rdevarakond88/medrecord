@@ -26,6 +26,7 @@ import {
   StyleSheet,
   FlatList,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -428,6 +429,42 @@ export default function PatientTimelineScreen() {
         />
       )}
 
+      {/* ── Bottom tab bar (patient app) ── */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={styles.tabItem}
+          accessibilityRole="tab"
+          accessibilityLabel="My Records tab, currently selected"
+          accessibilityState={{ selected: true }}
+        >
+          <Text style={styles.tabIcon} accessible={false}>📋</Text>
+          <Text style={[styles.tabLabel, styles.tabLabelActive]}>My Records</Text>
+          <View style={styles.tabActiveDot} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => navigation.navigate('PatientDoctorsAccess')}
+          accessibilityRole="tab"
+          accessibilityLabel="Doctors tab"
+          accessibilityState={{ selected: false }}
+        >
+          <Text style={styles.tabIcon} accessible={false}>👨‍⚕️</Text>
+          <Text style={styles.tabLabel}>Doctors</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() =>
+            Alert.alert('Profile', 'Patient profile screen coming soon.')
+          }
+          accessibilityRole="tab"
+          accessibilityLabel="Profile tab"
+          accessibilityState={{ selected: false }}
+        >
+          <Text style={styles.tabIcon} accessible={false}>👤</Text>
+          <Text style={styles.tabLabel}>Profile</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* ── DEV demo switcher ── */}
       {__DEV__ && (
         <View style={styles.demoBlock}>
@@ -732,6 +769,43 @@ const styles = StyleSheet.create({
     color:      Colors.textSecondary,
     textAlign:  'center',
     lineHeight: 22,
+  },
+
+  // ── Bottom tab bar
+  tabBar: {
+    flexDirection:   'row',
+    backgroundColor: Colors.surface,
+    borderTopWidth:  1,
+    borderTopColor:  Colors.border,
+    paddingBottom:   Spacing.md,
+    paddingTop:      Spacing.sm,
+  },
+  tabItem: {
+    flex:           1,
+    alignItems:     'center',
+    paddingVertical: Spacing.sm,
+    minHeight:       48,
+    justifyContent: 'center',
+  },
+  tabIcon: {
+    fontSize:     20,
+    marginBottom: 2,
+  },
+  tabLabel: {
+    fontSize:   11,
+    fontWeight: '500',
+    color:      Colors.textSecondary,
+  },
+  tabLabelActive: {
+    color:      Colors.primaryBlue,
+    fontWeight: '700',
+  },
+  tabActiveDot: {
+    width:           4,
+    height:          4,
+    borderRadius:    2,
+    backgroundColor: Colors.primaryBlue,
+    marginTop:       3,
   },
 
   // ── DEV demo switcher

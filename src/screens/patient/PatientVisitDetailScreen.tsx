@@ -152,17 +152,20 @@ function ScanCard({ record }: { record: ScanRecord }) {
         <Text style={styles.recordTypeName}>{record.label}</Text>
       </View>
 
-      {/* Large document thumbnail — tappable */}
+      {/* Neutral document card — tappable. P3-PC-S1: no blue-tinted image frame. */}
       <TouchableOpacity
-        style={styles.scanThumbnail}
+        style={styles.scanDocCard}
         onPress={handleViewScan}
         activeOpacity={0.75}
         accessibilityRole="button"
         accessibilityLabel={`${record.label} — tap to view full document`}
       >
-        <Text style={styles.scanThumbnailIcon}>📄</Text>
-        <Text style={styles.scanViewLabel}>View full document →</Text>
+        <Text style={styles.scanDocIcon} accessible={false}>📄</Text>
+        <Text style={styles.scanDocName}>{record.label}</Text>
+        <Text style={styles.scanDocCta}>View full document →</Text>
       </TouchableOpacity>
+      {/* P3-PC-S1: hint text outside the tappable area */}
+      <Text style={styles.scanHint}>Tap the document to view the original scan</Text>
 
       {record.ocrStatus === 'success' && record.ocrText !== null && (
         <View style={styles.ocrBlock}>
@@ -284,7 +287,7 @@ export default function PatientVisitDetailScreen() {
           accessibilityRole="button"
           accessibilityLabel="Report an issue with this visit record"
         >
-          <Text style={styles.flagLinkText}>Something wrong? Let us know →</Text>
+          <Text style={styles.flagLinkText}>⚑  Something wrong? Let us know</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -397,9 +400,9 @@ const styles = StyleSheet.create({
     color:    Colors.textSecondary,
   },
 
-  // ── Section label
+  // ── Section label — P3-PC-S2: 11px → 12px minimum
   sectionLabel: {
-    fontSize:      11,
+    fontSize:      12,
     fontWeight:    '700',
     color:         Colors.textSecondary,
     letterSpacing: 0.8,
@@ -434,25 +437,37 @@ const styles = StyleSheet.create({
     color:      Colors.textPrimary,
   },
 
-  // ── Scan thumbnail (large, tappable)
-  scanThumbnail: {
-    height:          160,
+  // ── Scan document card (P3-PC-S1: neutral, not blue-tinted image frame)
+  scanDocCard: {
+    backgroundColor: '#F8F9FA',
     borderRadius:    10,
-    backgroundColor: '#EFF6FF',
-    borderWidth:     1.5,
-    borderColor:     '#BFDBFE',
+    padding:         Spacing.xl,
     alignItems:      'center',
-    justifyContent:  'center',
-    marginBottom:    Spacing.md,
+    marginBottom:    Spacing.sm,
+    borderWidth:     1,
+    borderColor:     Colors.border,
   },
-  scanThumbnailIcon: {
-    fontSize:     48,
+  scanDocIcon: {
+    fontSize:     40,
     marginBottom: Spacing.sm,
   },
-  scanViewLabel: {
+  scanDocName: {
+    fontSize:     14,
+    fontWeight:   '600',
+    color:        Colors.textPrimary,
+    marginBottom: 6,
+  },
+  scanDocCta: {
     fontSize:   14,
     fontWeight: '600',
     color:      Colors.primaryBlue,
+  },
+  // P3-PC-S1: hint text lives OUTSIDE the tappable card
+  scanHint: {
+    fontSize:     12,
+    color:        Colors.textSecondary,
+    textAlign:    'center',
+    marginBottom: Spacing.md,
   },
 
   // ── OCR text block
@@ -463,8 +478,9 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     borderColor:     '#E0EAFF',
   },
+  // P3-PC-S2: 11px → 12px
   ocrSectionLabel: {
-    fontSize:      11,
+    fontSize:      12,
     fontWeight:    '700',
     color:         Colors.textSecondary,
     letterSpacing: 0.5,
@@ -502,10 +518,11 @@ const styles = StyleSheet.create({
     minHeight:      48,
     justifyContent: 'center',
   },
+  // P3-PC-S3: ⚑ icon added in JSX; color lifted to textPrimary at 70% — reads as actionable
   flagLinkText: {
-    fontSize:           14,
-    color:              Colors.textSecondary,
-    textDecorationLine: 'underline',
+    fontSize:   14,
+    color:      'rgba(26, 32, 44, 0.70)',
+    fontWeight: '500',
   },
 
   // ── DEV demo switcher
