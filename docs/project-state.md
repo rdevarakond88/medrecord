@@ -12,7 +12,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 |---|---|
 | API base URL (live) | `https://medrecord-api.onrender.com/v1` |
 | API base URL (frontend hardcoded) | `https://medrecord-api.onrender.com/v1` ✅ — updated 2026-03-18 |
-| Deployment status | **UP** — HTTP 200 confirmed 2026-05-16. Patient-facing endpoints deployed (pushed to dev branch; Render will redeploy automatically). Render cold-starts on first request (~20-30s); use 30s curl timeout for pre-flight. |
+| Deployment status | **UP** — HTTP 200 confirmed 2026-05-16 21:27 UTC. Patient-facing endpoints LIVE (GET /patient/profile → HTTP 401 confirmed). Render cold-starts on first request (~20-30s); use 60s curl timeout for pre-flight. |
 | Hosting provider | Render.com — service: `medrecord-api`, DB: `medrecord-db` |
 | Health check | `curl --max-time 60 https://medrecord-api.onrender.com/v1/health` → HTTP 200 ✅ (2026-05-16) |
 | Test doctor name | Dr. Test Doctor |
