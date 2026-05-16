@@ -494,6 +494,20 @@ How it was caught: The user remembered from the previous session that Persona Cr
 
 ---
 
+**Mistake 12 — Reading a reference screen before building a new one without announcing the reason**
+
+What happened: A Builder session for P2 opened and read `PatientLoginScreen.tsx` (P1) before writing any P2 code — standard practice for matching code style. But no explanation was given upfront. The user saw a P1 file being read in a P2 session and interrupted to ask whether the wrong screen was being worked on.
+
+Root cause: The Builder reads an existing screen as a code reference before writing a new sibling screen (imports, StyleSheet structure, mock data format, TypeScript conventions, DEV demo switcher pattern). This is correct behaviour, but it looks like working on the wrong thing to anyone watching the tool calls.
+
+Rule going forward: Whenever the Builder reads an existing screen solely as a style/pattern reference — not to modify it — state this explicitly before opening the file. A single sentence is enough:
+
+> "Reading PatientLoginScreen.tsx as a code reference for P2 — not modifying it."
+
+This applies any time a file is read for reference purposes that is not the file being built.
+
+---
+
 ## 4. Standard Runbook — Building Each Screen
 
 ### Step 1: Read Before Writing
