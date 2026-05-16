@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — P2 Persona Critic re-evaluation COMPLETE. Score 4.1/5, Ship as-is. Next: Builder: P3 mockup (Visit Record Detail).
+**Phase:** P1–P5 Patient App — P3 Persona Critic COMPLETE. Score 3.8/5, Ship as-is. Next: Builder: P4 mockup (Doctors Who Have Access).
 **Last Updated:** 2026-05-16
 
 ---
@@ -24,7 +24,17 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder — P3 mockup (Visit Record Detail) (2026-05-16). `PatientVisitDetailScreen.tsx` created. 4 demo states: normal, scan pending OCR, scan OCR failed, note only. Navigation wired from P2 expanded card → P3. Registered in App.tsx. Zero TS errors in new files.
+**Last Session:** Persona Critic — P3 mockup (Visit Record Detail) (2026-05-16). Score 3.8/5. Verdict: Ship as-is. 0 MUST FIX, 3 SHOULD FIX (P3-PC-S1 thumbnail styling, P3-PC-S2 11px labels, P3-PC-S3 footer link affordance). Apply before wire step. Critique: `reviews/P3-persona-critique.md`.
+
+### P3 Open Critique Items (apply before Builder: P3 wire step)
+
+| ID | Severity | Item | Status |
+|---|---|---|---|
+| P3-PC-S1 | SHOULD FIX | Scan thumbnail styled like a broken-image placeholder (160px blue-tinted box + 📄 emoji). Replace image-frame styling with a neutral document-card; move "Tap to view original scan" label OUTSIDE the tappable area as hint text. | Open |
+| P3-PC-S2 | SHOULD FIX | 11px supplementary labels ("RECORDS IN THIS VISIT", "DOCUMENT TEXT") below readable threshold for elderly users. Increase to 12px minimum. | Open |
+| P3-PC-S3 | SHOULD FIX | "Something wrong? Let us know →" (14px textSecondary underlined) reads as inactive fine print. Add a small icon (⚑) or increase color to textPrimary at reduced opacity to signal it is tappable. | Open |
+
+---
 
 ### P2 Open Critique Items (apply before Builder: P3 session)
 
@@ -87,8 +97,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~12b~~ | ~~**Builder: Apply P2 mockup revisions**~~ | ~~DONE 2026-05-16 — all 5 critique items applied. See last session note.~~ |
 | ~~12c~~ | ~~**Persona Critic: P2 re-evaluation**~~ | ~~DONE 2026-05-16. Score 4.1/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P2-persona-critique-v2.md`.~~ |
 | ~~13~~ | ~~**Builder: P3 mockup (Visit Record Detail)**~~ | ~~DONE 2026-05-16 — `PatientVisitDetailScreen.tsx`. 4 states. Nav from P2 wired. Zero TS errors.~~ |
-| 14 | **Persona Critic: P3 mockup** | **NEXT** — Mandatory before Builder: P4. |
-| 15 | **Builder: P4 mockup (Doctors Who Have Access)** | Consent management. DPDP mandatory. Revoke flow must be mocked even if backend not yet live. |
+| ~~14~~ | ~~**Persona Critic: P3 mockup**~~ | ~~DONE 2026-05-16. Score 3.8/5. Verdict: Ship as-is. 0 MUST FIX, 3 SHOULD FIX. See P3 Open Critique Items. Critique: `reviews/P3-persona-critique.md`.~~ |
+| 15 | **Builder: P4 mockup (Doctors Who Have Access)** | **NEXT** — Consent management. DPDP mandatory. Revoke flow must be mocked even if backend not yet live. Apply P3 SHOULD FIX items (P3-PC-S1, S2, S3) in the same Builder session before P3 wire. |
 | 16 | **Persona Critic: P4 mockup** | Mandatory — must run before Builder: P5. |
 | 17 | **Builder: P5 mockup (Patient Profile)** | Settings + accessibility. Use system font scaling (allowFontScaling) — no custom toggle. |
 | 18 | **Persona Critic: P5 mockup** | Mandatory — must run after Builder: P5. |
