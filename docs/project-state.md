@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — PM pre-flight COMPLETE. Next: Builder Agent — P1 mockup (Patient Login / OTP).
+**Phase:** P1–P5 Patient App — P1 mockup COMPLETE. Next: Builder Agent — P2 mockup (My Records Timeline).
 **Last Updated:** 2026-05-16
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** PM Agent — P1–P5 Patient App pre-flight (2026-05-16). PROCEED with changes. Key findings: patient-facing backend endpoints missing (patient JWT, timeline, consent list), P4 mandatory for DPDP compliance, P5 must use system font scaling only. Full review: `reviews/P1-P5-pm-review.md`.
+**Last Session:** Builder Agent — P1 mockup (PatientLoginScreen) (2026-05-16). Mockup complete. `src/screens/patient/PatientLoginScreen.tsx` created. `src/screens/patient/PatientTimelineScreen.tsx` stub created. Both routes registered in App.tsx. Zero new TS errors. Patient JWT shape documented in file header for Step 5b contract sync.
 
 ### D8 Open Critique Items (must be applied to mockup before wire session)
 
@@ -58,7 +58,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~7f-fix~~ | ~~**Builder: fix D8-DT-H1**~~ | ~~DONE 2026-05-16 — getScansForServerVisit() called in loadRecords; synthesised LocalRecord entries merged into records state. localScanRowsRef preserves scan rows across note refreshes.~~ |
 | ~~7g~~ | ~~**Device test: D8 Full Scan View (re-run)**~~ | ~~DONE 2026-05-16. 18 PASS / 0 FAIL. No new bugs. Clear to merge.~~ |
 | ~~8~~ | ~~**PM pre-flight: P1–P5 Patient App**~~ | ~~DONE 2026-05-16. PROCEED with changes. Review: `reviews/P1-P5-pm-review.md`.~~ |
-| 9 | **Builder: P1 mockup (Patient Login / OTP)** | First Patient App screen. Same OTP flow as D1, patient-role copy. Document patient JWT response shape in api-contracts.md (Step 5b). |
+| ~~9~~ | ~~**Builder: P1 mockup (Patient Login / OTP)**~~ | ~~DONE 2026-05-16. `src/screens/patient/PatientLoginScreen.tsx` + `PatientTimelineScreen.tsx` stub. Routes registered in App.tsx. Patient JWT shape documented in file header.~~ |
 | 10 | **Builder: P2 mockup (My Records Timeline)** | Elderly-friendly timeline. Text-first; thumbnails lazy-load. "Has data" + "empty state" variants required. |
 | 11 | **Builder: P3 mockup (Visit Record Detail)** | Read-only. Clean and reassuring. |
 | 12 | **Builder: P4 mockup (Doctors Who Have Access)** | Consent management. DPDP mandatory. Revoke flow must be mocked even if backend not yet live. |
@@ -144,7 +144,8 @@ _Carry these into every build/mockup session for these screens._
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
 | D8 — Full Scan View | **Wire complete (2026-05-12). Security audit complete (2026-05-12) — CLEAR TO MERGE. 0 CRITICAL, 0 HIGH. D8-SA-M1 (logScanViewed) + D8-SA-L1 (resolveScanPath null guard) documented. Audit: `reviews/D8-security-audit.md`. Next: QA Agent.** Wire: `src/screens/doctor/FullScanViewScreen.tsx`, `src/components/ScanImageViewer.tsx`. Persona Critic v2 score 3.55/5. | Tier 3. Image viewer + OCR panel. No new backend dependency — reads device filesystem + SQLite. ScanImageViewer reusable for P3. |
 | D9 — Consent Request Flow | **MERGED TO MAIN (2026-05-10). PM Moment 2 + Moment 3 complete. Device testing COMPLETE (sessions 1–4). Security re-audit v3 — 0 critical/high/medium. D3 `handleRequestAccess` fully wired to D9 (not a stub).** Pre-launch conditions: (1) patient mobile edit in D3, (2) EAS build + cert pinning, (3) D5-M-1 UNIQUE fix, (4) D6 syncLogger removal. Reviews: `reviews/D9-pm-review-v3.md`, `reviews/D9-security-audit-v3.md`. Sessions: `reviews/D9-device-test-session-1.md` through `reviews/D9-device-test-session-4.md`. Live screen: `src/screens/doctor/ConsentRequestScreen.tsx`. | Tier 3. MERGED. |
-| P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
+| P1 — Patient Login / OTP | **Mockup COMPLETE (2026-05-16). `src/screens/patient/PatientLoginScreen.tsx`. Mock auth — wire step will add real sendOtp/verifyOtp + patient auth store + SecureStore. Patient JWT shape documented in file header. Next: Persona Critic.** | Tier 4. |
+| P2–P5 — Patient App (Timeline, Record Detail, Access, Profile) | Not started | Tier 2 / Tier 4. |
 
 ---
 

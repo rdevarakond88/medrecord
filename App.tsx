@@ -7,12 +7,14 @@
  *   NavigationContainer → React Navigation root
  *
  * Registered routes (native stack):
- *   Login          → D1 LoginScreen         (initial route)
- *   PatientSearch  → D2 PatientSearchScreen
- *   PatientDetail  → D3 PatientDetailScreen
- *   NewVisit       → D6 NewVisitScreen
+ *   Login           → D1 LoginScreen          (initial route — doctor)
+ *   PatientSearch   → D2 PatientSearchScreen
+ *   PatientDetail   → D3 PatientDetailScreen
+ *   NewVisit        → D6 NewVisitScreen
  *   DocumentScanner → D7 DocumentScannerScreen
- *   NewPatientForm → D5 NewPatientFormScreen
+ *   NewPatientForm  → D5 NewPatientFormScreen
+ *   PatientLogin    → P1 PatientLoginScreen   (mockup — patient OTP login)
+ *   PatientTimeline → P2 PatientTimelineScreen (stub — patient home)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -34,6 +36,8 @@ import NewPatientFormScreen from './src/screens/doctor/NewPatientFormScreen';
 import VisitDetailScreen from './src/screens/doctor/VisitDetailScreen';
 import ConsentRequestScreen from './src/screens/doctor/ConsentRequestScreen';
 import FullScanViewScreen from './src/screens/doctor/FullScanViewScreen';
+import PatientLoginScreen from './src/screens/patient/PatientLoginScreen';
+import PatientTimelineScreen from './src/screens/patient/PatientTimelineScreen';
 import { useSyncWorker } from './src/sync/useSyncWorker';
 import { refreshAccessToken } from './src/api/auth';
 import { ApiError } from './src/api/apiClient';
@@ -90,6 +94,9 @@ export type RootStackParamList = {
     visitDate:     string;       // ISO 8601
     patientName:   string;
   };
+  // Patient App routes
+  PatientLogin:    undefined;
+  PatientTimeline: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -202,6 +209,9 @@ function App() {
             <Stack.Screen name="ConsentRequest"    component={ConsentRequestScreen}
                           options={{ gestureEnabled: false }} />
             <Stack.Screen name="FullScanView"      component={FullScanViewScreen} />
+            {/* Patient App — mockup/stub routes */}
+            <Stack.Screen name="PatientLogin"      component={PatientLoginScreen} />
+            <Stack.Screen name="PatientTimeline"   component={PatientTimelineScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </QueryClientProvider>
