@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — P1 mockup COMPLETE. Next: Builder Agent — P2 mockup (My Records Timeline).
+**Phase:** P1–P5 Patient App — P1 Persona Critic COMPLETE (Score 4.0/5, Ship as-is). Next: Builder Agent — P2 mockup (My Records Timeline).
 **Last Updated:** 2026-05-16
 
 ---
@@ -24,7 +24,17 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — P1 mockup (PatientLoginScreen) (2026-05-16). Mockup complete. `src/screens/patient/PatientLoginScreen.tsx` created. `src/screens/patient/PatientTimelineScreen.tsx` stub created. Both routes registered in App.tsx. Zero new TS errors. Patient JWT shape documented in file header for Step 5b contract sync.
+**Last Session:** Persona Critic Agent — P1 mockup (PatientLoginScreen) (2026-05-16). Score 4.0/5. Verdict: Ship as-is (apply 3 SHOULD FIX items before wire step). No MUST FIX. Critique saved: `reviews/P1-persona-critique.md`.
+
+### P1 Open Critique Items (apply before wire step)
+
+| ID | Severity | Item | Status |
+|---|---|---|---|
+| P1-PC-S1 | SHOULD FIX | Add one-line value proposition below "For Patients" subtitle — e.g., "Access your medical records" — so first-time patients understand the app before logging in. | Open |
+| P1-PC-S2 | SHOULD FIX | "Change number" link too small (13px, textSecondary). Increase to 14px minimum; ensure 44×44px tap target (WCAG AA). | Open |
+| P1-PC-S3 | SHOULD FIX | Loading text generic "Please wait…" for both phases. Differentiate: "Sending OTP…" / "Verifying…". | Open |
+
+---
 
 ### D8 Open Critique Items (must be applied to mockup before wire session)
 
@@ -59,8 +69,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~7g~~ | ~~**Device test: D8 Full Scan View (re-run)**~~ | ~~DONE 2026-05-16. 18 PASS / 0 FAIL. No new bugs. Clear to merge.~~ |
 | ~~8~~ | ~~**PM pre-flight: P1–P5 Patient App**~~ | ~~DONE 2026-05-16. PROCEED with changes. Review: `reviews/P1-P5-pm-review.md`.~~ |
 | ~~9~~ | ~~**Builder: P1 mockup (Patient Login / OTP)**~~ | ~~DONE 2026-05-16. `src/screens/patient/PatientLoginScreen.tsx` + `PatientTimelineScreen.tsx` stub. Routes registered in App.tsx. Patient JWT shape documented in file header.~~ |
-| 10 | **Persona Critic: P1 mockup (Patient Login)** | **NEXT** — Evaluate P1 before building P2. Mandatory per CLAUDE.md: Persona Critic after every mockup. |
-| 11 | **Builder: P2 mockup (My Records Timeline)** | Elderly-friendly timeline. Text-first; thumbnails lazy-load. "Has data" + "empty state" variants required. |
+| ~~10~~ | ~~**Persona Critic: P1 mockup (Patient Login)**~~ | ~~DONE 2026-05-16. Score 4.0/5. Verdict: Ship as-is. 3 SHOULD FIX (P1-PC-S1 tagline, P1-PC-S2 "Change number" sizing, P1-PC-S3 loading text). Apply before wire step. Critique: `reviews/P1-persona-critique.md`.~~ |
+| 11 | **Builder: P2 mockup (My Records Timeline)** | **NEXT** — Elderly-friendly timeline. Text-first; thumbnails lazy-load. "Has data" + "empty state" variants required. Note: apply P1 SHOULD FIX items (P1-PC-S1, S2, S3) during this or wire step. |
 | 12 | **Persona Critic: P2 mockup** | Mandatory — must run before Builder: P3. |
 | 13 | **Builder: P3 mockup (Visit Record Detail)** | Read-only. Clean and reassuring. |
 | 14 | **Persona Critic: P3 mockup** | Mandatory — must run before Builder: P4. |
