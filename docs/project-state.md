@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — Builder: P4 revisions COMPLETE. Next: Persona Critic: P4 re-evaluation.
+**Phase:** P1–P5 Patient App — Persona Critic: P4 re-evaluation COMPLETE (3.8/5, Ship as-is). Next: Builder: P5 mockup.
 **Last Updated:** 2026-05-16
 
 ---
@@ -24,9 +24,9 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder — P4 revisions (Doctors Who Have Access) (2026-05-16). All 4 critique items applied (P4-PC-M1/S1/S2/S3). Zero TS errors. Ready for Persona Critic re-evaluation.
+**Last Session:** Persona Critic — P4 re-evaluation (2026-05-16). Score 3.8/5. Verdict: Ship as-is. One SHOULD FIX (P4-PC-v2-S1: scopeNote 13→14px). Critique: `reviews/P4-persona-critique-v2.md`.
 
-### P4 Open Critique Items (apply before Builder: P5 mockup)
+### P4 Open Critique Items (apply before Builder: wire step)
 
 | ID | Severity | Item | Status |
 |---|---|---|---|
@@ -34,6 +34,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | P4-PC-S1 | SHOULD FIX | Section labels "ACTIVE ACCESS" / "PENDING REQUESTS" are jargon. Replace with "Your Doctors" / "New Requests". | **CLOSED 2026-05-16** — section labels updated; letterSpacing removed; fontSize 12→13 |
 | P4-PC-S2 | SHOULD FIX | No scope explanation on active consent cards — ambiguous what "access" covers. Add: "Can view all your health records" under each doctor card. | **CLOSED 2026-05-16** — scopeNote added to ConsentCard |
 | P4-PC-S3 | SHOULD FIX | "Access since" text at 13px below 14px minimum for patient/elderly audience. Increase to 14px. | **CLOSED 2026-05-16** — accessSince fontSize 13→14 |
+| P4-PC-v2-S1 | SHOULD FIX | scopeNote "Can view all your health records" renders at 13px — below 14px minimum for elderly audience. Increase fontSize 13 → 14. Apply before wire step alongside P1-PC open items. | Open |
 
 ---
 
@@ -112,8 +113,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~15~~ | ~~**Builder: P4 mockup (Doctors Who Have Access)**~~ | ~~DONE 2026-05-16 — `PatientDoctorsAccessScreen.tsx`. Active consent list, pending request card (Grant/Deny), revoke flow (Alert confirmation). Bottom tab bar wired P2→P4. P3-PC-S1/S2/S3 applied. Zero TS errors.~~ |
 | ~~16~~ | ~~**Persona Critic: P4 mockup**~~ | ~~DONE 2026-05-16. Score 3.0/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 3 SHOULD FIX. See P4 Open Critique Items. Critique: `reviews/P4-persona-critique.md`.~~ |
 | ~~16b~~ | ~~**Builder: Apply P4 mockup revisions**~~ | ~~DONE 2026-05-16 — P4-PC-M1: "Remove Access"/"Allow"/"Don't Allow" vocabulary + matching Alerts + info note. P4-PC-S1: "Your Doctors"/"New Requests" section labels. P4-PC-S2: scope note "Can view all your health records" on active consent cards. P4-PC-S3: accessSince 13→14px. Zero TS errors.~~ |
-| 16c | **Persona Critic: P4 re-evaluation** | **NEXT** — Mandatory re-evaluation after 16b revisions. |
-| 17 | **Builder: P5 mockup (Patient Profile)** | Settings + accessibility. Use system font scaling (allowFontScaling) — no custom toggle. |
+| ~~16c~~ | ~~**Persona Critic: P4 re-evaluation**~~ | ~~DONE 2026-05-16. Score 3.8/5. Verdict: Ship as-is. One SHOULD FIX (P4-PC-v2-S1: scopeNote 13→14px). Critique: `reviews/P4-persona-critique-v2.md`.~~ |
+| 17 | **Builder: P5 mockup (Patient Profile)** | **NEXT** — Settings + accessibility. Use system font scaling (allowFontScaling) — no custom toggle. Apply P4-PC-v2-S1 (scopeNote fontSize) and P1-PC open items before or during this session. |
 | 18 | **Persona Critic: P5 mockup** | Mandatory — must run after Builder: P5. |
 | 19 | **Backend Agent: patient-facing endpoints** | After all P mockups approved by Persona Critic. Endpoints needed: patient JWT, patient timeline, patient record detail, patient consent list. Required before any P-screen device testing. |
 | 20 | **Device test: P1–P5 Patient App** | After backend is deployed and all screens pass Security + QA. |
