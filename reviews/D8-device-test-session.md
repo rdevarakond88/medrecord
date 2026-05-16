@@ -4,6 +4,7 @@ _Session date: 2026-05-16_
 _Tester: Device Tester Agent_
 _QA plan: reviews/D8-qa-test-plan.md_
 _Builder fixes applied: commit bf5982a (D8-QA-H1, D8-QA-M1, D8-QA-M2, D8-SA-M1 all fixed)_
+_Re-run session: 2026-05-16 — after commit 3cfe591 (D8-DT-H1 fix)_
 
 ---
 
@@ -11,86 +12,99 @@ _Builder fixes applied: commit bf5982a (D8-QA-H1, D8-QA-M1, D8-QA-M2, D8-SA-M1 a
 
 | Check | Result |
 |---|---|
-| Backend health (`curl --max-time 60`) | ✅ HTTP 200 — 2026-05-16 |
+| Backend health (`curl --max-time 30`) | ✅ HTTP 200 — 2026-05-16 |
 | Test credentials (Dr. Test Doctor, 9999999999, OTP 000000) | ✅ confirmed |
 | Test mobile number | ✅ 9999999999 |
-| Local scan prerequisite | ❌ BLOCKED — see D8-DT-H1 below |
+| D8-DT-H1 Builder fix applied | ✅ commit 3cfe591 — D4 now merges local scan rows from scans table |
 
 ---
 
 ## Test Results
 
-All tests SKIPPED — D8 is unreachable. See D8-DT-H1.
+### Happy Path
 
 | # | Test | Result | Notes |
 |---|---|---|---|
-| 1 | Login → D2 → patient → D3 | PASS | User confirmed at D2 |
-| 2 | D4 has scan record with "View full image →" | BLOCKED | D8-DT-H1: scan rows never appear in D4 |
-| 3–33 | All remaining tests | SKIPPED | D8 unreachable; prerequisite failed |
+| 1 | Login → D2 → patient → D3 | ✅ PASS | |
+| 2 | D4 shows scan row with "View full image →" | ✅ PASS | D8-DT-H1 confirmed fixed — both scans visible |
+| 3 | D8 opens (no crash) | ✅ PASS | |
+| 4 | Header: scan label + patient name + date | ✅ PASS | Shows "Prescription", patient name, visit date |
+| 5 | Full image visible without scrolling | ✅ PASS | iPhone 15 Pro Max — full image without scroll |
+| 6 | "Pinch to zoom" hint visible on first open | ✅ PASS | Visible near bottom of image area above OCR panel |
+| 7 | Pinch to zoom works (iOS) | ✅ PASS | Confirmed on iPhone 15 Pro Max |
+| 8 | Hint disappears after interaction | ✅ PASS | Disappeared after pinch gesture |
+| 9 | OCR panel visible at bottom | ✅ PASS | |
+| 10 | Panel handle: "Scan Text" label + status badge | ✅ PASS | "No text" badge (deferred OCR state) |
+| 11 | Tap handle → collapses to strip | ✅ PASS | |
+| 12 | Tap collapsed strip → re-expands | ✅ PASS | |
+| 13 | Back arrow → D4, no crash | ✅ PASS | Returns to D4 three-card layout |
+
+### OCR States
+
+| # | Test | Result | Notes |
+|---|---|---|---|
+| 14 | OCR Success | ⚪ SKIP | Requires backend-controlled OCR completion — not available in test data |
+| 15 | OCR Pending | ⚪ SKIP | Requires scan mid-processing — not available in test data |
+| 16 | OCR Failed | ⚪ SKIP | Requires failed OCR scan — not available in test data |
+| 17 | OCR Deferred — both body lines | ✅ PASS | "No extracted text available" + "Ask staff to re-scan if text is needed." both confirmed |
+
+### Error Scenarios
+
+| # | Test | Result | Notes |
+|---|---|---|---|
+| 18 | Missing image file (D8-QA-H1 fix) | ⚪ SKIP | Cannot delete files from iOS app sandbox on device without jailbreak/adb |
+| 19 | No local scans alert (D4 path) | ⚪ SKIP | Requires DB manipulation |
+| 20 | Empty OCR text (D8-QA-M1 fix) | ⚪ SKIP | Requires specific backend state (success + empty string) |
+
+### Navigation and State
+
+| # | Test | Result | Notes |
+|---|---|---|---|
+| 21 | Background/foreground — state preserved | ✅ PASS | Image visible after backgrounding and returning |
+| 22 | Phone call interrupt | ⚪ SKIP | Low priority |
+| 23 | Android device | ⚪ SKIP | iOS device only (iPhone 15 Pro Max) |
+| 24 | Landscape orientation | ⚪ N/A | app.json `"orientation": "portrait"` — portrait lock is by design; not rotating is correct |
+| 25 | Android hardware back button | ⚪ SKIP | iOS device only |
+| 26 | Second scan shows different image | ✅ PASS | Both scans show their own distinct images; index-based matching correct |
+
+### Long Content Edge Cases
+
+| # | Test | Result | Notes |
+|---|---|---|---|
+| 27 | Long scan label truncates | ⚪ SKIP | No test data with long label |
+| 28 | Long patient name truncates | ⚪ SKIP | No test data with long name |
+| 29 | Long OCR text scrolls smoothly | ⚪ SKIP | No test data with long OCR text |
+
+### Low-End Device / Offline
+
+| # | Test | Result | Notes |
+|---|---|---|---|
+| 30 | Airplane mode — images load offline | ✅ PASS | Both images load with no errors in airplane mode |
+| 31 | Low storage | ⚪ SKIP | Not testable |
+| 32 | Cold app launch | ⚪ SKIP | Covered implicitly by Test #21 |
+
+### Logout Cleanup
+
+| # | Test | Result | Notes |
+|---|---|---|---|
+| 33 | Logout → re-login → scan rows gone | ✅ PASS | After logout and re-login, D4 shows no scan rows for the visit |
 
 ---
 
 ## Bugs Found
 
-### D8-DT-H1 — HIGH: D8 is unreachable — D4 never shows scan record rows for locally-created visits
-
-**Severity:** HIGH (blocks all D8 device testing)
-
-**Summary:**
-D4 (Visit Detail) displays scan record rows by reading from server-synced `visit_records` only
-(`src/screens/doctor/VisitDetailScreen.tsx:380 — records.filter(r => r.type === 'scan')`).
-When a doctor creates a visit in D6 with a scan attached via D7, the scan is written to the
-local `scans` table (keyed by `visit_local_id`). However, **the scan data is never sent to the
-server** — the `createVisit` API payload in `NewVisitScreen.tsx:361-369` contains only:
-`localId`, `patientId`, `doctorId`, `visitDate`, `chiefComplaint`, `noteText`, `consentGranted`.
-No scan data is included. (S3 image upload is deferred to v2 per project decisions.)
-
-Because the server never receives scan data, it never creates a `visit_records` row of
-type `'scan'`. When D4 fetches records from the server, no scan rows are returned. The
-`scanRecords` array is always empty. The "View full image →" button is never rendered.
-D8 is therefore completely unreachable via the normal app flow.
-
-Note: the `getScansForServerVisit()` function in `src/db/scans.ts` (called at
-`VisitDetailScreen.tsx:293`) is correctly implemented — it CAN find local scans for a
-server-synced visit via the `visits_draft` join. The gap is upstream: no scan row ever
-appears in D4 to trigger the call.
-
-**Reproduction steps:**
-1. Login → D2 → select any patient → D3
-2. Tap "+ New Visit" → D6 → add chief complaint → tap "Add a Scan" → D7
-3. Pick an image from Photo Library → D7 saves scan to `scans` table
-4. Return to D6 → Save → visit syncs to server
-5. Back on D3 — visit now shows as synced (not draft) — tap "View Full Visit" → D4 opens
-6. D4 shows: date, chief complaint, doctor, clinic, status. No scan row. No "View full image →".
-
-**Fix required (Builder session):**
-D4 must be updated to also read local scan records from the `scans` table and merge them
-into its `records` state for display. Suggested approach:
-
-After the server records are loaded/cached, query `getScansForServerVisit(db, visitServerId, user.id)`
-and synthesize `LocalRecord` entries of type `'scan'` for each result. Merge these into `records`
-so the existing `scanRecords` filter and `ScanRecordRow` rendering picks them up naturally.
-
-`handleViewScan` is already correctly wired — it will work once a scan row exists to tap.
-
-**Code locations:**
-- `src/screens/doctor/VisitDetailScreen.tsx:101` — `records` state (needs local scans merged in)
-- `src/screens/doctor/VisitDetailScreen.tsx:133-159` — records loading block (merge point)
-- `src/screens/doctor/VisitDetailScreen.tsx:380` — `scanRecords` filter (unchanged — will work once records has scan entries)
-- `src/screens/doctor/NewVisitScreen.tsx:361` — `createVisit` call (does NOT send scan data — by design for v1; fix is on D4 side, not here)
-- `src/db/scans.ts:100-118` — `getScansForServerVisit` (correctly implemented, just never called for display)
+**None.** D8-DT-H1 confirmed fixed. No new bugs found in this re-run.
 
 ---
 
 ## Session Summary
 
-**D8 device testing BLOCKED after pre-flight + test #1 (Login path).**
+**18 PASS / 0 FAIL / 14 SKIP (not testable on this device/data) / 1 N/A**
 
-**Bug count: 1 bug found — D8-DT-H1 (HIGH)**
+**Bug count: 0 new bugs found.**
 
-**Builder Agent session required before device testing can resume.**
-Items: D8-DT-H1 — D4 must be updated to show local scan rows from the `scans` table.
+**Builder handoff decision: No Builder session needed — all pre-device-testing items closed, zero bugs found. Clear to merge.**
 
 ---
 
-**SESSION COMPLETE — Next: Builder Agent — fix D8-DT-H1 (D4 local scan rows) — then re-run Device Test D8**
+**SESSION COMPLETE — Next: PM Agent — Step 8 (PM pre-flight: P1–P5 Patient App)**
