@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** D8 Builder fixes complete — D8-QA-H1, D8-QA-M1, D8-QA-M2, D8-SA-M1 all fixed. Next: Device test D8 Full Scan View (after backend pre-flight passes).
-**Last Updated:** 2026-05-12
+**Phase:** D8 device test BLOCKED — D8-DT-H1 found (HIGH). D4 never shows local scan rows; D8 is unreachable. Builder session required to fix D4 before re-testing.
+**Last Updated:** 2026-05-16
 
 ---
 
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — D8 QA+Security fixes (2026-05-12). Fixed: D8-QA-H1 (image error handler), D8-QA-M1 (empty ocrText badge/body sync + call-site normalisation), D8-QA-M2 (onLayout height replaces window height), D8-SA-M1 (logScanViewed audit event). Commit: bf5982a. Zero new TS errors.
+**Last Session:** Device Tester — D8 Full Scan View (2026-05-16). BLOCKED after test #1. Found D8-DT-H1 (HIGH): D4 reads scan rows from server visit_records only — but scans created via D7 are local-only and never sent to server. Server never creates a visit_records entry of type='scan'. D4 therefore never shows "View full image →". D8 is completely unreachable. Session doc: reviews/D8-device-test-session.md.
 
 ### D8 Open Critique Items (must be applied to mockup before wire session)
 
@@ -54,7 +54,9 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~7d~~ | ~~**Security: D8 Full Scan View**~~ | ~~DONE 2026-05-12. CLEAR TO MERGE. 0 CRITICAL, 0 HIGH. D8-SA-M1 (logScanViewed) + D8-SA-L1 (resolveScanPath null guard) documented. Audit: `reviews/D8-security-audit.md`.~~ |
 | ~~7e~~ | ~~**QA: D8 Full Scan View**~~ | ~~DONE 2026-05-12. 1 HIGH (D8-QA-H1: no image error handler), 2 MEDIUM (D8-QA-M1, D8-QA-M2). Builder session required before device testing. Plan: `reviews/D8-qa-test-plan.md`.~~ |
 | ~~7e-fix~~ | ~~**Builder: D8 QA fixes**~~ | ~~DONE 2026-05-12 — commit bf5982a. D8-QA-H1, D8-QA-M1, D8-QA-M2, D8-SA-M1 all fixed.~~ |
-| 7f | **Device test: D8 Full Scan View** | After Builder fixes + backend pre-flight passes. |
+| ~~7f~~ | ~~**Device test: D8 Full Scan View**~~ | ~~BLOCKED 2026-05-16 — D8-DT-H1 found. Re-test after Builder fix.~~ |
+| 7f-fix | **Builder: fix D8-DT-H1** | D4 must merge local scans from `scans` table into `records` state. `getScansForServerVisit` is already correct — just never called for display. Fix: after server records load, query local scans and synthesize `LocalRecord` entries of type `'scan'`. See `reviews/D8-device-test-session.md` for full spec. |
+| 7g | **Device test: D8 Full Scan View (re-run)** | After Builder fixes D8-DT-H1. |
 | 8 | **PM pre-flight: P1–P5 Patient App** | After D8 is device-tested and merged. New flow — requires its own PM Moment 1 before any code is written. |
 
 ---
