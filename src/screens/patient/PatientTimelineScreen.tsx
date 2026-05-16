@@ -14,7 +14,7 @@
  *   4. Wire "By Doctor" / "By Clinic" filter to server-side params or
  *      client-side filter over cached data.
  *
- * States shown: has-data (grouped by year), empty state.
+ * States shown: has-data (grouped by year / doctor / clinic), empty state.
  * Toggle via DEV demo switcher at bottom.
  */
 
@@ -63,8 +63,9 @@ interface VisitEntry {
 }
 
 type ListItem =
-  | { kind: 'year_header'; year: string }
-  | { kind: 'visit';       entry: VisitEntry };
+  | { kind: 'year_header';  year: string }
+  | { kind: 'group_header'; label: string }
+  | { kind: 'visit';        entry: VisitEntry };
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -144,9 +145,13 @@ const MOCK_TIMELINE: VisitEntry[] = [
   },
 ];
 
-// ─── Helper: build flat list items grouped by year ────────────────────────────
+// ─── Helpers: build flat list items ──────────────────────────────────────────
 
-function buildListItems(visits: VisitEntry[]): ListItem[] {
+function buildListItems(visits: VisitEntry[], filter: FilterOption): ListItem[] {
+  if (filter === 'by_doctor') return buildGroupedItems(visits, 'by_doctor');
+  if (filter === 'by_clinic') return buildGroupedItems(visits, 'by_clinic');
+
+  // 'all': group by year
   const items: ListItem[] = [];
   let currentYear = '';
   for (const entry of visits) {
@@ -155,6 +160,27 @@ function buildListItems(visits: VisitEntry[]): ListItem[] {
       currentYear = entry.year;
     }
     items.push({ kind: 'visit', entry });
+  }
+  return items;
+}
+
+function buildGroupedItems(
+  visits: VisitEntry[],
+  groupBy: 'by_doctor' | 'by_clinic',
+): ListItem[] {
+  const groups = new Map<string, VisitEntry[]>();
+  for (const entry of visits) {
+    const key = groupBy === 'by_doctor' ? entry.doctorName : entry.clinicName;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(entry);
+  }
+
+  const items: ListItem[] = [];
+  for (const [label, groupVisits] of groups) {
+    items.push({ kind: 'group_header', label });
+    for (const entry of groupVisits) {
+      items.push({ kind: 'visit', entry });
+    }
   }
   return items;
 }
@@ -170,6 +196,16 @@ function YearHeader({ year }: { year: string }) {
   );
 }
 
+function GroupHeader({ label }: { label: string }) {
+  return (
+    <View style={styles.groupHeaderRow}>
+      <View style={styles.groupHeaderLine} />
+      <Text style={styles.groupHeaderText} numberOfLines={1}>{label}</Text>
+      <View style={styles.groupHeaderLine} />
+    </View>
+  );
+}
+
 function RecordRow({ record }: { record: VisitRecord }) {
   if (record.type === 'scan') {
     return (
@@ -179,12 +215,12 @@ function RecordRow({ record }: { record: VisitRecord }) {
           accessible
           accessibilityLabel="Scanned document thumbnail"
         >
-          <Text style={styles.scanThumbLabel}>IMG</Text>
+          <Text style={styles.scanThumbIcon}>📄</Text>
         </View>
         <Text
           style={styles.recordPreview}
           numberOfLines={2}
-          accessibilityLabel={`Scan text: ${record.ocrPreview ?? 'No text extracted'}`}
+          accessibilityLabel={`Document text: ${record.ocrPreview ?? 'No text extracted'}`}
         >
           {record.ocrPreview ?? 'Text not yet extracted'}
         </Text>
@@ -199,7 +235,7 @@ function RecordRow({ record }: { record: VisitRecord }) {
       <Text
         style={styles.recordPreview}
         numberOfLines={2}
-        accessibilityLabel={`Doctor note: ${record.preview}`}
+        accessibilityLabel={`Doctor's note: ${record.preview}`}
       >
         {record.preview}
       </Text>
@@ -217,8 +253,8 @@ function VisitCard({ entry, expanded, onToggle }: VisitCardProps) {
   const scanCount  = entry.records.filter((r) => r.type === 'scan').length;
   const noteCount  = entry.records.filter((r) => r.type === 'note').length;
   const countParts: string[] = [];
-  if (scanCount > 0) countParts.push(`${scanCount} scan${scanCount > 1 ? 's' : ''}`);
-  if (noteCount > 0) countParts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
+  if (scanCount > 0) countParts.push(`${scanCount} Document${scanCount > 1 ? 's' : ''}`);
+  if (noteCount > 0) countParts.push(`${noteCount} Doctor's note${noteCount > 1 ? 's' : ''}`);
   const recordSummary = countParts.join(', ');
 
   return (
@@ -227,7 +263,7 @@ function VisitCard({ entry, expanded, onToggle }: VisitCardProps) {
       onPress={onToggle}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`Visit on ${entry.date} at ${entry.clinicName}. ${entry.summary ?? 'No summary'}. ${recordSummary}. Tap to ${expanded ? 'collapse' : 'expand'}.`}
+      accessibilityLabel={`Visit on ${entry.date} at ${entry.clinicName}. ${entry.summary ?? 'No summary'}. ${recordSummary}. Tap to ${expanded ? 'hide records' : 'view records'}.`}
       accessibilityState={{ expanded }}
     >
       {/* ── Card header ── */}
@@ -253,6 +289,11 @@ function VisitCard({ entry, expanded, onToggle }: VisitCardProps) {
           <Text style={styles.recordCountText}>{recordSummary}</Text>
         </View>
       </View>
+
+      {/* ── Expand / collapse tap cue ── */}
+      <Text style={styles.expandLink}>
+        {expanded ? 'Hide records ▲' : 'View records →'}
+      </Text>
 
       {/* ── Expanded records ── */}
       {expanded && (
@@ -291,16 +332,15 @@ export default function PatientTimelineScreen() {
   const [showEmpty,    setShowEmpty]    = useState(false);
 
   const visits    = showEmpty ? [] : MOCK_TIMELINE;
-  const listItems = buildListItems(visits);
+  const listItems = buildListItems(visits, filter);
 
   function handleToggle(id: string) {
     setExpandedId((prev) => (prev === id ? null : id));
   }
 
   function renderItem({ item }: { item: ListItem }) {
-    if (item.kind === 'year_header') {
-      return <YearHeader year={item.year} />;
-    }
+    if (item.kind === 'year_header')  return <YearHeader year={item.year} />;
+    if (item.kind === 'group_header') return <GroupHeader label={item.label} />;
     return (
       <VisitCard
         entry={item.entry}
@@ -335,7 +375,7 @@ export default function PatientTimelineScreen() {
               styles.filterChip,
               filter === value && styles.filterChipActive,
             ]}
-            onPress={() => setFilter(value)}
+            onPress={() => { setFilter(value); setExpandedId(null); }}
             accessibilityRole="tab"
             accessibilityLabel={label}
             accessibilityState={{ selected: filter === value }}
@@ -358,9 +398,11 @@ export default function PatientTimelineScreen() {
       ) : (
         <FlatList
           data={listItems}
-          keyExtractor={(item) =>
-            item.kind === 'year_header' ? `year-${item.year}` : item.entry.id
-          }
+          keyExtractor={(item) => {
+            if (item.kind === 'year_header')  return `year-${item.year}`;
+            if (item.kind === 'group_header') return `group-${item.label}`;
+            return item.entry.id;
+          }}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -465,14 +507,35 @@ const styles = StyleSheet.create({
     marginTop:      Spacing.lg,
   },
   yearHeaderText: {
-    fontSize:    13,
-    fontWeight:  '700',
-    color:       Colors.textSecondary,
-    marginRight: Spacing.sm,
+    fontSize:      13,
+    fontWeight:    '700',
+    color:         Colors.textSecondary,
+    marginRight:   Spacing.sm,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   yearHeaderLine: {
+    flex:            1,
+    height:          1,
+    backgroundColor: Colors.border,
+  },
+
+  // ── Group header (By Doctor / By Clinic)
+  groupHeaderRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    marginBottom:   Spacing.md,
+    marginTop:      Spacing.lg,
+    gap:            Spacing.sm,
+  },
+  groupHeaderText: {
+    fontSize:      13,
+    fontWeight:    '600',
+    color:         Colors.textSecondary,
+    flexShrink:    1,
+    letterSpacing: 0.2,
+  },
+  groupHeaderLine: {
     flex:            1,
     height:          1,
     backgroundColor: Colors.border,
@@ -502,9 +565,10 @@ const styles = StyleSheet.create({
     paddingLeft: Spacing.sm,
     paddingTop:  2,
   },
+  // P2-PC-M1: chevron is now visible (was 11px textDisabled)
   expandChevron: {
-    fontSize: 11,
-    color:    Colors.textDisabled,
+    fontSize: 14,
+    color:    Colors.textSecondary,
   },
   visitDate: {
     fontSize:     13,
@@ -522,11 +586,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color:    Colors.textSecondary,
   },
+  // P2-PC-S4: no italic; regular weight with dimmed colour
   visitSummary: {
     fontSize:   14,
-    color:      Colors.textPrimary,
+    color:      Colors.textSecondary,
     marginTop:  Spacing.sm,
-    fontStyle:  'italic',
     lineHeight: 20,
   },
   recordCountRow: {
@@ -534,17 +598,24 @@ const styles = StyleSheet.create({
     marginTop:     Spacing.sm,
   },
   recordCountPill: {
-    backgroundColor: Colors.background,
-    borderRadius:    12,
-    paddingVertical: 3,
+    backgroundColor:  Colors.background,
+    borderRadius:     12,
+    paddingVertical:  3,
     paddingHorizontal: Spacing.sm,
-    borderWidth:     1,
-    borderColor:     Colors.border,
+    borderWidth:      1,
+    borderColor:      Colors.border,
   },
   recordCountText: {
     fontSize:   12,
     color:      Colors.textSecondary,
     fontWeight: '500',
+  },
+  // P2-PC-M1: prominent tap cue below pill
+  expandLink: {
+    fontSize:   14,
+    fontWeight: '600',
+    color:      Colors.primaryBlue,
+    marginTop:  Spacing.sm,
   },
 
   // ── Expanded records
@@ -573,10 +644,9 @@ const styles = StyleSheet.create({
     justifyContent:  'center',
     flexShrink:      0,
   },
-  scanThumbLabel: {
-    fontSize:   10,
-    fontWeight: '700',
-    color:      Colors.primaryBlue,
+  // P2-PC-S1: document emoji replaces "IMG" text
+  scanThumbIcon: {
+    fontSize: 22,
   },
   noteIcon: {
     width:           52,
@@ -602,11 +672,11 @@ const styles = StyleSheet.create({
 
   // ── Empty state
   emptyState: {
-    flex:            1,
-    alignItems:      'center',
-    justifyContent:  'center',
+    flex:              1,
+    alignItems:        'center',
+    justifyContent:    'center',
     paddingHorizontal: 40,
-    paddingBottom:   60,
+    paddingBottom:     60,
   },
   emptyIllustration: {
     width:           100,
@@ -642,13 +712,13 @@ const styles = StyleSheet.create({
     borderTopColor:  '#FCD34D',
   },
   demoTitle: {
-    fontSize:        11,
-    fontWeight:      '700',
-    color:           '#92400E',
-    textAlign:       'center',
-    marginBottom:    6,
-    textTransform:   'uppercase',
-    letterSpacing:   0.5,
+    fontSize:      11,
+    fontWeight:    '700',
+    color:         '#92400E',
+    textAlign:     'center',
+    marginBottom:  6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   demoRow: {
     flexDirection:  'row',
@@ -656,10 +726,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   demoBtn: {
-    backgroundColor: '#D97706',
-    paddingVertical: 6,
+    backgroundColor:  '#D97706',
+    paddingVertical:  6,
     paddingHorizontal: 16,
-    borderRadius:    6,
+    borderRadius:     6,
   },
   demoBtnActive: {
     backgroundColor: '#92400E',
