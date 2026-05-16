@@ -508,6 +508,16 @@ This applies any time a file is read for reference purposes that is not the file
 
 ---
 
+**Mistake 13 — Builder registered a new flow's root screen in App.tsx but never added a dev navigation entry point to reach it**
+
+What happened: PatientLoginScreen (P1) was built and registered in App.tsx. No existing screen navigates to it — it is the root of the patient app flow. The QA test plan assumed "tap PatientLogin from developer navigation" but that navigation didn't exist. The Device Tester discovered this at session start; device testing was blocked before a single test case could run.
+
+Root cause: Route registration in App.tsx prevents crashes (Rule 1.1) but does not guarantee reachability. For screens mid-flow, a parent screen provides the path. For screens that are the root of a new navigation flow, no parent exists yet — the Builder must create one explicitly. There is a difference between a route being *registered* and being *reachable*.
+
+Rule going forward: Whenever a Builder session creates the first screen of a new navigation flow (i.e., no registered screen navigates to it), the Builder must also add a dev-only entry point — a `{__DEV__ && ...}` button on the closest existing screen — before closing the session. This check is now step 3 of the Builder End-of-Session Protocol in `agents/agent-builder.md`. The session is not complete until the new screen is reachable on a device.
+
+---
+
 ## 4. Standard Runbook — Building Each Screen
 
 ### Step 1: Read Before Writing
@@ -558,6 +568,7 @@ if (!token || !user) return null
 
 **Navigation guards:**
 - Register every route target in App.tsx, even stubs.
+- For flow-root screens (nothing navigates to them yet), also add a `{__DEV__ && ...}` entry point on the closest existing screen — registration alone does not make a screen reachable on device (Mistake 13).
 - Add `navigation.addListener('beforeRemove')` for screens with unsaved state.
 - Use `savingCompletedRef` to allow programmatic `goBack()` without triggering the discard dialog.
 - Use `useRef(false)` tap guard for submit buttons, not `useState`.
