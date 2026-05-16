@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — P2 mockup COMPLETE. Next: Persona Critic — P2 mockup (My Records Timeline).
+**Phase:** P1–P5 Patient App — P2 Persona Critic COMPLETE. Score 3.0/5. Verdict: Revise and re-evaluate. Next: Builder — apply P2 MUST FIX + SHOULD FIX items.
 **Last Updated:** 2026-05-16
 
 ---
@@ -24,7 +24,19 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — P2 mockup (PatientTimelineScreen) (2026-05-16). Timeline with year-grouped visit cards, filter bar (All/By Doctor/By Clinic), expand-in-place records, empty state. 4 realistic mock visits across 2024–2026. Zero TS errors.
+**Last Session:** Persona Critic Agent — P2 mockup (My Records Timeline) (2026-05-16). Score 3.0/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 4 SHOULD FIX. See P2 Open Critique Items below. Critique: `reviews/P2-persona-critique.md`.
+
+### P2 Open Critique Items (apply before Builder: P3 session)
+
+| ID | Severity | Item | Status |
+|---|---|---|---|
+| P2-PC-M1 | MUST FIX | Expand affordance insufficient for elderly patients: 11px greyed-out "▼" is the only cue that cards are tappable. Add "View records →" text link or prominent tap cue below record count pill. | Open |
+| P2-PC-S1 | SHOULD FIX | Replace "IMG" text in scan thumbnail placeholder with a camera/document icon — "IMG" reads as a broken image state and damages trust. | Open |
+| P2-PC-S2 | SHOULD FIX | Replace "scan" → "Document", "note" → "Doctor's note" throughout — patients do not use clinical app jargon. | Open |
+| P2-PC-S3 | SHOULD FIX | Filter chips ("By Doctor", "By Clinic") non-functional in both demo states. Add at least one demo state showing filter behavior (e.g. visits grouped under doctor headers). | Open |
+| P2-PC-S4 | SHOULD FIX | Visit summary in italic — reduces readability for elderly/low-vision users. Switch to regular weight with slightly dimmed colour. | Open |
+
+---
 
 ### P1 Open Critique Items (apply before wire step)
 
@@ -71,7 +83,9 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~9~~ | ~~**Builder: P1 mockup (Patient Login / OTP)**~~ | ~~DONE 2026-05-16. `src/screens/patient/PatientLoginScreen.tsx` + `PatientTimelineScreen.tsx` stub. Routes registered in App.tsx. Patient JWT shape documented in file header.~~ |
 | ~~10~~ | ~~**Persona Critic: P1 mockup (Patient Login)**~~ | ~~DONE 2026-05-16. Score 4.0/5. Verdict: Ship as-is. 3 SHOULD FIX (P1-PC-S1 tagline, P1-PC-S2 "Change number" sizing, P1-PC-S3 loading text). Apply before wire step. Critique: `reviews/P1-persona-critique.md`.~~ |
 | ~~11~~ | ~~**Builder: P2 mockup (My Records Timeline)**~~ | ~~DONE 2026-05-16. `PatientTimelineScreen.tsx` full mockup. Year-grouped timeline, filter bar, expand-in-place records, empty state. 4 realistic mock visits. Zero TS errors.~~ |
-| 12 | **Persona Critic: P2 mockup** | **NEXT** — Mandatory before Builder: P3. |
+| ~~12~~ | ~~**Persona Critic: P2 mockup**~~ | ~~DONE 2026-05-16. Score 3.0/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 4 SHOULD FIX. See P2 Open Critique Items. Critique: `reviews/P2-persona-critique.md`.~~ |
+| 12b | **Builder: Apply P2 mockup revisions** | **NEXT** — Apply P2-PC-M1 (expand affordance) + P2-PC-S1 through S4. Then re-run Persona Critic. |
+| 12c | **Persona Critic: P2 re-evaluation** | Mandatory — must run after Builder: P2 fix session. |
 | 13 | **Builder: P3 mockup (Visit Record Detail)** | Read-only. Clean and reassuring. |
 | 14 | **Persona Critic: P3 mockup** | Mandatory — must run before Builder: P4. |
 | 15 | **Builder: P4 mockup (Doctors Who Have Access)** | Consent management. DPDP mandatory. Revoke flow must be mocked even if backend not yet live. |
