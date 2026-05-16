@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — P1 Persona Critic COMPLETE (Score 4.0/5, Ship as-is). Next: Builder Agent — P2 mockup (My Records Timeline).
+**Phase:** P1–P5 Patient App — P2 mockup COMPLETE. Next: Persona Critic — P2 mockup (My Records Timeline).
 **Last Updated:** 2026-05-16
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Persona Critic Agent — P1 mockup (PatientLoginScreen) (2026-05-16). Score 4.0/5. Verdict: Ship as-is (apply 3 SHOULD FIX items before wire step). No MUST FIX. Critique saved: `reviews/P1-persona-critique.md`.
+**Last Session:** Builder Agent — P2 mockup (PatientTimelineScreen) (2026-05-16). Timeline with year-grouped visit cards, filter bar (All/By Doctor/By Clinic), expand-in-place records, empty state. 4 realistic mock visits across 2024–2026. Zero TS errors.
 
 ### P1 Open Critique Items (apply before wire step)
 
@@ -70,8 +70,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~8~~ | ~~**PM pre-flight: P1–P5 Patient App**~~ | ~~DONE 2026-05-16. PROCEED with changes. Review: `reviews/P1-P5-pm-review.md`.~~ |
 | ~~9~~ | ~~**Builder: P1 mockup (Patient Login / OTP)**~~ | ~~DONE 2026-05-16. `src/screens/patient/PatientLoginScreen.tsx` + `PatientTimelineScreen.tsx` stub. Routes registered in App.tsx. Patient JWT shape documented in file header.~~ |
 | ~~10~~ | ~~**Persona Critic: P1 mockup (Patient Login)**~~ | ~~DONE 2026-05-16. Score 4.0/5. Verdict: Ship as-is. 3 SHOULD FIX (P1-PC-S1 tagline, P1-PC-S2 "Change number" sizing, P1-PC-S3 loading text). Apply before wire step. Critique: `reviews/P1-persona-critique.md`.~~ |
-| 11 | **Builder: P2 mockup (My Records Timeline)** | **NEXT** — Elderly-friendly timeline. Text-first; thumbnails lazy-load. "Has data" + "empty state" variants required. Note: apply P1 SHOULD FIX items (P1-PC-S1, S2, S3) during this or wire step. |
-| 12 | **Persona Critic: P2 mockup** | Mandatory — must run before Builder: P3. |
+| ~~11~~ | ~~**Builder: P2 mockup (My Records Timeline)**~~ | ~~DONE 2026-05-16. `PatientTimelineScreen.tsx` full mockup. Year-grouped timeline, filter bar, expand-in-place records, empty state. 4 realistic mock visits. Zero TS errors.~~ |
+| 12 | **Persona Critic: P2 mockup** | **NEXT** — Mandatory before Builder: P3. |
 | 13 | **Builder: P3 mockup (Visit Record Detail)** | Read-only. Clean and reassuring. |
 | 14 | **Persona Critic: P3 mockup** | Mandatory — must run before Builder: P4. |
 | 15 | **Builder: P4 mockup (Doctors Who Have Access)** | Consent management. DPDP mandatory. Revoke flow must be mocked even if backend not yet live. |
