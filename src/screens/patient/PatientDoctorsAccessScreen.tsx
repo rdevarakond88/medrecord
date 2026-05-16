@@ -89,15 +89,16 @@ function ConsentCard({
       <View style={styles.cardInfo}>
         <Text style={styles.doctorName}>{consent.doctorName}</Text>
         <Text style={styles.clinicName}>{consent.clinicName}</Text>
+        <Text style={styles.scopeNote}>Can view all your health records</Text>
         <Text style={styles.accessSince}>Access since: {consent.accessSince}</Text>
       </View>
       <TouchableOpacity
         style={styles.revokeBtn}
         onPress={() => onRevoke(consent.id, consent.doctorName)}
         accessibilityRole="button"
-        accessibilityLabel={`Revoke access for ${consent.doctorName}`}
+        accessibilityLabel={`Remove access for ${consent.doctorName}`}
       >
-        <Text style={styles.revokeBtnText}>Revoke Access</Text>
+        <Text style={styles.revokeBtnText}>Remove Access</Text>
       </TouchableOpacity>
     </View>
   );
@@ -129,17 +130,17 @@ function PendingCard({
           style={styles.grantBtn}
           onPress={() => onGrant(request.id)}
           accessibilityRole="button"
-          accessibilityLabel={`Grant access to ${request.doctorName}`}
+          accessibilityLabel={`Allow access to ${request.doctorName}`}
         >
-          <Text style={styles.grantBtnText}>Grant Access</Text>
+          <Text style={styles.grantBtnText}>Allow</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.denyBtn}
           onPress={() => onDeny(request.id)}
           accessibilityRole="button"
-          accessibilityLabel={`Deny access request from ${request.doctorName}`}
+          accessibilityLabel={`Don't allow access request from ${request.doctorName}`}
         >
-          <Text style={styles.denyBtnText}>Deny</Text>
+          <Text style={styles.denyBtnText}>Don't Allow</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -178,12 +179,12 @@ export default function PatientDoctorsAccessScreen() {
 
   function handleRevoke(id: string, doctorName: string) {
     Alert.alert(
-      'Revoke Access?',
+      'Remove Access?',
       `${doctorName} will no longer be able to view your records. Records they created remain visible to you.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Revoke',
+          text: 'Remove',
           style: 'destructive',
           onPress: () => {
             setConsents((prev) => prev.filter((c) => c.id !== id));
@@ -195,8 +196,8 @@ export default function PatientDoctorsAccessScreen() {
 
   function handleGrant(id: string) {
     Alert.alert(
-      'Grant Access',
-      'Access granted. This doctor will be able to view your records.',
+      'Access Allowed',
+      'This doctor can now view your health records.',
       [{ text: 'OK' }],
     );
     setPendingReqs((prev) => prev.filter((r) => r.id !== id));
@@ -204,8 +205,8 @@ export default function PatientDoctorsAccessScreen() {
 
   function handleDeny(id: string) {
     Alert.alert(
-      'Access Denied',
-      "The doctor's access request has been declined.",
+      'Access Not Allowed',
+      "The doctor's request has been declined.",
       [{ text: 'OK' }],
     );
     setPendingReqs((prev) => prev.filter((r) => r.id !== id));
@@ -247,7 +248,7 @@ export default function PatientDoctorsAccessScreen() {
           {/* ── Active consents ── */}
           {displayConsents.length > 0 && (
             <>
-              <Text style={styles.sectionLabel}>ACTIVE ACCESS</Text>
+              <Text style={styles.sectionLabel}>Your Doctors</Text>
               {displayConsents.map((consent) => (
                 <ConsentCard
                   key={consent.id}
@@ -262,7 +263,7 @@ export default function PatientDoctorsAccessScreen() {
           {displayRequests.length > 0 && (
             <>
               <Text style={[styles.sectionLabel, displayConsents.length > 0 && styles.sectionLabelSpaced]}>
-                PENDING REQUESTS
+                New Requests
               </Text>
               {displayRequests.map((req) => (
                 <PendingCard
@@ -278,7 +279,7 @@ export default function PatientDoctorsAccessScreen() {
           {/* ── DPDP info note ── */}
           <View style={styles.infoNote}>
             <Text style={styles.infoNoteText}>
-              You control who can see your records. Revoking access takes effect immediately.
+              You control who can see your records. Removing access takes effect immediately.
             </Text>
           </View>
 
@@ -408,12 +409,11 @@ const styles = StyleSheet.create({
 
   // ── Section labels
   sectionLabel: {
-    fontSize:      12,
-    fontWeight:    '700',
-    color:         Colors.textSecondary,
-    letterSpacing: 0.8,
-    marginBottom:  Spacing.sm,
-    marginLeft:    4,
+    fontSize:     13,
+    fontWeight:   '700',
+    color:        Colors.textSecondary,
+    marginBottom: Spacing.sm,
+    marginLeft:   4,
   },
   sectionLabelSpaced: {
     marginTop: Spacing.xl,
@@ -445,8 +445,13 @@ const styles = StyleSheet.create({
     color:        Colors.textSecondary,
     marginBottom: 4,
   },
+  scopeNote: {
+    fontSize:     13,
+    color:        Colors.textSecondary,
+    marginBottom: 4,
+  },
   accessSince: {
-    fontSize: 13,
+    fontSize: 14,
     color:    Colors.textSecondary,
   },
 
