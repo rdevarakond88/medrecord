@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — P2 Builder revisions COMPLETE. All 5 critique items applied. Next: Persona Critic re-evaluation (P2).
+**Phase:** P1–P5 Patient App — P2 Persona Critic re-evaluation COMPLETE. Score 4.1/5, Ship as-is. Next: Builder: P3 mockup (Visit Record Detail).
 **Last Updated:** 2026-05-16
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — P2 mockup revisions (2026-05-16). All 5 critique items applied: P2-PC-M1 (expand affordance + "View records →" link), P2-PC-S1 (📄 emoji replaces "IMG"), P2-PC-S2 ("Document"/"Doctor's note" labels), P2-PC-S3 (By Doctor / By Clinic grouping implemented), P2-PC-S4 (italic removed from summary).
+**Last Session:** Persona Critic — P2 re-evaluation (2026-05-16). Score 4.1/5 (up from 3.0/5). Verdict: Ship as-is. All 5 v1 critique items confirmed closed. No new MUST FIX or SHOULD FIX. Critique: `reviews/P2-persona-critique-v2.md`.
 
 ### P2 Open Critique Items (apply before Builder: P3 session)
 
@@ -85,8 +85,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~11~~ | ~~**Builder: P2 mockup (My Records Timeline)**~~ | ~~DONE 2026-05-16. `PatientTimelineScreen.tsx` full mockup. Year-grouped timeline, filter bar, expand-in-place records, empty state. 4 realistic mock visits. Zero TS errors.~~ |
 | ~~12~~ | ~~**Persona Critic: P2 mockup**~~ | ~~DONE 2026-05-16. Score 3.0/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 4 SHOULD FIX. See P2 Open Critique Items. Critique: `reviews/P2-persona-critique.md`.~~ |
 | ~~12b~~ | ~~**Builder: Apply P2 mockup revisions**~~ | ~~DONE 2026-05-16 — all 5 critique items applied. See last session note.~~ |
-| 12c | **Persona Critic: P2 re-evaluation** | **NEXT** — Mandatory re-evaluation after Builder: P2 fix session. |
-| 13 | **Builder: P3 mockup (Visit Record Detail)** | Read-only. Clean and reassuring. |
+| ~~12c~~ | ~~**Persona Critic: P2 re-evaluation**~~ | ~~DONE 2026-05-16. Score 4.1/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P2-persona-critique-v2.md`.~~ |
+| 13 | **Builder: P3 mockup (Visit Record Detail)** | **NEXT** — Read-only. Clean and reassuring. |
 | 14 | **Persona Critic: P3 mockup** | Mandatory — must run before Builder: P4. |
 | 15 | **Builder: P4 mockup (Doctors Who Have Access)** | Consent management. DPDP mandatory. Revoke flow must be mocked even if backend not yet live. |
 | 16 | **Persona Critic: P4 mockup** | Mandatory — must run before Builder: P5. |
