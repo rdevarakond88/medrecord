@@ -61,9 +61,10 @@ router.post('/auth/send-otp', otpSendLimiter, validate(sendOtpSchema), async (re
       data: { token: otpToken, mobileNumber: mobile_number, otpHash, role, expiresAt },
     });
 
-    // Log OTP to console — no SMS provider wired yet.
-    // In test mode, 000000 is also always accepted.
-    console.log(`[OTP] ${mobile_number}: ${rawOtp}  (token: ${otpToken})`);
+    // OTP log — dev/bypass only; never logged in production
+    if (process.env.NODE_ENV !== 'production' || process.env.TEST_OTP_BYPASS === 'true') {
+      console.log(`[OTP-DEV] ${mobile_number}: ${rawOtp}  (token: ${otpToken})`);
+    }
     if (process.env.TEST_OTP_BYPASS === 'true') {
       console.log(`[OTP] Test bypass is ON — you may also enter: 000000`);
     }

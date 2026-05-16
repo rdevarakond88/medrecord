@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — Security Audit BLOCKED (2 CRITICAL). Builder Agent required to fix C-1 (OTP logged in production), C-2 (consent OTP logged in production), H-1 (DELETE /consent/:id missing IDOR guard). After Builder fixes: Security re-check, then QA.
+**Phase:** P1–P5 Patient App — Security fixes applied (C-1, C-2, H-1, M-1). Security re-check required before QA.
 **Last Updated:** 2026-05-16
 
 ---
@@ -27,7 +27,9 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Security Agent — P1–P5 Patient App (2026-05-16). BLOCKED — 2 CRITICAL, 1 HIGH found in live backend. C-1: OTP plaintext logged unconditionally in auth.ts:66. C-2: Consent OTP logged in both branches of consent.ts:106-110. H-1: DELETE /consent/:id missing IDOR ownership guard. M-1: 3 consent routes use requireAuth instead of requireDoctorAuth. Wire-step mandates: auth guards on P2-P5 (M-2), logout token clearance on P5 (M-3). Audit: `reviews/P1-P5-security-audit.md`.
+**Last Session:** Builder Agent — P1–P5 security fixes (2026-05-16). C-1: auth.ts OTP log now gated behind `NODE_ENV !== 'production' || TEST_OTP_BYPASS`. C-2: consent.ts else branch no longer logs raw OTP or mobile number. H-1: IDOR ownership guard added to DELETE /consent/:id; actorRole now uses `req.auth!.role`. M-1: `requireAuth` → `requireDoctorAuth` on POST /consent/request, POST /consent/verify, POST /consent/pending-request. Zero TS errors. Pushed to dev.
+
+**Previous Session:** Security Agent — P1–P5 Patient App (2026-05-16). BLOCKED — 2 CRITICAL, 1 HIGH found in live backend. C-1: OTP plaintext logged unconditionally in auth.ts:66. C-2: Consent OTP logged in both branches of consent.ts:106-110. H-1: DELETE /consent/:id missing IDOR ownership guard. M-1: 3 consent routes use requireAuth instead of requireDoctorAuth. Wire-step mandates: auth guards on P2-P5 (M-2), logout token clearance on P5 (M-3). Audit: `reviews/P1-P5-security-audit.md`.
 
 **Previous Session:** Backend Agent — Patient-facing endpoints (2026-05-16). Patient JWT auth (POST /auth/verify-otp role:patient), PatientRefreshToken, ConsentPendingRequest models added to schema. New routes: GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond, POST /consent/pending-request. Test patient (8888888888 / Priya Sharma) added to seed. Zero TS errors. Pushed to dev for Render redeploy.
 
@@ -138,8 +140,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~18c~~ | ~~**Persona Critic: P5 re-evaluation**~~ | ~~DONE 2026-05-16. Score 3.64/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P5-persona-critique-v2.md`.~~ |
 | ~~19~~ | ~~**Backend Agent: patient-facing endpoints**~~ | ~~DONE 2026-05-16 — patient JWT (role:patient in verify-otp), PatientRefreshToken, ConsentPendingRequest. Routes: /patient/profile, /patient/timeline, /patient/visits/:id, /patient/consents, /patient/consent-requests/:id/respond, /consent/pending-request. Zero TS errors.~~ |
 | ~~20~~ | ~~**Security Agent: P1–P5 Patient App**~~ | ~~DONE 2026-05-16. BLOCKED — 2 CRITICAL, 1 HIGH. See `reviews/P1-P5-security-audit.md`.~~ |
-| 20b | **Builder: P1–P5 security fixes** | **NEXT** — Fix C-1 (auth.ts OTP log), C-2 (consent.ts consent OTP log), H-1 (DELETE /consent/:id IDOR guard), M-1 (requireDoctorAuth on 3 consent routes). |
-| 20c | **Security re-check: P1–P5** | After Builder fixes C-1, C-2, H-1. Verify fixes then clear to QA. |
+| ~~20b~~ | ~~**Builder: P1–P5 security fixes**~~ | ~~DONE 2026-05-16 — C-1, C-2, H-1, M-1 all fixed. Zero TS errors.~~ |
+| 20c | **Security re-check: P1–P5** | **NEXT** — Verify C-1, C-2, H-1, M-1 fixes then clear to QA. |
 | 21 | **QA: P1–P5 Patient App** | After Security re-check passes. |
 | 22 | **Device test: P1–P5 Patient App** | After all screens pass Security + QA. |
 
