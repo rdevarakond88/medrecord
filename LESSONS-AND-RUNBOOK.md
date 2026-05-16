@@ -479,6 +479,21 @@ Rule going forward: Any time a Security Audit **modifies `api-contracts.md`** (a
 
 ---
 
+**Mistake 11 — Persona Critic skipped after P1 mockup; project-state.md contradicted CLAUDE.md**
+
+What happened: The P1 mockup Builder session ended and updated `project-state.md` with "Builder: P2 mockup" as the next item (item 10), batching all Persona Critic reviews to a single item 14 ("After all patient mockups built"). This directly contradicts the CLAUDE.md rule: "Persona Critic — After **every** mockup is built." The following session (this one) opened as a Builder Agent for P2 without questioning the sequence, because it read project-state.md and followed what was written there. The user caught the error by recalling that the previous session had verbally indicated Persona Critic was next.
+
+Root cause: project-state.md is the ground truth every session reads. CLAUDE.md has the rule, but there was no enforcement mechanism — the rule relied entirely on the previous session writing project-state.md correctly. When the file contradicted the rule, the file won.
+
+Rule going forward:
+1. When a Builder session ends after completing a mockup, the next item written into `project-state.md` MUST be a Persona Critic session for that screen. Two consecutive Builder mockup sessions with no Persona Critic between them is a workflow violation.
+2. If the opening session status line shows two consecutive Builder mockup sessions with no Persona Critic between them, the agent must stop, flag the violation, correct the sequence, and ask the user before proceeding.
+3. This rule is now explicitly documented in CLAUDE.md under "Mandatory Builder → Persona Critic Sequence."
+
+How it was caught: The user remembered from the previous session that Persona Critic was declared as next, and questioned why a Builder session had been opened instead. The agent had not caught the contradiction between project-state.md and CLAUDE.md at session start.
+
+---
+
 ## 4. Standard Runbook — Building Each Screen
 
 ### Step 1: Read Before Writing

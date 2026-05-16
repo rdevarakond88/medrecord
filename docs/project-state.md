@@ -59,13 +59,17 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~7g~~ | ~~**Device test: D8 Full Scan View (re-run)**~~ | ~~DONE 2026-05-16. 18 PASS / 0 FAIL. No new bugs. Clear to merge.~~ |
 | ~~8~~ | ~~**PM pre-flight: P1–P5 Patient App**~~ | ~~DONE 2026-05-16. PROCEED with changes. Review: `reviews/P1-P5-pm-review.md`.~~ |
 | ~~9~~ | ~~**Builder: P1 mockup (Patient Login / OTP)**~~ | ~~DONE 2026-05-16. `src/screens/patient/PatientLoginScreen.tsx` + `PatientTimelineScreen.tsx` stub. Routes registered in App.tsx. Patient JWT shape documented in file header.~~ |
-| 10 | **Builder: P2 mockup (My Records Timeline)** | Elderly-friendly timeline. Text-first; thumbnails lazy-load. "Has data" + "empty state" variants required. |
-| 11 | **Builder: P3 mockup (Visit Record Detail)** | Read-only. Clean and reassuring. |
-| 12 | **Builder: P4 mockup (Doctors Who Have Access)** | Consent management. DPDP mandatory. Revoke flow must be mocked even if backend not yet live. |
-| 13 | **Builder: P5 mockup (Patient Profile)** | Settings + accessibility. Use system font scaling (allowFontScaling) — no custom toggle. |
-| 14 | **Persona Critic: P2, P3, P4, P5** | After all patient mockups built. |
-| 15 | **Backend Agent: patient-facing endpoints** | After all P mockups approved. Endpoints needed: patient JWT, patient timeline, patient record detail, patient consent list. Required before any P-screen device testing. |
-| 16 | **Device test: P1–P5 Patient App** | After backend is deployed and all screens pass Security + QA. |
+| 10 | **Persona Critic: P1 mockup (Patient Login)** | **NEXT** — Evaluate P1 before building P2. Mandatory per CLAUDE.md: Persona Critic after every mockup. |
+| 11 | **Builder: P2 mockup (My Records Timeline)** | Elderly-friendly timeline. Text-first; thumbnails lazy-load. "Has data" + "empty state" variants required. |
+| 12 | **Persona Critic: P2 mockup** | Mandatory — must run before Builder: P3. |
+| 13 | **Builder: P3 mockup (Visit Record Detail)** | Read-only. Clean and reassuring. |
+| 14 | **Persona Critic: P3 mockup** | Mandatory — must run before Builder: P4. |
+| 15 | **Builder: P4 mockup (Doctors Who Have Access)** | Consent management. DPDP mandatory. Revoke flow must be mocked even if backend not yet live. |
+| 16 | **Persona Critic: P4 mockup** | Mandatory — must run before Builder: P5. |
+| 17 | **Builder: P5 mockup (Patient Profile)** | Settings + accessibility. Use system font scaling (allowFontScaling) — no custom toggle. |
+| 18 | **Persona Critic: P5 mockup** | Mandatory — must run after Builder: P5. |
+| 19 | **Backend Agent: patient-facing endpoints** | After all P mockups approved by Persona Critic. Endpoints needed: patient JWT, patient timeline, patient record detail, patient consent list. Required before any P-screen device testing. |
+| 20 | **Device test: P1–P5 Patient App** | After backend is deployed and all screens pass Security + QA. |
 
 ---
 
