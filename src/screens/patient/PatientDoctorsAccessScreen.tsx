@@ -195,12 +195,24 @@ export default function PatientDoctorsAccessScreen() {
   }
 
   function handleGrant(id: string) {
+    const req = pendingReqs.find((r) => r.id === id);
     Alert.alert(
       'Access Allowed',
       'This doctor can now view your health records.',
       [{ text: 'OK' }],
     );
     setPendingReqs((prev) => prev.filter((r) => r.id !== id));
+    if (req) {
+      setConsents((prev) => [
+        ...prev,
+        {
+          id:          req.id,
+          doctorName:  req.doctorName,
+          clinicName:  req.clinicName,
+          accessSince: req.requestedDate,
+        },
+      ]);
+    }
   }
 
   function handleDeny(id: string) {
@@ -532,7 +544,7 @@ const styles = StyleSheet.create({
     borderColor:       '#BFDBFE',
   },
   infoNoteText: {
-    fontSize:   13,
+    fontSize:   14,
     color:      '#1E40AF',
     lineHeight: 20,
     textAlign:  'center',

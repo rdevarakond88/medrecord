@@ -187,7 +187,11 @@ export default function PatientLoginScreen() {
 
   async function handleSendOtp(isResend = false) {
     const firstDigit = parseInt(phone[0], 10);
-    if (phone.length !== 10 || firstDigit < 6) return;
+    if (phone.length !== 10) return;
+    if (firstDigit < 6) {
+      setPhoneError('Mobile numbers start with 6–9');
+      return;
+    }
 
     if (isSendingRef.current) return;
     isSendingRef.current = true;

@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — QA DONE. 0 CRITICAL, 0 HIGH, 4 MEDIUM. Builder session required before device testing.
+**Phase:** P1–P5 Patient App — QA fixes applied. Ready for device testing.
 **Last Updated:** 2026-05-16
 
 ---
@@ -27,7 +27,9 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** QA Agent — P1–P5 Patient App (2026-05-16). 0 CRITICAL, 0 HIGH, 4 MEDIUM. P1-M1: Send OTP button unresponsive on pasted invalid number. P4-M1: Grant consent removes pending card but does not add to active list. P4-M2: infoNoteText 13px below 14px minimum. P5-M1: handleLogout uses navigate instead of replace. Plus wire-step mandates M-2 (auth guards P2–P5) and M-3 (logout token clearance). Builder session required before device testing. Plan: `reviews/P1-P5-qa-test-plan.md`.
+**Last Session:** Builder Agent — P1–P5 QA fixes (2026-05-16). P1-M1: handleSendOtp now calls setPhoneError when pasted number has first digit < 6. P4-M1: handleGrant synthesises ActiveConsent from the granted request and pushes to consents state. P4-M2: infoNoteText fontSize 13→14. P5-M1: navigation.navigate→replace in handleLogout. Zero TS errors in changed files. Pushed to dev.
+
+**Previous Session:** QA Agent — P1–P5 Patient App (2026-05-16). 0 CRITICAL, 0 HIGH, 4 MEDIUM. P1-M1: Send OTP button unresponsive on pasted invalid number. P4-M1: Grant consent removes pending card but does not add to active list. P4-M2: infoNoteText 13px below 14px minimum. P5-M1: handleLogout uses navigate instead of replace. Plus wire-step mandates M-2 (auth guards P2–P5) and M-3 (logout token clearance). Builder session required before device testing. Plan: `reviews/P1-P5-qa-test-plan.md`.
 
 **Previous Session:** Security Agent — P1–P5 re-check (2026-05-16). CLEAR TO QA. C-1 ✅: auth.ts OTP log gated behind `NODE_ENV !== 'production' || TEST_OTP_BYPASS`. C-2 ✅: consent.ts else branch sanitized — no OTP/mobile in production path. H-1 ✅: IDOR guard present; actorRole from `req.auth!.role`. M-1 ✅: all three consent routes use `requireDoctorAuth`. M-4 still open (MEDIUM, low impact). Wire-step mandates M-2/M-3 deferred. Re-check: `reviews/P1-P5-security-recheck.md`.
 
@@ -147,8 +149,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~20b~~ | ~~**Builder: P1–P5 security fixes**~~ | ~~DONE 2026-05-16 — C-1, C-2, H-1, M-1 all fixed. Zero TS errors.~~ |
 | ~~20c~~ | ~~**Security re-check: P1–P5**~~ | ~~DONE 2026-05-16. CLEAR TO QA. All 4 mandatory findings verified fixed. Re-check: `reviews/P1-P5-security-recheck.md`.~~ |
 | ~~21~~ | ~~**QA: P1–P5 Patient App**~~ | ~~DONE 2026-05-16. 0 CRITICAL, 0 HIGH, 4 MEDIUM. Builder session required. Plan: `reviews/P1-P5-qa-test-plan.md`.~~ |
-| 21b | **Builder: P1–P5 QA fixes** | **NEXT** — Fix P1-M1 (send OTP paste validation), P4-M1 (grant moves to active), P4-M2 (infoNoteText 13→14px), P5-M1 (navigate→replace for logout). |
-| 22 | **Device test: P1–P5 Patient App** | After QA bugs fixed. |
+| ~~21b~~ | ~~**Builder: P1–P5 QA fixes**~~ | ~~DONE 2026-05-16 — P1-M1, P4-M1, P4-M2, P5-M1 all fixed. Pushed to dev.~~ |
+| 22 | **Device test: P1–P5 Patient App** | **NEXT** — After QA bugs fixed. Run full test plan: `reviews/P1-P5-qa-test-plan.md`. |
 
 ---
 

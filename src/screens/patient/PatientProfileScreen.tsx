@@ -271,7 +271,7 @@ export default function PatientProfileScreen() {
           style: 'destructive',
           onPress: () => {
             // Wire step: clear patient auth + expo-secure-store, navigate to PatientLogin
-            navigation.navigate('PatientLogin');
+            navigation.replace('PatientLogin');
           },
         },
       ],
