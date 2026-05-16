@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — P4 mockup (Doctors Who Have Access) COMPLETE. Next: Persona Critic: P4 mockup.
+**Phase:** P1–P5 Patient App — Persona Critic: P4 COMPLETE (Score 3.0/5, Revise and re-evaluate). Next: Builder: Apply P4 mockup revisions.
 **Last Updated:** 2026-05-16
 
 ---
@@ -24,7 +24,18 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder — P4 mockup (Doctors Who Have Access) (2026-05-16). `PatientDoctorsAccessScreen.tsx` created: active consent list, pending request card, revoke flow (Alert confirmation), bottom tab bar (My Records / Doctors / Profile). P3 SHOULD FIX items applied: P3-PC-S1 scan thumbnail redesigned as neutral doc card, P3-PC-S2 labels 11px→12px, P3-PC-S3 flag link icon added + color lifted. Routes registered in App.tsx. Zero TS errors.
+**Last Session:** Persona Critic — P4 mockup (Doctors Who Have Access) (2026-05-16). Score 3.0/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 3 SHOULD FIX. See P4 Open Critique Items. Critique: `reviews/P4-persona-critique.md`.
+
+### P4 Open Critique Items (apply before Builder: P5 mockup)
+
+| ID | Severity | Item | Status |
+|---|---|---|---|
+| P4-PC-M1 | MUST FIX | "Revoke Access" / "Grant Access" / "Deny" vocabulary opaque to elderly patients (Shantabai 2/5). Replace: "Remove Access" (revoke), "Allow" / "Don't Allow" (grant/deny). Update info note to match. | Open |
+| P4-PC-S1 | SHOULD FIX | Section labels "ACTIVE ACCESS" / "PENDING REQUESTS" are jargon. Replace with "Your Doctors" / "New Requests". | Open |
+| P4-PC-S2 | SHOULD FIX | No scope explanation on active consent cards — ambiguous what "access" covers. Add: "Can view all your health records" under each doctor card. | Open |
+| P4-PC-S3 | SHOULD FIX | "Access since" text at 13px below 14px minimum for patient/elderly audience. Increase to 14px. | Open |
+
+---
 
 ### P3 Open Critique Items (apply before Builder: P3 wire step)
 
@@ -99,7 +110,9 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~13~~ | ~~**Builder: P3 mockup (Visit Record Detail)**~~ | ~~DONE 2026-05-16 — `PatientVisitDetailScreen.tsx`. 4 states. Nav from P2 wired. Zero TS errors.~~ |
 | ~~14~~ | ~~**Persona Critic: P3 mockup**~~ | ~~DONE 2026-05-16. Score 3.8/5. Verdict: Ship as-is. 0 MUST FIX, 3 SHOULD FIX. See P3 Open Critique Items. Critique: `reviews/P3-persona-critique.md`.~~ |
 | ~~15~~ | ~~**Builder: P4 mockup (Doctors Who Have Access)**~~ | ~~DONE 2026-05-16 — `PatientDoctorsAccessScreen.tsx`. Active consent list, pending request card (Grant/Deny), revoke flow (Alert confirmation). Bottom tab bar wired P2→P4. P3-PC-S1/S2/S3 applied. Zero TS errors.~~ |
-| 16 | **Persona Critic: P4 mockup** | **NEXT** — Mandatory — must run before Builder: P5. |
+| ~~16~~ | ~~**Persona Critic: P4 mockup**~~ | ~~DONE 2026-05-16. Score 3.0/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 3 SHOULD FIX. See P4 Open Critique Items. Critique: `reviews/P4-persona-critique.md`.~~ |
+| 16b | **Builder: Apply P4 mockup revisions** | **NEXT** — Apply P4-PC-M1 (vocabulary), P4-PC-S1 (section labels), P4-PC-S2 (scope note), P4-PC-S3 (13→14px). Then Persona Critic re-evaluation. |
+| 16c | **Persona Critic: P4 re-evaluation** | Mandatory after 16b. |
 | 17 | **Builder: P5 mockup (Patient Profile)** | Settings + accessibility. Use system font scaling (allowFontScaling) — no custom toggle. |
 | 18 | **Persona Critic: P5 mockup** | Mandatory — must run after Builder: P5. |
 | 19 | **Backend Agent: patient-facing endpoints** | After all P mockups approved by Persona Critic. Endpoints needed: patient JWT, patient timeline, patient record detail, patient consent list. Required before any P-screen device testing. |
