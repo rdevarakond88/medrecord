@@ -111,9 +111,14 @@ export default function VisitDetailScreen() {
   const [isOwnVisitLive,      setIsOwnVisitLive]      = useState(isOwnVisit);
   // D4-SA-H2: session expiry banner
   const [sessionExpired,      setSessionExpired]      = useState(false);
-  const isSavingRef   = useRef(false);  // synchronous tap guard — prevents double-submit on note saves
-  const isFinishingRef = useRef(false); // D4-QA-H4: synchronous tap guard for Finish Visit
-  const viewLoggedRef  = useRef(false); // D4-SA-M2: fire logVisitViewed once per mount
+  const isSavingRef      = useRef(false);         // synchronous tap guard — prevents double-submit on note saves
+  const isFinishingRef   = useRef(false);         // D4-QA-H4: synchronous tap guard for Finish Visit
+  const viewLoggedRef    = useRef(false);         // D4-SA-M2: fire logVisitViewed once per mount
+  // D8-DT-H1: local scans (S3 deferred to v2) are never sent to the server, so visit_records
+  // never contains scan rows for locally-created visits. Cache the synthesised scan LocalRecords
+  // in a ref so note refreshes (handleSaveNote / handleEditNote / handleDeleteNote) always
+  // re-merge them — getCachedRecords only reads visit_records, which has no scan rows.
+  const localScanRowsRef = useRef<LocalRecord[]>([]);
 
   // ── Records data load ─────────────────────────────────────────
   // ALL hooks must be declared before any conditional return (D3-H-3 pattern).
@@ -156,7 +161,24 @@ export default function VisitDetailScreen() {
     try {
       // Always read from SQLite — includes locally-created pending notes
       const cached = await getCachedRecords(db, visitServerId, user.id);
-      setRecords(cached);
+      // D8-DT-H1: scan data is local-only (S3 deferred to v2) — the server never
+      // creates visit_records rows of type 'scan'. Fetch from the scans table and
+      // synthesise LocalRecord entries so D4 renders the "View full image →" row
+      // and handleViewScan can match them positionally via getScansForServerVisit.
+      const localScans = await getScansForServerVisit(db, visitServerId, user.id);
+      const scanRows: LocalRecord[] = localScans.map((s) => ({
+        id:              s.id,
+        local_id:        s.id,
+        visit_id:        visitServerId,
+        type:            'scan' as const,
+        content_text:    null,
+        ocr_status:      'deferred',
+        created_by_name: user.name,
+        created_at:      s.createdAt,
+        sync_status:     'pending' as const,
+      }));
+      localScanRowsRef.current = scanRows;
+      setRecords([...cached, ...scanRows]);
 
       // D4-SA-H1: re-read consent from SQLite to catch revocations that happened
       // while D4 was open (nav param is the initial signal only, not the live gate)
@@ -251,7 +273,7 @@ export default function VisitDetailScreen() {
       setIsSaving(false);
       try {
         const updated = await getCachedRecords(db, visitServerId, user.id);
-        setRecords(updated);
+        setRecords([...updated, ...localScanRowsRef.current]);
       } catch {
         // SQLite read failure — display is stale but tap guard is cleared
       }
@@ -262,7 +284,7 @@ export default function VisitDetailScreen() {
   const handleEditNote = useCallback(async (recordId: string, newText: string) => {
     await updateLocalNoteText(db, recordId, newText, user?.id ?? '');
     const updated = await getCachedRecords(db, visitServerId, user?.id ?? '');
-    setRecords(updated);
+    setRecords([...updated, ...localScanRowsRef.current]);
   }, [db, visitServerId, user]);
 
   // ── Delete note handler ───────────────────────────────────────
@@ -279,7 +301,7 @@ export default function VisitDetailScreen() {
             // Soft-delete locally — server is append-only (data model decision)
             await deleteLocalRecord(db, recordId, user?.id ?? '');
             const updated = await getCachedRecords(db, visitServerId, user?.id ?? '');
-            setRecords(updated);
+            setRecords([...updated, ...localScanRowsRef.current]);
           },
         },
       ],

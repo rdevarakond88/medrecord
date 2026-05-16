@@ -111,16 +111,16 @@ export async function getScansForServerVisit(
   db: SQLite.SQLiteDatabase,
   serverVisitId: string,
   doctorId: string,
-): Promise<Array<{ id: string; localPath: string; label: string }>> {
-  const rows = await db.getAllAsync<{ id: string; local_path: string; label: string }>(
-    `SELECT s.id, s.local_path, s.label
+): Promise<Array<{ id: string; localPath: string; label: string; createdAt: string }>> {
+  const rows = await db.getAllAsync<{ id: string; local_path: string; label: string; created_at: string }>(
+    `SELECT s.id, s.local_path, s.label, s.created_at
      FROM scans s
      INNER JOIN visits_draft vd ON s.visit_local_id = vd.local_id
      WHERE vd.server_id = ? AND s.doctor_id = ?
      ORDER BY s.created_at ASC`,
     [serverVisitId, doctorId],
   );
-  return rows.map((r) => ({ id: r.id, localPath: r.local_path, label: r.label }));
+  return rows.map((r) => ({ id: r.id, localPath: r.local_path, label: r.label, createdAt: r.created_at }));
 }
 
 /**
