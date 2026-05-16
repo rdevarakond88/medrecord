@@ -244,12 +244,13 @@ function RecordRow({ record }: { record: VisitRecord }) {
 }
 
 interface VisitCardProps {
-  entry:     VisitEntry;
-  expanded:  boolean;
-  onToggle:  () => void;
+  entry:          VisitEntry;
+  expanded:       boolean;
+  onToggle:       () => void;
+  onViewDetails:  () => void;
 }
 
-function VisitCard({ entry, expanded, onToggle }: VisitCardProps) {
+function VisitCard({ entry, expanded, onToggle, onViewDetails }: VisitCardProps) {
   const scanCount  = entry.records.filter((r) => r.type === 'scan').length;
   const noteCount  = entry.records.filter((r) => r.type === 'note').length;
   const countParts: string[] = [];
@@ -302,6 +303,14 @@ function VisitCard({ entry, expanded, onToggle }: VisitCardProps) {
           {entry.records.map((record) => (
             <RecordRow key={record.id} record={record} />
           ))}
+          <TouchableOpacity
+            style={styles.viewDetailsBtn}
+            onPress={onViewDetails}
+            accessibilityRole="button"
+            accessibilityLabel={`View full details for visit on ${entry.date}`}
+          >
+            <Text style={styles.viewDetailsBtnText}>View full details →</Text>
+          </TouchableOpacity>
         </View>
       )}
     </TouchableOpacity>
@@ -325,7 +334,7 @@ function EmptyState() {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PatientTimelineScreen() {
-  useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [filter,       setFilter]       = useState<FilterOption>('all');
   const [expandedId,   setExpandedId]   = useState<string | null>(null);
@@ -338,6 +347,15 @@ export default function PatientTimelineScreen() {
     setExpandedId((prev) => (prev === id ? null : id));
   }
 
+  function handleViewDetails(entry: VisitEntry) {
+    navigation.navigate('PatientVisitDetail', {
+      visitId:    entry.id,
+      date:       entry.date,
+      doctorName: entry.doctorName,
+      clinicName: entry.clinicName,
+    });
+  }
+
   function renderItem({ item }: { item: ListItem }) {
     if (item.kind === 'year_header')  return <YearHeader year={item.year} />;
     if (item.kind === 'group_header') return <GroupHeader label={item.label} />;
@@ -346,6 +364,7 @@ export default function PatientTimelineScreen() {
         entry={item.entry}
         expanded={expandedId === item.entry.id}
         onToggle={() => handleToggle(item.entry.id)}
+        onViewDetails={() => handleViewDetails(item.entry)}
       />
     );
   }
@@ -668,6 +687,17 @@ const styles = StyleSheet.create({
     color:      Colors.textSecondary,
     lineHeight: 20,
     paddingTop: 2,
+  },
+  viewDetailsBtn: {
+    alignSelf:      'flex-start',
+    marginTop:      Spacing.sm,
+    minHeight:      44,
+    justifyContent: 'center',
+  },
+  viewDetailsBtnText: {
+    fontSize:   14,
+    fontWeight: '600',
+    color:      Colors.primaryBlue,
   },
 
   // ── Empty state

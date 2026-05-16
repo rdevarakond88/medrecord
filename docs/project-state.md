@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Persona Critic — P2 re-evaluation (2026-05-16). Score 4.1/5 (up from 3.0/5). Verdict: Ship as-is. All 5 v1 critique items confirmed closed. No new MUST FIX or SHOULD FIX. Critique: `reviews/P2-persona-critique-v2.md`.
+**Last Session:** Builder — P3 mockup (Visit Record Detail) (2026-05-16). `PatientVisitDetailScreen.tsx` created. 4 demo states: normal, scan pending OCR, scan OCR failed, note only. Navigation wired from P2 expanded card → P3. Registered in App.tsx. Zero TS errors in new files.
 
 ### P2 Open Critique Items (apply before Builder: P3 session)
 
@@ -86,8 +86,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~12~~ | ~~**Persona Critic: P2 mockup**~~ | ~~DONE 2026-05-16. Score 3.0/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 4 SHOULD FIX. See P2 Open Critique Items. Critique: `reviews/P2-persona-critique.md`.~~ |
 | ~~12b~~ | ~~**Builder: Apply P2 mockup revisions**~~ | ~~DONE 2026-05-16 — all 5 critique items applied. See last session note.~~ |
 | ~~12c~~ | ~~**Persona Critic: P2 re-evaluation**~~ | ~~DONE 2026-05-16. Score 4.1/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P2-persona-critique-v2.md`.~~ |
-| 13 | **Builder: P3 mockup (Visit Record Detail)** | **NEXT** — Read-only. Clean and reassuring. |
-| 14 | **Persona Critic: P3 mockup** | Mandatory — must run before Builder: P4. |
+| ~~13~~ | ~~**Builder: P3 mockup (Visit Record Detail)**~~ | ~~DONE 2026-05-16 — `PatientVisitDetailScreen.tsx`. 4 states. Nav from P2 wired. Zero TS errors.~~ |
+| 14 | **Persona Critic: P3 mockup** | **NEXT** — Mandatory before Builder: P4. |
 | 15 | **Builder: P4 mockup (Doctors Who Have Access)** | Consent management. DPDP mandatory. Revoke flow must be mocked even if backend not yet live. |
 | 16 | **Persona Critic: P4 mockup** | Mandatory — must run before Builder: P5. |
 | 17 | **Builder: P5 mockup (Patient Profile)** | Settings + accessibility. Use system font scaling (allowFontScaling) — no custom toggle. |
