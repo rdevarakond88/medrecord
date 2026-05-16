@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — Builder: P5 revisions COMPLETE. All 4 critique items applied. Next: Persona Critic: P5 re-evaluation.
+**Phase:** P1–P5 Patient App — Persona Critic: P5 re-evaluation COMPLETE. Score 3.64/5, Ship as-is. Next: Backend Agent — patient-facing endpoints.
 **Last Updated:** 2026-05-16
 
 ---
@@ -24,7 +24,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder — P5 mockup revisions (2026-05-16). All 4 critique items applied: P5-PC-M1 (keyboardType "default" + auto-insert "/" after DD and MM digits), P5-PC-S1 (LANGUAGE_NATIVE map — native scripts shown in modal and picker row), P5-PC-S2 (textSizeNote 13→14px), P5-PC-S3 (infoHint + editHint 12→13px). Zero TS errors.
+**Last Session:** Persona Critic — P5 re-evaluation (2026-05-16). Score 3.64/5. Verdict: Ship as-is. All 4 v1 critique items confirmed resolved. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P5-persona-critique-v2.md`.
 
 ### P5 Open Critique Items (apply before Persona Critic re-evaluation)
 
@@ -128,8 +128,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~17~~ | ~~**Builder: P5 mockup (Patient Profile)**~~ | ~~DONE 2026-05-16 — `PatientProfileScreen.tsx`. Viewing + editing states, language modal, text-size info row. P4-PC-v2-S1 + P1-PC-S1/S2/S3 applied. Tab bars wired. App.tsx registered. Zero TS errors.~~ |
 | ~~18~~ | ~~**Persona Critic: P5 mockup**~~ | ~~DONE 2026-05-16. Score 3.2/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 3 SHOULD FIX. See P5 Open Critique Items. Critique: `reviews/P5-persona-critique.md`.~~ |
 | ~~18b~~ | ~~**Builder: Apply P5 mockup revisions**~~ | ~~DONE 2026-05-16 — P5-PC-M1 (keyboardType default + auto-slash), P5-PC-S1 (LANGUAGE_NATIVE bilingual labels), P5-PC-S2 (textSizeNote 14px), P5-PC-S3 (infoHint/editHint 13px). Zero TS errors.~~ |
-| 18c | **Persona Critic: P5 re-evaluation** | **NEXT** — After Builder applies all P5 critique items. |
-| 19 | **Backend Agent: patient-facing endpoints** | After all P mockups approved by Persona Critic. Endpoints needed: patient JWT, patient timeline, patient record detail, patient consent list. Required before any P-screen device testing. |
+| ~~18c~~ | ~~**Persona Critic: P5 re-evaluation**~~ | ~~DONE 2026-05-16. Score 3.64/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P5-persona-critique-v2.md`.~~ |
+| 19 | **Backend Agent: patient-facing endpoints** | **NEXT** — All P1–P5 mockups approved by Persona Critic. Endpoints needed: patient JWT, patient timeline, patient record detail, patient consent list. Required before any P-screen device testing. |
 | 20 | **Device test: P1–P5 Patient App** | After backend is deployed and all screens pass Security + QA. |
 
 ---
