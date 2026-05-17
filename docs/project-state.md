@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — DT-B1 fixed. Ready for device testing re-run (22c).
+**Phase:** P1–P5 Patient App — Device testing COMPLETE (22c). 54/54 PASS, 0 bugs. Clear to merge to main.
 **Last Updated:** 2026-05-16
 
 ---
@@ -27,7 +27,9 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — DT-B1 fix (2026-05-16). Added `__DEV__`-gated "Patient App →" button to doctor's LoginScreen demo block; `navigation.navigate('PatientLogin')`. Zero new TS errors. Pushed to dev.
+**Last Session:** Device Tester — P1–P5 Patient App (22c complete, 2026-05-16). 54/54 PASS, 0 FAIL, 0 bugs. All deferred tests from prior sub-session completed. Session: `reviews/P1-P5-device-test-session.md`. Clear to merge to main.
+
+**Previous Session:** Builder Agent — DT-B1 fix (2026-05-16). Added `__DEV__`-gated "Patient App →" button to doctor's LoginScreen demo block; `navigation.navigate('PatientLogin')`. Zero new TS errors. Pushed to dev.
 
 **Previous Session:** Device Tester — P1–P5 Patient App (2026-05-16). BLOCKED before first test case. DT-B1: no dev nav entry point to PatientLogin — doctor's LoginScreen has no `__DEV__` button to navigate to PatientLogin; all 54 test cases blocked. Builder session required to fix DT-B1, then restart device testing. Session doc: `reviews/P1-P5-device-test-session.md`.
 
@@ -156,7 +158,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~21b~~ | ~~**Builder: P1–P5 QA fixes**~~ | ~~DONE 2026-05-16 — P1-M1, P4-M1, P4-M2, P5-M1 all fixed. Pushed to dev.~~ |
 | ~~22~~ | ~~**Device test: P1–P5 Patient App**~~ | ~~BLOCKED 2026-05-16 — DT-B1: no dev nav entry point to PatientLogin. 0/54 tests run. Session: `reviews/P1-P5-device-test-session.md`.~~ |
 | ~~22b~~ | ~~**Builder: fix DT-B1**~~ | ~~DONE 2026-05-16 — "Patient App →" button added to `__DEV__` demo block in LoginScreen.tsx; navigates to PatientLogin. Zero new TS errors.~~ |
-| 22c | **Device test: P1–P5 Patient App (re-run)** | **NEXT** — After DT-B1 fixed. Run full test plan from scratch: `reviews/P1-P5-qa-test-plan.md`. |
+| ~~22c~~ | ~~**Device test: P1–P5 Patient App (re-run)**~~ | ~~DONE 2026-05-16. 54/54 PASS, 0 FAIL, 0 bugs. Clear to merge. Session: `reviews/P1-P5-device-test-session.md`.~~ |
 
 ---
 
