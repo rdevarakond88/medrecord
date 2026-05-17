@@ -634,6 +634,15 @@ export default function LoginScreen({
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {/* DT-B1 fix: nav entry point to Patient App for device testing */}
+              <TouchableOpacity
+                style={styles.patientNavBtn}
+                onPress={() => navigation.navigate('PatientLogin')}
+                accessibilityLabel="Go to Patient App"
+              >
+                <Text style={styles.patientNavBtnText}>Patient App →</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -907,5 +916,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
+  },
+
+  // DT-B1 fix: patient app nav entry point
+  patientNavBtn: {
+    marginTop: Spacing.sm,
+    backgroundColor: '#1D4ED8',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  patientNavBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
