@@ -294,9 +294,9 @@ _Carry these into every build/mockup session for these screens._
 | Item | Screen | Source | Notes |
 |---|---|---|---|
 | ~~**D4-QA-M1:** Consent banner in meta card reads stale `consentGranted` nav param, not `consentGrantedLive`.~~ | D4 | D4 QA test plan | **CLOSED 2026-04-19** — `!consentGranted` → `!consentGrantedLive`. |
-| **D4-QA-M2:** `upsertRecordsFromServer` iterates records with `for...of` and runs one `db.runAsync` per row without a transaction wrapper. App killed mid-loop leaves visit_records partially updated. Self-healing on next server fetch. Fix: wrap loop in `db.withTransactionAsync()`. | D4 | D4 QA test plan | `src/db/records.ts:78-94` |
-| **D4-QA-M3:** Soft-deleted pending note reappears after next server refresh — `upsertRecordsFromServer` conflict clause `WHERE sync_status != 'pending'` allows overwriting `sync_status='deleted'` rows. Existing debt documented in `records.ts:183`. Fix deferred pending DELETE /records/:id backend implementation. | D4 | D4 QA test plan (existing debt) | `src/db/records.ts:183` |
-| **D4-QA-M4:** `handleFinishVisit` does not update `visits.record_count` after PATCH succeeds. D3 visit list shows pre-finish record count until next full `getPatientVisits` fetch. | D4 | D4 QA test plan | `VisitDetailScreen.tsx:274-276` |
+| **D4-QA-M2:** `upsertRecordsFromServer` iterates records with `for...of` and runs one `db.runAsync` per row without a transaction wrapper. App killed mid-loop leaves visit_records partially updated. Self-healing on next server fetch. Fix: wrap loop in `db.withTransactionAsync()`. | D4 | D4 QA test plan | `src/db/records.ts:78-94` — **Not fixed: only triggers on app crash mid-refresh, self-heals on next open. Not reproducible in a demo or stable-connectivity environment. Accepted as v2 debt — project completed as a learning exercise before reaching production hardening.** |
+| **D4-QA-M3:** Soft-deleted pending note reappears after next server refresh — `upsertRecordsFromServer` conflict clause `WHERE sync_status != 'pending'` allows overwriting `sync_status='deleted'` rows. Existing debt documented in `records.ts:183`. Fix deferred pending DELETE /records/:id backend implementation. | D4 | D4 QA test plan (existing debt) | `src/db/records.ts:183` — **Not fixed: requires a DELETE /records/:id backend endpoint that was never built. This is the one item that would affect a real user (deleted notes reappear after sync). Accepted as v2 debt — fixing it requires a backend change outside the scope of the v1 learning exercise.** |
+| **D4-QA-M4:** `handleFinishVisit` does not update `visits.record_count` after PATCH succeeds. D3 visit list shows pre-finish record count until next full `getPatientVisits` fetch. | D4 | D4 QA test plan | `VisitDetailScreen.tsx:274-276` — **Not fixed: cosmetic stale display only; correct count shown after navigate-away-and-back. No data is wrong, just the count badge. Accepted as v2 debt — below threshold for blocking the merge.** |
 
 ### CRITICAL — D4 live screen security audit (2026-04-19) — MUST FIX before QA
 
@@ -373,20 +373,20 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D8-SA-M1:** No `scan_viewed` audit event when doctor opens D8. `security-spec.md` lists "Image downloaded" as auditable. D4 emits `logVisitViewed` at visit-level; no event covers individual scan image access. Patients cannot request a complete access log without this. Fix: add `logScanViewed()` to `src/db/scans.ts`; call in `handleViewScan` (VisitDetailScreen.tsx:302) before navigating. | D8 | D8 security audit | `src/screens/doctor/VisitDetailScreen.tsx:302`, `src/db/scans.ts` |
+| **D8-SA-M1:** No `scan_viewed` audit event when doctor opens D8. `security-spec.md` lists "Image downloaded" as auditable. D4 emits `logVisitViewed` at visit-level; no event covers individual scan image access. Patients cannot request a complete access log without this. Fix: add `logScanViewed()` to `src/db/scans.ts`; call in `handleViewScan` (VisitDetailScreen.tsx:302) before navigating. | D8 | D8 security audit | `src/screens/doctor/VisitDetailScreen.tsx:302`, `src/db/scans.ts` — **Not fixed: DPDP compliance gap, not a functional bug. Only matters in a regulated production deployment where patients request access logs. No real patients exist in this project. Accepted as v2 debt.** |
 
 ### LOW — D8 live screen security audit (2026-05-12) — backlog
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D8-SA-L1:** `resolveScanPath()` null-path fallback: `(FileSystem.documentDirectory ?? '') + relativePath` produces an invalid relative URI if `documentDirectory` is null. Results in a broken image — not a security risk. Not observed in Expo SDK 54 practice. | D8 | D8 security audit | `src/db/scans.ts:39` |
+| **D8-SA-L1:** `resolveScanPath()` null-path fallback: `(FileSystem.documentDirectory ?? '') + relativePath` produces an invalid relative URI if `documentDirectory` is null. Results in a broken image — not a security risk. Not observed in Expo SDK 54 practice. | D8 | D8 security audit | `src/db/scans.ts:39` — **Not fixed: theoretical edge case that has never been observed in Expo SDK 54. No runtime impact in practice. Accepted as v2 debt.** |
 
 ### MEDIUM — Pre-v1 launch (identified in security re-audits 2026-04-11)
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **D3-M-2:** `logConsentAccess()` fires on every screen focus and every background sync completion — generates multiple `consent_accessed` audit events per clinical encounter. Audit log inflation, not data exposure. | D3 | Security audit v2 2026-04-11 | Add `consentLoggedRef` to fire once per `patientLocalId` open; reset on unmount. Fix before v1 launch. |
-| **D6-M-new-1:** `syncLogger.ts` and all call sites in `NewVisitScreen.tsx` write to `console.log` with no `__DEV__` guard — active in production builds. File header explicitly flags removal after BUG-D3-DT8-1 resolved. UUIDs only, no patient PII. | D6 | Security audit v3 2026-04-11 | Remove `src/sync/syncLogger.ts` + call sites in `NewVisitScreen.tsx` lines 64, 342, 344, 368, 372. Also check `syncWorker.ts` and `useSyncWorker.ts`. Fix before v1 launch. |
+| **D3-M-2:** `logConsentAccess()` fires on every screen focus and every background sync completion — generates multiple `consent_accessed` audit events per clinical encounter. Audit log inflation, not data exposure. | D3 | Security audit v2 2026-04-11 | Add `consentLoggedRef` to fire once per `patientLocalId` open; reset on unmount. Fix before v1 launch. — **Not fixed: noisy audit data, not a security or functional risk. Too many events rather than too few. Accepted as v2 debt — project completed before production hardening was reached.** |
+| **D6-M-new-1:** `syncLogger.ts` and all call sites in `NewVisitScreen.tsx` write to `console.log` with no `__DEV__` guard — active in production builds. File header explicitly flags removal after BUG-D3-DT8-1 resolved. UUIDs only, no patient PII. | D6 | Security audit v3 2026-04-11 | ~~**RESOLVED 2026-05-10 (Step 25)** — `syncLogger.ts` deleted; all call sites removed. Verified complete 2026-05-16.~~ |
 
 ### HIGH — Fix before D3 build
 
@@ -516,9 +516,9 @@ _Carry these into every build/mockup session for these screens._
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
-| **LOW-1:** `queueOcrAsync` receives `absolutePath` parameter — when OCR is wired in v2, developer may use the passed absolute path instead of reading `scans.local_path` + `resolveScanPath()`, reintroducing KFM-3 path drift | D7 | D7 security audit v2 | Rename stub parameter to `_scanId`; document that OCR worker must query `scans` table and call `resolveScanPath()`. |
-| **LOW-2:** `user?.id ?? ''` fallback at lines 262/266/282/287 is dead code after auth guard — if guard is bypassed by future refactor, scans land in unscoped `{documentDirectory}/scans/` root | D7 | D7 security audit v2 | Extract `const doctorId = user.id` at top of `handleUseThis`; assert non-empty; replace all `user?.id ?? ''` uses. |
-| **LOW-3:** `sanitizeOcrText` regex does not cover non-breaking space (`\u00A0`) between Aadhaar digit groups — inherited from mockup audit LOW-2 | D7 | D7 security audit v1 LOW-2 | Change `\s?` to `[\s\u00A0]*`. Fix before OCR is wired. |
+| **LOW-1:** `queueOcrAsync` receives `absolutePath` parameter — when OCR is wired in v2, developer may use the passed absolute path instead of reading `scans.local_path` + `resolveScanPath()`, reintroducing KFM-3 path drift | D7 | D7 security audit v2 | Rename stub parameter to `_scanId`; document that OCR worker must query `scans` table and call `resolveScanPath()`. — **Not fixed: OCR is a stub — this code never runs. A note for the v2 developer who wires OCR. Zero runtime impact today.** |
+| **LOW-2:** `user?.id ?? ''` fallback at lines 262/266/282/287 is dead code after auth guard — if guard is bypassed by future refactor, scans land in unscoped `{documentDirectory}/scans/` root | D7 | D7 security audit v2 | Extract `const doctorId = user.id` at top of `handleUseThis`; assert non-empty; replace all `user?.id ?? ''` uses. — **Not fixed: dead code after the auth guard — unreachable in current code. No runtime impact. Accepted as v2 debt.** |
+| **LOW-3:** `sanitizeOcrText` regex does not cover non-breaking space (`\u00A0`) between Aadhaar digit groups — inherited from mockup audit LOW-2 | D7 | D7 security audit v1 LOW-2 | Change `\s?` to `[\s\u00A0]*`. Fix before OCR is wired. — **Not fixed: OCR is not wired — this function never runs on real data. Only relevant when OCR is built in v2. Zero runtime impact today.** |
 
 ### SHOULD FIX — D7 persona critique (before live build)
 
@@ -583,14 +583,14 @@ _Carry these into every build/mockup session for these screens._
 | Item | Screen | Source | Notes |
 |---|---|---|---|
 | ~~**SW-M-1:** Audit events never flush when `sync_queue` is empty. `batchSucceeded` gate prevents the flush in read-only sessions (e.g., doctor only views records, no new visits). DPDP §8 requires server-side audit trail for access events.~~ | Sync Worker | Security audit M-1 | **CLOSED 2026-03-13** — `if (batchSucceeded)` gate removed; `flushAuditEvents` called unconditionally and returns immediately if nothing to flush. |
-| **SW-M-2:** `hasResetInProgress` module-level flag is never reset on doctor change. If Doctor B logs in within the same app process lifetime, the in_progress startup cleanup does not run for their first sync session. | Sync Worker | Security audit M-2 | Reset `hasResetInProgress` in the `useLogout` sequence, or tie it to a session counter in `useAuthStore`. |
+| **SW-M-2:** `hasResetInProgress` module-level flag is never reset on doctor change. If Doctor B logs in within the same app process lifetime, the in_progress startup cleanup does not run for their first sync session. | Sync Worker | Security audit M-2 | Reset `hasResetInProgress` in the `useLogout` sequence, or tie it to a session counter in `useAuthStore`. — **Not fixed: only affects multi-doctor shared devices where two doctors log in without force-quitting the app — an uncommon scenario even in production. No data loss, just a skipped cleanup on first sync. Accepted as v2 debt.** |
 
 ### LOW — Sync worker security audit
 
 | Item | Screen | Source | Notes |
 |---|---|---|---|
 | ~~**SW-L-1 / D1-SA2-L-1:** `ACCESS_TOKEN_KEY` exported in `constants.ts` but unused — ambiguity about access token persistence.~~ | `src/auth/constants.ts` | Security audit v2 L-1 | **CLOSED 2026-03-16** — constant removed; replaced with a comment block explicitly stating access token is in-memory Zustand only and must not be stored. |
-| **SW-L-2:** Mid-sync logout does not abort the in-flight run. The `?? currentToken` fallback on token re-read means `clearAuth()` during a sync run does not stop the current batch. | Sync Worker | Security audit L-2 | Remove the `?? currentToken` fallback; treat null token mid-run as an abort signal. |
+| **SW-L-2:** Mid-sync logout does not abort the in-flight run. The `?? currentToken` fallback on token re-read means `clearAuth()` during a sync run does not stop the current batch. | Sync Worker | Security audit L-2 | Remove the `?? currentToken` fallback; treat null token mid-run as an abort signal. — **Not fixed: the in-flight batch completes correctly and data goes where it should — logout just doesn't interrupt it. No data corruption or security breach. Accepted as v2 debt.** |
 
 ### MUST FIX — D1 persona critique (all closed 2026-03-16)
 
