@@ -35,7 +35,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Step 26 closed (2026-05-17). EAS build permanently skipped — Apple Developer Program membership ($99/year) not purchased. Project purpose is learning agent orchestration, not App Store publication. App is fully functional via Expo Go. Project is COMPLETE.
+**Last Session:** Workflow update (2026-05-17). Integration Tester agent created (`agents/agent-integration-tester.md`). CLAUDE.md and AGENT_ORCHESTRATION.md updated to include Step 12. Mistake 14 documented in LESSONS-AND-RUNBOOK.md. Next: Integration Tester session (Step 27) — run 7 connected doctor-patient scenarios to validate the full end-to-end loop before declaring the project functionally complete.
 
 **Previous Session:** Builder Agent — Step 25 (2026-05-16). Verified syncLogger.ts already removed (done 2026-05-10). No code changes required. project-state.md updated.
 
@@ -179,6 +179,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~24~~ | ~~**Merge dev → main**~~ | ~~DONE 2026-05-16 — PR #5 merged. Merge commit: f7936ee. All 14 screens live on main.~~ |
 | ~~25~~ | ~~**Builder: remove syncLogger.ts**~~ | ~~Already removed 2026-05-10. Step 25 verified complete 2026-05-16.~~ |
 | ~~**26**~~ | ~~**EAS build + cert pinning validation**~~ | ~~PERMANENTLY SKIPPED 2026-05-17 — Apple Developer Program membership ($99/year) required for EAS iOS builds. Owner chose not to purchase; project purpose is learning agent orchestration, not App Store publication. App is fully functional via Expo Go.~~ |
+| **27** | **Integration Tester — connected doctor-patient scenarios** | All 14 screens individually device tested. This step validates the full end-to-end loop: doctor actions that should produce visible effects on patient screens, and patient actions that should change what the doctor sees. 7 scenarios. Start dev server (`npm start`), then start Integration Tester session. |
 
 ---
 
