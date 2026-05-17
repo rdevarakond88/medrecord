@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** ALL SCREENS COMPLETE — PM Agent Moment 2 sign-off required before merge to main.
+**Phase:** PM MOMENT 2 COMPLETE — CLEAR TO MERGE dev → main. Pre-pilot conditions documented (EAS build, syncLogger removal, solo-doctor pilot selection).
 **Last Updated:** 2026-05-16
 
 ---
@@ -22,12 +22,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Patient endpoints | POST /auth/send-otp (role:"patient") + POST /auth/verify-otp → patient JWT. GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond. |
 | Consent endpoints | POST /consent/request → HTTP 401 ✅. POST /consent/verify → HTTP 401 ✅. POST /consent/pending-request → async patient-app flow. |
-| Next action | PM Agent — Moment 2 post-flow sign-off (all screens complete). |
+| Next action | Merge dev → main. Then: EAS build (delete empty ascAppId/appleTeamId from eas.json → eas init → eas build), syncLogger.ts removal (Builder session), pilot clinic selection (solo-doctor). |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Analysis session (2026-05-16). Confirmed all D1–D9 doctor screens and P1–P5 patient screens are device-tested and clear to merge. D8 "Screens Pending" table entry was stale (sessions 7e–7g completed QA + device testing). PM Agent Moment 2 sign-off identified as the missing step before merge to main.
+**Last Session:** PM Agent — Moment 2 post-flow review (2026-05-16). CLEAR TO MERGE dev → main. Overall: Strong. Key risks: consent OTP friction (solo-doctor pilot recommended), no patient app discovery path (v1.1), EAS cert pinning not yet validated (pre-pilot blocker), syncLogger.ts still active (pre-pilot Builder session required). Review: `reviews/all-screens-pm-review-moment2.md`.
 
 **Previous Session:** Device Tester — P1–P5 Patient App (22c complete, 2026-05-16). 54/54 PASS, 0 FAIL, 0 bugs. All deferred tests from prior sub-session completed. Session: `reviews/P1-P5-device-test-session.md`. Clear to merge to main.
 
@@ -161,7 +161,10 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~22~~ | ~~**Device test: P1–P5 Patient App**~~ | ~~BLOCKED 2026-05-16 — DT-B1: no dev nav entry point to PatientLogin. 0/54 tests run. Session: `reviews/P1-P5-device-test-session.md`.~~ |
 | ~~22b~~ | ~~**Builder: fix DT-B1**~~ | ~~DONE 2026-05-16 — "Patient App →" button added to `__DEV__` demo block in LoginScreen.tsx; navigates to PatientLogin. Zero new TS errors.~~ |
 | ~~22c~~ | ~~**Device test: P1–P5 Patient App (re-run)**~~ | ~~DONE 2026-05-16. 54/54 PASS, 0 FAIL, 0 bugs. Clear to merge. Session: `reviews/P1-P5-device-test-session.md`.~~ |
-| **23** | **PM Agent — Moment 2 sign-off (all screens)** | All D1–D9 doctor screens and P1–P5 patient screens are device-tested and clear. PM Agent must run Moment 2 post-flow review before merge to main. No merge until PM sign-off is recorded here. |
+| ~~23~~ | ~~**PM Agent — Moment 2 sign-off (all screens)**~~ | ~~DONE 2026-05-16. CLEAR TO MERGE. Overall: Strong. Pre-pilot conditions: EAS build + cert pinning, syncLogger.ts removal, solo-doctor pilot selection. Review: `reviews/all-screens-pm-review-moment2.md`.~~ |
+| **24** | **Merge dev → main** | PM Moment 2 complete. All 14 screens device-tested, zero open bugs. Create PR and merge. |
+| **25** | **Builder: remove syncLogger.ts** | D6-M-new-1 — remove `src/sync/syncLogger.ts` + all call sites before EAS build ships. |
+| **26** | **EAS build + cert pinning validation** | Delete empty `ascAppId`/`appleTeamId` from eas.json → `eas init` → `eas build --profile preview --platform ios` → validate cert pinning active on device. |
 
 ---
 
