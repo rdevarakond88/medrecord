@@ -37,7 +37,6 @@ import {
 import { clearDoctorScans, clearDoctorScanRecords } from '../db/scans';
 import { clearDoctorRecords } from '../db/records';
 import { clearDoctorSyncQueue } from '../sync/syncQueue';
-import { syncLog } from '../sync/syncLogger';
 
 export function useLogout(): () => Promise<void> {
   const db          = useSQLiteContext();
@@ -74,7 +73,6 @@ export function useLogout(): () => Promise<void> {
       const sqCount = sqResult?.count ?? 0;
 
       const totalUnsynced = Math.max(pendingCount, sqCount);
-      syncLog(`M-6 check: visits_draft=${pendingCount} sync_queue=${sqCount} total=${totalUnsynced}`);
 
       if (totalUnsynced > 0) {
         const confirmed = await new Promise<boolean>((resolve) => {

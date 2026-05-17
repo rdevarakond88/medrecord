@@ -9,6 +9,7 @@ import visitsRouter  from './routes/visits';
 import recordsRouter from './routes/records';
 import consentRouter from './routes/consent';
 import syncRouter    from './routes/sync';
+import patientRouter from './routes/patient';
 
 const app  = express();
 const PORT = process.env.PORT ?? 3000;
@@ -33,6 +34,7 @@ app.use('/v1', visitsRouter);
 app.use('/v1', recordsRouter);
 app.use('/v1', consentRouter);
 app.use('/v1', syncRouter);
+app.use('/v1', patientRouter);
 
 // 404
 app.use((_req, res) => {

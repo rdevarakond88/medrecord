@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** POST-D9. All 8 core doctor-facing screens complete and device-tested (D1, D2, D3, D4, D5, D6, D7, D9). PM Agent Moment 2 + Moment 3 complete (2026-05-10). D9 PR created and merged to main. Pre-launch conditions identified: (1) EAS build + cert pinning validation, (2) patient mobile edit (D3 stub → working form), (3) remove syncLogger, (4) D5-M-1 UNIQUE constraint fix. Next: Builder sessions for pre-launch conditions, then EAS build smoke test.
-**Last Updated:** 2026-05-10
+**Phase:** PM MOMENT 2 COMPLETE — CLEAR TO MERGE dev → main. Pre-pilot conditions documented (EAS build, syncLogger removal, solo-doctor pilot selection).
+**Last Updated:** 2026-05-16
 
 ---
 
@@ -12,28 +12,159 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 |---|---|
 | API base URL (live) | `https://medrecord-api.onrender.com/v1` |
 | API base URL (frontend hardcoded) | `https://medrecord-api.onrender.com/v1` ✅ — updated 2026-03-18 |
-| Deployment status | **UP** — HTTP 200 confirmed 2026-05-10. Render cold-starts on first request (~20-30s); use 30s curl timeout for pre-flight. |
+| Deployment status | **UP** — HTTP 200 confirmed 2026-05-16 21:27 UTC. Patient-facing endpoints LIVE (GET /patient/profile → HTTP 401 confirmed). Render cold-starts on first request (~20-30s); use 60s curl timeout for pre-flight. |
 | Hosting provider | Render.com — service: `medrecord-api`, DB: `medrecord-db` |
-| Health check | `curl --max-time 30 https://medrecord-api.onrender.com/v1/health` → HTTP 200 ✅ (2026-05-10) |
+| Health check | `curl --max-time 60 https://medrecord-api.onrender.com/v1/health` → HTTP 200 ✅ (2026-05-16) |
 | Test doctor name | Dr. Test Doctor |
-| Test mobile number | `9999999999` |
+| Test doctor mobile | `9999999999` |
+| Test patient name | Priya Sharma |
+| Test patient mobile | `8888888888` |
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
-| Consent endpoints | `POST /consent/request` → HTTP 401 ✅ (2026-05-10). `POST /consent/verify` → HTTP 401 ✅ (2026-05-10). Blocker cleared. |
-| Next action | POST-D9 — PM Moment 2 + Moment 3 complete (2026-05-10). D9 merged to main. Next: Builder sessions for pre-launch conditions (see Recommended Next Session Order). |
+| Patient endpoints | POST /auth/send-otp (role:"patient") + POST /auth/verify-otp → patient JWT. GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond. |
+| Consent endpoints | POST /consent/request → HTTP 401 ✅. POST /consent/verify → HTTP 401 ✅. POST /consent/pending-request → async patient-app flow. |
+| Next action | Merge dev → main. Then: EAS build (delete empty ascAppId/appleTeamId from eas.json → eas init → eas build), syncLogger.ts removal (Builder session), pilot clinic selection (solo-doctor). |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** PM Agent — Moment 2 (D9 post-flow) + Moment 3 (pre-launch gate) complete (2026-05-10). D9 Overall: Strong. All 8 core screens complete. Pre-launch verdict: Yes with conditions. Four conditions before pilot: (1) EAS build + cert pinning, (2) patient mobile edit (D3 stub), (3) D6 syncLogger removal, (4) D5-M-1 UNIQUE constraint fix. Review: `reviews/D9-pm-review-v3.md`.
+**Last Session:** PM Agent — Moment 2 post-flow review (2026-05-16). CLEAR TO MERGE dev → main. Overall: Strong. Key risks: consent OTP friction (solo-doctor pilot recommended), no patient app discovery path (v1.1), EAS cert pinning not yet validated (pre-pilot blocker), syncLogger.ts still active (pre-pilot Builder session required). Review: `reviews/all-screens-pm-review-moment2.md`.
+
+**Previous Session:** Device Tester — P1–P5 Patient App (22c complete, 2026-05-16). 54/54 PASS, 0 FAIL, 0 bugs. All deferred tests from prior sub-session completed. Session: `reviews/P1-P5-device-test-session.md`. Clear to merge to main.
+
+**Previous Session:** Builder Agent — DT-B1 fix (2026-05-16). Added `__DEV__`-gated "Patient App →" button to doctor's LoginScreen demo block; `navigation.navigate('PatientLogin')`. Zero new TS errors. Pushed to dev.
+
+**Previous Session:** Device Tester — P1–P5 Patient App (2026-05-16). BLOCKED before first test case. DT-B1: no dev nav entry point to PatientLogin — doctor's LoginScreen has no `__DEV__` button to navigate to PatientLogin; all 54 test cases blocked. Builder session required to fix DT-B1, then restart device testing. Session doc: `reviews/P1-P5-device-test-session.md`.
+
+**Previous Session:** Builder Agent — P1–P5 QA fixes (2026-05-16). P1-M1: handleSendOtp now calls setPhoneError when pasted number has first digit < 6. P4-M1: handleGrant synthesises ActiveConsent from the granted request and pushes to consents state. P4-M2: infoNoteText fontSize 13→14. P5-M1: navigation.navigate→replace in handleLogout. Zero TS errors in changed files. Pushed to dev.
+
+**Previous Session:** QA Agent — P1–P5 Patient App (2026-05-16). 0 CRITICAL, 0 HIGH, 4 MEDIUM. P1-M1: Send OTP button unresponsive on pasted invalid number. P4-M1: Grant consent removes pending card but does not add to active list. P4-M2: infoNoteText 13px below 14px minimum. P5-M1: handleLogout uses navigate instead of replace. Plus wire-step mandates M-2 (auth guards P2–P5) and M-3 (logout token clearance). Builder session required before device testing. Plan: `reviews/P1-P5-qa-test-plan.md`.
+
+**Previous Session:** Security Agent — P1–P5 re-check (2026-05-16). CLEAR TO QA. C-1 ✅: auth.ts OTP log gated behind `NODE_ENV !== 'production' || TEST_OTP_BYPASS`. C-2 ✅: consent.ts else branch sanitized — no OTP/mobile in production path. H-1 ✅: IDOR guard present; actorRole from `req.auth!.role`. M-1 ✅: all three consent routes use `requireDoctorAuth`. M-4 still open (MEDIUM, low impact). Wire-step mandates M-2/M-3 deferred. Re-check: `reviews/P1-P5-security-recheck.md`.
+
+**Previous Session:** Builder Agent — P1–P5 security fixes (2026-05-16). C-1: auth.ts OTP log now gated behind `NODE_ENV !== 'production' || TEST_OTP_BYPASS`. C-2: consent.ts else branch no longer logs raw OTP or mobile number. H-1: IDOR ownership guard added to DELETE /consent/:id; actorRole now uses `req.auth!.role`. M-1: `requireAuth` → `requireDoctorAuth` on POST /consent/request, POST /consent/verify, POST /consent/pending-request. Zero TS errors. Pushed to dev.
+
+**Previous Session:** Security Agent — P1–P5 Patient App (2026-05-16). BLOCKED — 2 CRITICAL, 1 HIGH found in live backend. C-1: OTP plaintext logged unconditionally in auth.ts:66. C-2: Consent OTP logged in both branches of consent.ts:106-110. H-1: DELETE /consent/:id missing IDOR ownership guard. M-1: 3 consent routes use requireAuth instead of requireDoctorAuth. Wire-step mandates: auth guards on P2-P5 (M-2), logout token clearance on P5 (M-3). Audit: `reviews/P1-P5-security-audit.md`.
+
+**Previous Session:** Backend Agent — Patient-facing endpoints (2026-05-16). Patient JWT auth (POST /auth/verify-otp role:patient), PatientRefreshToken, ConsentPendingRequest models added to schema. New routes: GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond, POST /consent/pending-request. Test patient (8888888888 / Priya Sharma) added to seed. Zero TS errors. Pushed to dev for Render redeploy.
+
+**Previous Session:** Persona Critic — P5 re-evaluation (2026-05-16). Score 3.64/5. Verdict: Ship as-is. All 4 v1 critique items confirmed resolved. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P5-persona-critique-v2.md`.
+
+### P5 Open Critique Items (apply before Persona Critic re-evaluation)
+
+| ID | Severity | Item | Status |
+|---|---|---|---|
+| P5-PC-M1 | MUST FIX | `keyboardType="number-pad"` on DOB EditRow blocks "/" input — users cannot type the "DD/MM/YYYY" format. Fix: switch to `keyboardType="default"` with auto-inserted "/" after 2nd and 4th digit, OR use a native date picker. | **CLOSED 2026-05-16** — `keyboardType="default"`; auto-insert "/" after 2nd and 4th digit via digit-only extraction |
+| P5-PC-S1 | SHOULD FIX | Language modal options are English-only Roman script. Non-English-reading patients cannot identify their language. Add native script alongside English: "Hindi — हिन्दी", "Tamil — தமிழ்", "Telugu — తెలుగు", "Kannada — ಕನ್ನಡ", "Bengali — বাংলా". | **CLOSED 2026-05-16** — LANGUAGE_NATIVE map added; modal and picker row show bilingual labels |
+| P5-PC-S2 | SHOULD FIX | `textSizeNote` renders at 13px — below 14px minimum for informational text on patient screens (same issue as P4-PC-v2-S1). One-line fix: `fontSize: 13 → 14`. | **CLOSED 2026-05-16** — fontSize 13→14 |
+| P5-PC-S3 | SHOULD FIX | `infoHint` and `editHint` render at 12px — too small for elderly audience. Raise to 13px minimum. | **CLOSED 2026-05-16** — infoHint + editHint both 12→13px |
+
+---
+
+### P4 Open Critique Items (apply before Builder: wire step)
+
+| ID | Severity | Item | Status |
+|---|---|---|---|
+| P4-PC-M1 | MUST FIX | "Revoke Access" / "Grant Access" / "Deny" vocabulary opaque to elderly patients (Shantabai 2/5). Replace: "Remove Access" (revoke), "Allow" / "Don't Allow" (grant/deny). Update info note to match. | **CLOSED 2026-05-16** — vocabulary updated; Alerts and info note updated to match |
+| P4-PC-S1 | SHOULD FIX | Section labels "ACTIVE ACCESS" / "PENDING REQUESTS" are jargon. Replace with "Your Doctors" / "New Requests". | **CLOSED 2026-05-16** — section labels updated; letterSpacing removed; fontSize 12→13 |
+| P4-PC-S2 | SHOULD FIX | No scope explanation on active consent cards — ambiguous what "access" covers. Add: "Can view all your health records" under each doctor card. | **CLOSED 2026-05-16** — scopeNote added to ConsentCard |
+| P4-PC-S3 | SHOULD FIX | "Access since" text at 13px below 14px minimum for patient/elderly audience. Increase to 14px. | **CLOSED 2026-05-16** — accessSince fontSize 13→14 |
+| P4-PC-v2-S1 | SHOULD FIX | scopeNote "Can view all your health records" renders at 13px — below 14px minimum for elderly audience. Increase fontSize 13 → 14. Apply before wire step alongside P1-PC open items. | **CLOSED 2026-05-16** — fontSize 13→14 |
+
+---
+
+### P3 Open Critique Items (apply before Builder: P3 wire step)
+
+| ID | Severity | Item | Status |
+|---|---|---|---|
+| P3-PC-S1 | SHOULD FIX | Scan thumbnail styled like a broken-image placeholder. Replace with neutral document-card; hint text outside tappable area. | **CLOSED 2026-05-16** — neutral #F8F9FA card, hint text rendered below as scanHint style |
+| P3-PC-S2 | SHOULD FIX | 11px supplementary labels below readable threshold. Increase to 12px minimum. | **CLOSED 2026-05-16** — sectionLabel + ocrSectionLabel both 11→12px |
+| P3-PC-S3 | SHOULD FIX | "Something wrong?" reads as inactive fine print. Add icon or lift color. | **CLOSED 2026-05-16** — ⚑ icon added; color lifted to rgba(26,32,44,0.70) |
+
+---
+
+### P2 Open Critique Items (apply before Builder: P3 session)
+
+| ID | Severity | Item | Status |
+|---|---|---|---|
+| P2-PC-M1 | MUST FIX | Expand affordance insufficient for elderly patients. | **CLOSED 2026-05-16** — "View records →" / "Hide records" link added; chevron 11px→14px textSecondary |
+| P2-PC-S1 | SHOULD FIX | "IMG" text in scan thumbnail reads as broken image. | **CLOSED 2026-05-16** — 📄 emoji replaces "IMG" |
+| P2-PC-S2 | SHOULD FIX | "scan"/"note" are clinical jargon patients don't recognise. | **CLOSED 2026-05-16** — "Document(s)" / "Doctor's note(s)" throughout |
+| P2-PC-S3 | SHOULD FIX | Filter chips non-functional in demo states. | **CLOSED 2026-05-16** — By Doctor / By Clinic grouping implemented with section headers |
+| P2-PC-S4 | SHOULD FIX | Visit summary in italic reduces readability. | **CLOSED 2026-05-16** — fontStyle:italic removed; color: textSecondary |
+
+---
+
+### P1 Open Critique Items (apply before wire step)
+
+| ID | Severity | Item | Status |
+|---|---|---|---|
+| P1-PC-S1 | SHOULD FIX | Add one-line value proposition below "For Patients" subtitle — e.g., "Access your medical records" — so first-time patients understand the app before logging in. | **CLOSED 2026-05-16** — tagline "Access your medical records anytime" added below subtitle |
+| P1-PC-S2 | SHOULD FIX | "Change number" link too small (13px, textSecondary). Increase to 14px minimum; ensure 44×44px tap target (WCAG AA). | **CLOSED 2026-05-16** — fontSize 13→14; minHeight 44; paddingVertical Spacing.xs→Spacing.sm |
+| P1-PC-S3 | SHOULD FIX | Loading text generic "Please wait…" for both phases. Differentiate: "Sending OTP…" / "Verifying…". | **CLOSED 2026-05-16** — loadingAction state added; "Sending OTP…" vs "Verifying…" |
+
+---
+
+### D8 Open Critique Items (must be applied to mockup before wire session)
+
+| ID | Severity | Item | Status |
+|---|---|---|---|
+| D8-PC-M1 | MUST FIX | Patient name missing from header — `patientName` nav param defined but never rendered. Add as dimmed sub-line under document label in `ScanHeader`. | **CLOSED 2026-05-12** |
+| D8-PC-M2 | MUST FIX | OCR text font too small: 13pt monospace → minimum 14pt (15pt preferred). Consider switching to system font. | **CLOSED 2026-05-12** — 15pt system font |
+| D8-PC-S1 | SHOULD FIX | No recovery path on OCR failed/deferred state. Add note: "Ask staff to rescan if text is needed." | **CLOSED 2026-05-12** |
+| D8-PC-S2 | SHOULD FIX | "Extracted Text" label → "Scan Text" or "Document Text." | **CLOSED 2026-05-12** — "Scan Text" |
+| D8-PC-S3 | SHOULD FIX | "Pinch to zoom" hint opacity: rgba(255,255,255,0.3) → rgba(255,255,255,0.6). | **CLOSED 2026-05-12** |
+| D8-PC-S4 | SHOULD FIX | Pending state: add "(usually under a minute)" to avoid open-ended spinner anxiety. | **CLOSED 2026-05-12** |
 
 ### Recommended Next Session Order
 | Priority | Session | Reason |
 |---|---|---|
-| 1 | **Builder: Patient mobile edit** | D3 edit button is a stub. Needed before D9 SMS delivery can be corrected in field. Minimum: modal with validated mobile field, SQLite save + sync queue. |
-| 2 | **Builder: D6 syncLogger removal** | `src/sync/syncLogger.ts` + call sites in `NewVisitScreen.tsx` lines 64, 342, 344, 368, 372. Must remove before EAS production build. |
-| 3 | **Builder: D5-M-1 UNIQUE constraint fix** | `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)` with schema migration. Required for multi-doctor clinics. |
-| 4 | **EAS build + cert pinning smoke test** | First EAS production binary. Validate cert pinning works. Run core flow smoke test. Highest field risk. |
-| 5 | **Device test: EAS build smoke test** | Confirm cert pinning, login → D9 consent flow in production binary. |
+| ~~1~~ | ~~**Builder: Patient mobile edit**~~ | ~~DONE 2026-05-10 — commit a6f35d6~~ |
+| ~~2~~ | ~~**Builder: D6 syncLogger removal**~~ | ~~DONE 2026-05-10 — syncLogger.ts deleted; all call sites removed from 4 files; SyncDebugPanel removed from D3; useSyncStore cleaned up.~~ |
+| ~~3~~ | ~~**Builder: D5-M-1 UNIQUE constraint fix**~~ | ~~DONE 2026-05-10 — `UNIQUE(mobile_number)` → `UNIQUE(doctor_id, mobile_number)`. Schema migration with PRAGMA guard. `ON CONFLICT` + fallback lookup updated in patients.ts.~~ |
+| ~~4~~ | ~~**Backend: patient update sync**~~ | ~~DONE 2026-05-10 — `patientUpdatePayloadSchema` + update branch added to POST /sync in `backend/src/routes/sync.ts`. IDOR check, ownership guard, idempotency, UNIQUE conflict, audit log (last 4 digits only). api-contracts.md updated. Build: zero TS errors.~~ |
+| ~~5~~ | ~~**EAS build infrastructure**~~ | ~~DONE 2026-05-10 — eas.json + app.json + cert + plugin + pinnedFetch updated. User must complete: `eas login && eas init && npm install && eas build --profile preview --platform ios`.~~ |
+| 6 | **Device test: EAS build smoke test** | After EAS build completes and IPA is installed on device. Verify cert pinning active (not Expo Go fallback), run login → D9 consent flow. (Deferred — `eas init` blocked by empty ascAppId/appleTeamId in eas.json submit section. Fix is a 2-line deletion in eas.json. Defer until all screens built.) |
+| ~~7~~ | ~~**Builder: D8 Full Scan View — mockup**~~ | ~~DONE 2026-05-12 — commit 1504171. 4 variants built.~~ |
+| ~~7b~~ | ~~**Persona Critic: D8 Full Scan View**~~ | ~~DONE 2026-05-12. Score 3.3/5. Revise verdict — 2 MUST FIX, 4 SHOULD FIX. See D8 Open Critique Items above.~~ |
+| ~~7b-fix~~ | ~~**Builder: Apply D8 mockup revisions**~~ | ~~DONE 2026-05-12 — all 6 critique items applied. Revised mockup ready for re-evaluation.~~ |
+| ~~7b-v2~~ | ~~**Persona Critic: D8 re-evaluation**~~ | ~~DONE 2026-05-12. Score 3.55/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. reviews/D8-persona-critique-v2.md saved.~~ |
+| ~~7c~~ | ~~**Builder: D8 Full Scan View — wire**~~ | ~~DONE 2026-05-12. FullScanViewScreen.tsx + ScanImageViewer.tsx created. D4 wired. App.tsx registered. Zero TS errors.~~ |
+| ~~7d~~ | ~~**Security: D8 Full Scan View**~~ | ~~DONE 2026-05-12. CLEAR TO MERGE. 0 CRITICAL, 0 HIGH. D8-SA-M1 (logScanViewed) + D8-SA-L1 (resolveScanPath null guard) documented. Audit: `reviews/D8-security-audit.md`.~~ |
+| ~~7e~~ | ~~**QA: D8 Full Scan View**~~ | ~~DONE 2026-05-12. 1 HIGH (D8-QA-H1: no image error handler), 2 MEDIUM (D8-QA-M1, D8-QA-M2). Builder session required before device testing. Plan: `reviews/D8-qa-test-plan.md`.~~ |
+| ~~7e-fix~~ | ~~**Builder: D8 QA fixes**~~ | ~~DONE 2026-05-12 — commit bf5982a. D8-QA-H1, D8-QA-M1, D8-QA-M2, D8-SA-M1 all fixed.~~ |
+| ~~7f~~ | ~~**Device test: D8 Full Scan View**~~ | ~~BLOCKED 2026-05-16 — D8-DT-H1 found. Re-test after Builder fix.~~ |
+| ~~7f-fix~~ | ~~**Builder: fix D8-DT-H1**~~ | ~~DONE 2026-05-16 — getScansForServerVisit() called in loadRecords; synthesised LocalRecord entries merged into records state. localScanRowsRef preserves scan rows across note refreshes.~~ |
+| ~~7g~~ | ~~**Device test: D8 Full Scan View (re-run)**~~ | ~~DONE 2026-05-16. 18 PASS / 0 FAIL. No new bugs. Clear to merge.~~ |
+| ~~8~~ | ~~**PM pre-flight: P1–P5 Patient App**~~ | ~~DONE 2026-05-16. PROCEED with changes. Review: `reviews/P1-P5-pm-review.md`.~~ |
+| ~~9~~ | ~~**Builder: P1 mockup (Patient Login / OTP)**~~ | ~~DONE 2026-05-16. `src/screens/patient/PatientLoginScreen.tsx` + `PatientTimelineScreen.tsx` stub. Routes registered in App.tsx. Patient JWT shape documented in file header.~~ |
+| ~~10~~ | ~~**Persona Critic: P1 mockup (Patient Login)**~~ | ~~DONE 2026-05-16. Score 4.0/5. Verdict: Ship as-is. 3 SHOULD FIX (P1-PC-S1 tagline, P1-PC-S2 "Change number" sizing, P1-PC-S3 loading text). Apply before wire step. Critique: `reviews/P1-persona-critique.md`.~~ |
+| ~~11~~ | ~~**Builder: P2 mockup (My Records Timeline)**~~ | ~~DONE 2026-05-16. `PatientTimelineScreen.tsx` full mockup. Year-grouped timeline, filter bar, expand-in-place records, empty state. 4 realistic mock visits. Zero TS errors.~~ |
+| ~~12~~ | ~~**Persona Critic: P2 mockup**~~ | ~~DONE 2026-05-16. Score 3.0/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 4 SHOULD FIX. See P2 Open Critique Items. Critique: `reviews/P2-persona-critique.md`.~~ |
+| ~~12b~~ | ~~**Builder: Apply P2 mockup revisions**~~ | ~~DONE 2026-05-16 — all 5 critique items applied. See last session note.~~ |
+| ~~12c~~ | ~~**Persona Critic: P2 re-evaluation**~~ | ~~DONE 2026-05-16. Score 4.1/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P2-persona-critique-v2.md`.~~ |
+| ~~13~~ | ~~**Builder: P3 mockup (Visit Record Detail)**~~ | ~~DONE 2026-05-16 — `PatientVisitDetailScreen.tsx`. 4 states. Nav from P2 wired. Zero TS errors.~~ |
+| ~~14~~ | ~~**Persona Critic: P3 mockup**~~ | ~~DONE 2026-05-16. Score 3.8/5. Verdict: Ship as-is. 0 MUST FIX, 3 SHOULD FIX. See P3 Open Critique Items. Critique: `reviews/P3-persona-critique.md`.~~ |
+| ~~15~~ | ~~**Builder: P4 mockup (Doctors Who Have Access)**~~ | ~~DONE 2026-05-16 — `PatientDoctorsAccessScreen.tsx`. Active consent list, pending request card (Grant/Deny), revoke flow (Alert confirmation). Bottom tab bar wired P2→P4. P3-PC-S1/S2/S3 applied. Zero TS errors.~~ |
+| ~~16~~ | ~~**Persona Critic: P4 mockup**~~ | ~~DONE 2026-05-16. Score 3.0/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 3 SHOULD FIX. See P4 Open Critique Items. Critique: `reviews/P4-persona-critique.md`.~~ |
+| ~~16b~~ | ~~**Builder: Apply P4 mockup revisions**~~ | ~~DONE 2026-05-16 — P4-PC-M1: "Remove Access"/"Allow"/"Don't Allow" vocabulary + matching Alerts + info note. P4-PC-S1: "Your Doctors"/"New Requests" section labels. P4-PC-S2: scope note "Can view all your health records" on active consent cards. P4-PC-S3: accessSince 13→14px. Zero TS errors.~~ |
+| ~~16c~~ | ~~**Persona Critic: P4 re-evaluation**~~ | ~~DONE 2026-05-16. Score 3.8/5. Verdict: Ship as-is. One SHOULD FIX (P4-PC-v2-S1: scopeNote 13→14px). Critique: `reviews/P4-persona-critique-v2.md`.~~ |
+| ~~17~~ | ~~**Builder: P5 mockup (Patient Profile)**~~ | ~~DONE 2026-05-16 — `PatientProfileScreen.tsx`. Viewing + editing states, language modal, text-size info row. P4-PC-v2-S1 + P1-PC-S1/S2/S3 applied. Tab bars wired. App.tsx registered. Zero TS errors.~~ |
+| ~~18~~ | ~~**Persona Critic: P5 mockup**~~ | ~~DONE 2026-05-16. Score 3.2/5. Verdict: Revise and re-evaluate. 1 MUST FIX, 3 SHOULD FIX. See P5 Open Critique Items. Critique: `reviews/P5-persona-critique.md`.~~ |
+| ~~18b~~ | ~~**Builder: Apply P5 mockup revisions**~~ | ~~DONE 2026-05-16 — P5-PC-M1 (keyboardType default + auto-slash), P5-PC-S1 (LANGUAGE_NATIVE bilingual labels), P5-PC-S2 (textSizeNote 14px), P5-PC-S3 (infoHint/editHint 13px). Zero TS errors.~~ |
+| ~~18c~~ | ~~**Persona Critic: P5 re-evaluation**~~ | ~~DONE 2026-05-16. Score 3.64/5. Verdict: Ship as-is. No MUST FIX or SHOULD FIX remain. Critique: `reviews/P5-persona-critique-v2.md`.~~ |
+| ~~19~~ | ~~**Backend Agent: patient-facing endpoints**~~ | ~~DONE 2026-05-16 — patient JWT (role:patient in verify-otp), PatientRefreshToken, ConsentPendingRequest. Routes: /patient/profile, /patient/timeline, /patient/visits/:id, /patient/consents, /patient/consent-requests/:id/respond, /consent/pending-request. Zero TS errors.~~ |
+| ~~20~~ | ~~**Security Agent: P1–P5 Patient App**~~ | ~~DONE 2026-05-16. BLOCKED — 2 CRITICAL, 1 HIGH. See `reviews/P1-P5-security-audit.md`.~~ |
+| ~~20b~~ | ~~**Builder: P1–P5 security fixes**~~ | ~~DONE 2026-05-16 — C-1, C-2, H-1, M-1 all fixed. Zero TS errors.~~ |
+| ~~20c~~ | ~~**Security re-check: P1–P5**~~ | ~~DONE 2026-05-16. CLEAR TO QA. All 4 mandatory findings verified fixed. Re-check: `reviews/P1-P5-security-recheck.md`.~~ |
+| ~~21~~ | ~~**QA: P1–P5 Patient App**~~ | ~~DONE 2026-05-16. 0 CRITICAL, 0 HIGH, 4 MEDIUM. Builder session required. Plan: `reviews/P1-P5-qa-test-plan.md`.~~ |
+| ~~21b~~ | ~~**Builder: P1–P5 QA fixes**~~ | ~~DONE 2026-05-16 — P1-M1, P4-M1, P4-M2, P5-M1 all fixed. Pushed to dev.~~ |
+| ~~22~~ | ~~**Device test: P1–P5 Patient App**~~ | ~~BLOCKED 2026-05-16 — DT-B1: no dev nav entry point to PatientLogin. 0/54 tests run. Session: `reviews/P1-P5-device-test-session.md`.~~ |
+| ~~22b~~ | ~~**Builder: fix DT-B1**~~ | ~~DONE 2026-05-16 — "Patient App →" button added to `__DEV__` demo block in LoginScreen.tsx; navigates to PatientLogin. Zero new TS errors.~~ |
+| ~~22c~~ | ~~**Device test: P1–P5 Patient App (re-run)**~~ | ~~DONE 2026-05-16. 54/54 PASS, 0 FAIL, 0 bugs. Clear to merge. Session: `reviews/P1-P5-device-test-session.md`.~~ |
+| ~~23~~ | ~~**PM Agent — Moment 2 sign-off (all screens)**~~ | ~~DONE 2026-05-16. CLEAR TO MERGE. Overall: Strong. Pre-pilot conditions: EAS build + cert pinning, syncLogger.ts removal, solo-doctor pilot selection. Review: `reviews/all-screens-pm-review-moment2.md`.~~ |
+| **24** | **Merge dev → main** | PM Moment 2 complete. All 14 screens device-tested, zero open bugs. Create PR and merge. |
+| **25** | **Builder: remove syncLogger.ts** | D6-M-new-1 — remove `src/sync/syncLogger.ts` + all call sites before EAS build ships. |
+| **26** | **EAS build + cert pinning validation** | Delete empty `ascAppId`/`appleTeamId` from eas.json → `eas init` → `eas build --profile preview --platform ios` → validate cert pinning active on device. |
 
 ---
 
@@ -110,9 +241,10 @@ _Carry these into every build/mockup session for these screens._
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
-| D8 — Full Scan View | Not started | Tier 3. Image viewer + OCR panel. |
+| D8 — Full Scan View | **DEVICE TESTING COMPLETE (2026-05-16, session 7g). 18/18 PASS, 0 FAIL. No new bugs. Clear to merge. QA complete (7e, 2026-05-12). QA fixes complete (7e-fix). D8-DT-H1 found in session 7f, fixed in 7f-fix, verified in 7g. Security audit: 0 CRITICAL, 0 HIGH. D8-SA-M1 + D8-SA-L1 documented as pre-v1 debt. Audit: `reviews/D8-security-audit.md`.** Wire: `src/screens/doctor/FullScanViewScreen.tsx`, `src/components/ScanImageViewer.tsx`. Persona Critic v2 score 3.55/5. | Tier 3. Image viewer + OCR panel. No new backend dependency — reads device filesystem + SQLite. ScanImageViewer reusable for P3. |
 | D9 — Consent Request Flow | **MERGED TO MAIN (2026-05-10). PM Moment 2 + Moment 3 complete. Device testing COMPLETE (sessions 1–4). Security re-audit v3 — 0 critical/high/medium. D3 `handleRequestAccess` fully wired to D9 (not a stub).** Pre-launch conditions: (1) patient mobile edit in D3, (2) EAS build + cert pinning, (3) D5-M-1 UNIQUE fix, (4) D6 syncLogger removal. Reviews: `reviews/D9-pm-review-v3.md`, `reviews/D9-security-audit-v3.md`. Sessions: `reviews/D9-device-test-session-1.md` through `reviews/D9-device-test-session-4.md`. Live screen: `src/screens/doctor/ConsentRequestScreen.tsx`. | Tier 3. MERGED. |
-| P1–P5 — Patient App | Not started | Tier 2 / Tier 4. |
+| P1 — Patient Login / OTP | **Mockup COMPLETE (2026-05-16). `src/screens/patient/PatientLoginScreen.tsx`. Mock auth — wire step will add real sendOtp/verifyOtp + patient auth store + SecureStore. Patient JWT shape documented in file header. Next: Persona Critic.** | Tier 4. |
+| P2–P5 — Patient App (Timeline, Record Detail, Access, Profile) | Not started | Tier 2 / Tier 4. |
 
 ---
 
@@ -222,6 +354,18 @@ _Carry these into every build/mockup session for these screens._
 | ~~**D3-H-1:** Live build API must return two separate visit lists — `myVisits` (doctor's own, always returned) and `otherDoctorVisits` (consent-gated, `chiefComplaint` omitted)~~ | D3 | Security audit D3-C-2 / mockup `VISITS_OWN` + `VISITS_OTHER` | **CLOSED 2026-02-24** — `getPatientVisits()` in `src/api/visits.ts` calls `GET /patients/:serverId/visits` which returns `{ my_visits, other_doctor_visits, consent_granted, checked_at }`. Server must exclude `chief_complaint` from `other_doctor_visits` at the query layer when `consent_granted=false`. |
 | ~~**D3-H-2:** Server-side consent re-verification must complete before visit history renders — nav param must not be used as the sole gate~~ | D3 | Security audit HIGH | **CLOSED 2026-02-24** — Loading skeleton rendered on mount until `getPatientVisits()` resolves. Offline fallback to `getCachedVisits()` only when `isConnected === false`. Nav param `consentGranted` used only in offline fallback; server response is the gate. |
 | ~~**D3-H-3:** Auth guard on mount — synchronous null-render if token or user is absent~~ | D3 | Security audit HIGH | **CLOSED 2026-02-24** — `if (!token \|\| !user) return null` added at `PatientDetailScreen.tsx` after all hooks, matching D2 pattern (PatientSearchScreen.tsx line 244). |
+
+### MEDIUM — D8 live screen security audit (2026-05-12) — fix before v1 launch
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D8-SA-M1:** No `scan_viewed` audit event when doctor opens D8. `security-spec.md` lists "Image downloaded" as auditable. D4 emits `logVisitViewed` at visit-level; no event covers individual scan image access. Patients cannot request a complete access log without this. Fix: add `logScanViewed()` to `src/db/scans.ts`; call in `handleViewScan` (VisitDetailScreen.tsx:302) before navigating. | D8 | D8 security audit | `src/screens/doctor/VisitDetailScreen.tsx:302`, `src/db/scans.ts` |
+
+### LOW — D8 live screen security audit (2026-05-12) — backlog
+
+| Item | Screen | Source | Notes |
+|---|---|---|---|
+| **D8-SA-L1:** `resolveScanPath()` null-path fallback: `(FileSystem.documentDirectory ?? '') + relativePath` produces an invalid relative URI if `documentDirectory` is null. Results in a broken image — not a security risk. Not observed in Expo SDK 54 practice. | D8 | D8 security audit | `src/db/scans.ts:39` |
 
 ### MEDIUM — Pre-v1 launch (identified in security re-audits 2026-04-11)
 

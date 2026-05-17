@@ -479,6 +479,45 @@ Rule going forward: Any time a Security Audit **modifies `api-contracts.md`** (a
 
 ---
 
+**Mistake 11 — Persona Critic skipped after P1 mockup; project-state.md contradicted CLAUDE.md**
+
+What happened: The P1 mockup Builder session ended and updated `project-state.md` with "Builder: P2 mockup" as the next item (item 10), batching all Persona Critic reviews to a single item 14 ("After all patient mockups built"). This directly contradicts the CLAUDE.md rule: "Persona Critic — After **every** mockup is built." The following session (this one) opened as a Builder Agent for P2 without questioning the sequence, because it read project-state.md and followed what was written there. The user caught the error by recalling that the previous session had verbally indicated Persona Critic was next.
+
+Root cause: project-state.md is the ground truth every session reads. CLAUDE.md has the rule, but there was no enforcement mechanism — the rule relied entirely on the previous session writing project-state.md correctly. When the file contradicted the rule, the file won.
+
+Rule going forward:
+1. When a Builder session ends after completing a mockup, the next item written into `project-state.md` MUST be a Persona Critic session for that screen. Two consecutive Builder mockup sessions with no Persona Critic between them is a workflow violation.
+2. If the opening session status line shows two consecutive Builder mockup sessions with no Persona Critic between them, the agent must stop, flag the violation, correct the sequence, and ask the user before proceeding.
+3. This rule is now explicitly documented in CLAUDE.md under "Mandatory Builder → Persona Critic Sequence."
+
+How it was caught: The user remembered from the previous session that Persona Critic was declared as next, and questioned why a Builder session had been opened instead. The agent had not caught the contradiction between project-state.md and CLAUDE.md at session start.
+
+---
+
+**Mistake 12 — Reading a reference screen before building a new one without announcing the reason**
+
+What happened: A Builder session for P2 opened and read `PatientLoginScreen.tsx` (P1) before writing any P2 code — standard practice for matching code style. But no explanation was given upfront. The user saw a P1 file being read in a P2 session and interrupted to ask whether the wrong screen was being worked on.
+
+Root cause: The Builder reads an existing screen as a code reference before writing a new sibling screen (imports, StyleSheet structure, mock data format, TypeScript conventions, DEV demo switcher pattern). This is correct behaviour, but it looks like working on the wrong thing to anyone watching the tool calls.
+
+Rule going forward: Whenever the Builder reads an existing screen solely as a style/pattern reference — not to modify it — state this explicitly before opening the file. A single sentence is enough:
+
+> "Reading PatientLoginScreen.tsx as a code reference for P2 — not modifying it."
+
+This applies any time a file is read for reference purposes that is not the file being built.
+
+---
+
+**Mistake 13 — Builder registered a new flow's root screen in App.tsx but never added a dev navigation entry point to reach it**
+
+What happened: PatientLoginScreen (P1) was built and registered in App.tsx. No existing screen navigates to it — it is the root of the patient app flow. The QA test plan assumed "tap PatientLogin from developer navigation" but that navigation didn't exist. The Device Tester discovered this at session start; device testing was blocked before a single test case could run.
+
+Root cause: Route registration in App.tsx prevents crashes (Rule 1.1) but does not guarantee reachability. For screens mid-flow, a parent screen provides the path. For screens that are the root of a new navigation flow, no parent exists yet — the Builder must create one explicitly. There is a difference between a route being *registered* and being *reachable*.
+
+Rule going forward: Whenever a Builder session creates the first screen of a new navigation flow (i.e., no registered screen navigates to it), the Builder must also add a dev-only entry point — a `{__DEV__ && ...}` button on the closest existing screen — before closing the session. This check is now step 3 of the Builder End-of-Session Protocol in `agents/agent-builder.md`. The session is not complete until the new screen is reachable on a device.
+
+---
+
 ## 4. Standard Runbook — Building Each Screen
 
 ### Step 1: Read Before Writing
@@ -529,6 +568,7 @@ if (!token || !user) return null
 
 **Navigation guards:**
 - Register every route target in App.tsx, even stubs.
+- For flow-root screens (nothing navigates to them yet), also add a `{__DEV__ && ...}` entry point on the closest existing screen — registration alone does not make a screen reachable on device (Mistake 13).
 - Add `navigation.addListener('beforeRemove')` for screens with unsaved state.
 - Use `savingCompletedRef` to allow programmatic `goBack()` without triggering the discard dialog.
 - Use `useRef(false)` tap guard for submit buttons, not `useState`.

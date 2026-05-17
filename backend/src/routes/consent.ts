@@ -11,7 +11,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import prisma from '../db/prisma';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, requireDoctorAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { consentRequestLimiter, consentVerifyLimiter } from '../middleware/rateLimit';
 import { generateOtp, generateOtpToken, hashOtp, checkOtp } from '../utils/otp';
@@ -67,7 +67,7 @@ const consentRequestSchema = z.object({
 
 router.post(
   '/consent/request',
-  requireAuth,
+  requireDoctorAuth,
   consentRequestLimiter,
   validate(consentRequestSchema),
   async (req, res) => {
@@ -102,12 +102,12 @@ router.post(
         data: { token: otpToken, doctorId, patientId, otpHash, expiresAt },
       });
 
-      // In test mode log OTP to console; in production send SMS
+      // Consent OTP log — dev/bypass only; never logged in production
       if (process.env.TEST_OTP_BYPASS === 'true') {
-        console.log(`[CONSENT OTP] patient=${patient.mobileNumber} otp=${rawOtp} token=${otpToken}`);
+        console.log(`[CONSENT OTP-DEV] patient=${patient.mobileNumber} otp=${rawOtp} token=${otpToken}`);
       } else {
-        // TODO: wire real SMS provider (Twilio / AWS SNS / MSG91)
-        console.log(`[SMS] Send OTP ${rawOtp} to ${patient.mobileNumber}`);
+        // TODO: wire real SMS provider (Twilio / MSG91 / AWS SNS)
+        console.log(`[SMS] Consent OTP queued for patient (production — SMS provider not yet wired)`);
       }
 
       await logAudit({
@@ -135,7 +135,7 @@ const consentVerifySchema = z.object({
 
 router.post(
   '/consent/verify',
-  requireAuth,
+  requireDoctorAuth,
   consentVerifyLimiter,
   validate(consentVerifySchema),
   async (req, res) => {
@@ -238,6 +238,12 @@ router.delete('/consent/:id', requireAuth, async (req, res) => {
       return;
     }
 
+    // IDOR guard: only the patient or the doctor named on the consent may revoke it
+    if (consent.patientId !== req.auth!.sub && consent.doctorId !== req.auth!.sub) {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Access denied' } });
+      return;
+    }
+
     const revokedAt = new Date();
     await prisma.consent.update({
       where: { id: consentId },
@@ -247,7 +253,7 @@ router.delete('/consent/:id', requireAuth, async (req, res) => {
     await logAudit({
       event:     'consent.revoked',
       actorId:   req.auth!.sub,
-      actorRole: 'doctor',
+      actorRole: req.auth!.role,
       patientId: consent.patientId,
       ipAddress: req.ip,
     });
@@ -258,5 +264,64 @@ router.delete('/consent/:id', requireAuth, async (req, res) => {
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to revoke consent' } });
   }
 });
+
+// ─── POST /consent/pending-request ───────────────────────────────────────────
+// Doctor creates an async consent request for a patient who has the Patient App
+// (consent-layer-spec Flow 2A). No OTP — appears in patient's P4 screen.
+
+const pendingRequestSchema = z.object({
+  patient_id: z.string().uuid('patient_id must be a valid UUID'),
+});
+
+router.post(
+  '/consent/pending-request',
+  requireDoctorAuth,
+  consentRequestLimiter,
+  validate(pendingRequestSchema),
+  async (req, res) => {
+    const doctorId  = req.auth!.sub;
+    const patientId = (req.body as z.infer<typeof pendingRequestSchema>).patient_id;
+
+    try {
+      const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+      if (!patient) {
+        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Patient not found' } });
+        return;
+      }
+
+      // Reject if active consent already exists
+      const activeConsent = await prisma.consent.findFirst({
+        where: { patientId, doctorId, revokedAt: null },
+      });
+      if (activeConsent) {
+        res.status(409).json({ error: { code: 'CONFLICT', message: 'Active consent already exists' } });
+        return;
+      }
+
+      // Replace any prior unresponded pending request for this (doctor, patient) pair
+      await prisma.consentPendingRequest.updateMany({
+        where:  { doctorId, patientId, status: 'pending' },
+        data:   { status: 'denied', respondedAt: new Date() }, // superseded by new request
+      });
+
+      const pendingReq = await prisma.consentPendingRequest.create({
+        data: { doctorId, patientId },
+      });
+
+      await logAudit({
+        event:     'consent.pending_request_created',
+        actorId:   doctorId,
+        actorRole: 'doctor',
+        patientId,
+        ipAddress: req.ip,
+      });
+
+      res.json({ request_id: pendingReq.id, created_at: pendingReq.createdAt.toISOString() });
+    } catch (err) {
+      console.error('[POST /consent/pending-request]', err);
+      res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to create consent request' } });
+    }
+  },
+);
 
 export default router;

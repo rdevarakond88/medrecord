@@ -24,6 +24,16 @@ const patientPayloadSchema = z.object({
   gender:        z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
 });
 
+// Separate schema for patient 'update' — includes server_id + doctor_id for IDOR check.
+// For v1, only mobile_number updates are supported via sync (D3 mobile edit flow).
+const patientUpdatePayloadSchema = z.object({
+  local_id:      z.string().uuid(),
+  server_id:     z.string().uuid().nullable().optional(),
+  mobile_number: z.string().regex(/^[6-9]\d{9}$/),
+  doctor_id:     z.string().uuid(),
+  updated_at:    z.string(),
+});
+
 const visitPayloadSchema = z.object({
   local_id:        z.string().uuid(),
   patient_id:      z.string().uuid(),
@@ -77,32 +87,100 @@ router.post('/sync', requireAuth, syncLimiter, validate(syncBodySchema), async (
   for (const op of sorted) {
     try {
       if (op.entity_type === 'patient') {
-        const parsed = patientPayloadSchema.safeParse(op.payload);
-        if (!parsed.success) {
-          results.push({ local_id: op.local_id, status: 'error', message: parsed.error.errors[0]?.message });
-          continue;
-        }
-        const p = parsed.data;
+        if (op.operation === 'update') {
+          // ── Patient mobile update (D3 mobile edit flow) ──────────────────────
+          const parsed = patientUpdatePayloadSchema.safeParse(op.payload);
+          if (!parsed.success) {
+            results.push({ local_id: op.local_id, status: 'error', message: parsed.error.errors[0]?.message });
+            continue;
+          }
+          const p = parsed.data;
 
-        const existing = await prisma.patient.findFirst({
-          where: { mobileNumber: p.mobile_number, deletedAt: null },
-        });
-        if (existing) {
-          results.push({ local_id: op.local_id, status: 'conflict', server_id: existing.id, message: 'Patient already registered' });
-          continue;
-        }
+          // IDOR: the doctor in the payload must match the authenticated doctor
+          if (p.doctor_id !== doctorId) {
+            results.push({ local_id: op.local_id, status: 'error', message: 'doctor_id mismatch' });
+            continue;
+          }
 
-        const patient = await prisma.patient.create({
-          data: {
-            localId:      p.local_id,
-            mobileNumber: p.mobile_number,
-            name:         p.name,
-            dateOfBirth:  p.date_of_birth ? new Date(p.date_of_birth) : null,
-            gender:       p.gender as any,
-            createdBy:    doctorId,
-          },
-        });
-        results.push({ local_id: op.local_id, status: 'success', server_id: patient.id });
+          // Find patient by server_id (when already synced) or local_id (unsynced create + update in same batch)
+          let patient = p.server_id
+            ? await prisma.patient.findFirst({ where: { id: p.server_id, deletedAt: null } })
+            : null;
+          if (!patient) {
+            patient = await prisma.patient.findFirst({ where: { localId: p.local_id, deletedAt: null } });
+          }
+          if (!patient) {
+            results.push({ local_id: op.local_id, status: 'error', message: 'Patient not found' });
+            continue;
+          }
+
+          // Ownership: only the doctor who registered this patient may update their mobile
+          if (patient.createdBy !== doctorId) {
+            results.push({ local_id: op.local_id, status: 'error', message: 'Not authorized to update this patient' });
+            continue;
+          }
+
+          // Idempotency: already at the target value — succeed without a write
+          if (patient.mobileNumber === p.mobile_number) {
+            results.push({ local_id: op.local_id, status: 'success', server_id: patient.id });
+            continue;
+          }
+
+          // UNIQUE conflict: new number must not belong to a different patient
+          const mobileConflict = await prisma.patient.findFirst({
+            where: { mobileNumber: p.mobile_number, deletedAt: null, id: { not: patient.id } },
+          });
+          if (mobileConflict) {
+            results.push({ local_id: op.local_id, status: 'conflict', server_id: mobileConflict.id, message: 'Mobile number already registered to another patient' });
+            continue;
+          }
+
+          await prisma.patient.update({
+            where: { id: patient.id },
+            data:  { mobileNumber: p.mobile_number },
+          });
+
+          // Audit — last 4 digits only; raw mobile never enters audit log (PII minimisation)
+          await logAudit({
+            event:     'patient.mobile_updated',
+            actorId:   doctorId,
+            actorRole: 'doctor',
+            patientId: patient.id,
+            ipAddress: req.ip,
+            metadata:  { new_mobile_last4: p.mobile_number.slice(-4) },
+          });
+
+          results.push({ local_id: op.local_id, status: 'success', server_id: patient.id });
+
+        } else {
+          // ── Patient create ───────────────────────────────────────────────────
+          const parsed = patientPayloadSchema.safeParse(op.payload);
+          if (!parsed.success) {
+            results.push({ local_id: op.local_id, status: 'error', message: parsed.error.errors[0]?.message });
+            continue;
+          }
+          const p = parsed.data;
+
+          const existing = await prisma.patient.findFirst({
+            where: { mobileNumber: p.mobile_number, deletedAt: null },
+          });
+          if (existing) {
+            results.push({ local_id: op.local_id, status: 'conflict', server_id: existing.id, message: 'Patient already registered' });
+            continue;
+          }
+
+          const patient = await prisma.patient.create({
+            data: {
+              localId:      p.local_id,
+              mobileNumber: p.mobile_number,
+              name:         p.name,
+              dateOfBirth:  p.date_of_birth ? new Date(p.date_of_birth) : null,
+              gender:       p.gender as any,
+              createdBy:    doctorId,
+            },
+          });
+          results.push({ local_id: op.local_id, status: 'success', server_id: patient.id });
+        }
 
       } else if (op.entity_type === 'visit') {
         const parsed = visitPayloadSchema.safeParse(op.payload);

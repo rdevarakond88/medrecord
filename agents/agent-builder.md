@@ -115,9 +115,16 @@ Before this session ends, always perform the following steps **without being ask
 
    The file should always feel like one clean snapshot of current reality — not a log of everything that ever happened.
 
-3. **Commit and push to GitHub** — Stage all new and modified files, commit to the
+3. **Verify the new screen is reachable on device** — Check: does any existing
+   registered screen navigate to this screen via `navigation.navigate()`?
+   If NO, this is a flow-root screen and no navigation path to it exists yet.
+   Add a `{__DEV__ && ...}` entry point (e.g. a button on the closest existing
+   screen) before committing. A screen that is registered in App.tsx but
+   unreachable from any other screen blocks device testing.
+
+4. **Commit and push to GitHub** — Stage all new and modified files, commit to the
    `dev` branch using the project convention (e.g. `[D3] Screen complete`),
    and push to `origin dev`.
 
-4. **Confirm the commit hash** — Output the short commit hash so it can be traced
+5. **Confirm the commit hash** — Output the short commit hash so it can be traced
    in the repo history.

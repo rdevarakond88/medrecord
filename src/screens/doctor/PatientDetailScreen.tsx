@@ -41,11 +41,15 @@ import {
   View,
   Text,
   FlatList,
+  Modal,
   StyleSheet,
   SafeAreaView,
   StatusBar,
+  TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -57,7 +61,8 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useSyncStore } from '../../store/useSyncStore';
 import { ApiError } from '../../api/apiClient';
 import { getPatientVisits } from '../../api/visits';
-import { LocalPatient, getPatientByLocalId } from '../../db/patients';
+import { LocalPatient, getPatientByLocalId, updatePatientMobile } from '../../db/patients';
+import { enqueueOperation } from '../../sync/syncQueue';
 import {
   LocalVisit,
   getCachedVisits,
@@ -123,6 +128,7 @@ export default function PatientDetailScreen() {
   const [consentRequestSent,  setConsentRequestSent]  = useState(false);
   const [sessionExpired,      setSessionExpired]      = useState(false);
   const [visibleCount,        setVisibleCount]        = useState(20);
+  const [editModalVisible,    setEditModalVisible]    = useState(false);
 
   // ── Load patient header from SQLite — immediate, no spinner needed ──
   // Reads the patient row the doctor already has cached from D2.
@@ -315,6 +321,39 @@ export default function PatientDetailScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadState, consentGranted]);
 
+  // ── Mobile edit save — called by PatientMobileEditModal on confirm ──
+  async function handleSaveMobile(newMobile: string): Promise<{ error: string | null }> {
+    if (!user) return { error: 'Not authenticated.' };
+    const result = await updatePatientMobile(db, patientLocalId, newMobile);
+    if (result.conflict) {
+      return { error: 'A patient with this mobile number already exists in your records.' };
+    }
+    if (!result.success) {
+      return { error: 'Could not update mobile number. Please try again.' };
+    }
+    // Refresh patient header immediately from SQLite — no full consent re-fetch needed.
+    const refreshed = await getPatientByLocalId(db, patientLocalId);
+    if (refreshed) setPatient(refreshed);
+
+    // Enqueue sync — backend must handle patient 'update' in POST /sync (pre-launch gap).
+    await enqueueOperation(db, {
+      doctor_id:       user.id,
+      entity_type:     'patient',
+      entity_local_id: patientLocalId,
+      operation:       'update',
+      payload: {
+        local_id:      patientLocalId,
+        server_id:     patient?.server_id ?? null,
+        mobile_number: newMobile,
+        doctor_id:     user.id,
+        updated_at:    new Date().toISOString(),
+      },
+    });
+
+    setEditModalVisible(false);
+    return { error: null };
+  }
+
   // ── D3-H-3: Synchronous auth guard — same pattern as PatientSearchScreen.tsx:244 ──
   // All hooks above run unconditionally (React rules of hooks).
   // This guard fires after hooks, before any JSX, so the screen renders nothing
@@ -449,9 +488,6 @@ export default function PatientDetailScreen() {
         <ErrorBanner message={fetchError} onRetry={() => void fetchData()} />
       )}
 
-      {/* DEBUG — sync diagnostics overlay. Remove before merge (BUG-D3-DT8-1). */}
-      <SyncDebugPanel />
-
       {/* ── Navigation header ── */}
       <View style={styles.navHeader}>
         <TouchableOpacity
@@ -471,10 +507,7 @@ export default function PatientDetailScreen() {
           style={styles.editButton}
           accessibilityLabel="Edit patient profile"
           accessibilityRole="button"
-          onPress={() => {
-            // TODO: navigate to profile-edit screen when built.
-            // navigation.navigate('PatientProfileEdit', { patientLocalId });
-          }}
+          onPress={() => setEditModalVisible(true)}
         >
           <Text style={styles.editButtonText}>Edit</Text>
         </TouchableOpacity>
@@ -497,6 +530,14 @@ export default function PatientDetailScreen() {
           <Text style={styles.patientAge}>{patientAge} years</Text>
         )}
       </View>
+
+      {/* ── Mobile edit modal ── */}
+      <PatientMobileEditModal
+        visible={editModalVisible}
+        currentMobile={patient?.mobile_number ?? ''}
+        onSave={handleSaveMobile}
+        onCancel={() => setEditModalVisible(false)}
+      />
 
       {/* ── Loading skeleton — shown while consent re-fetch is in flight (D3-H-2) ── */}
       {variant === 'loading' ? (
@@ -593,6 +634,228 @@ export default function PatientDetailScreen() {
     </SafeAreaView>
   );
 }
+
+// ─────────────────────────────────────────────────────────────
+// PatientMobileEditModal — bottom-sheet modal for correcting mobile number.
+// Staff correct wrong numbers from this screen before re-sending consent SMS.
+// Spec: D3 build constraints (persona critique SHOULD FIX, now implemented).
+// ─────────────────────────────────────────────────────────────
+
+interface PatientMobileEditModalProps {
+  visible:        boolean;
+  currentMobile:  string;
+  onSave:         (newMobile: string) => Promise<{ error: string | null }>;
+  onCancel:       () => void;
+}
+
+function PatientMobileEditModal({
+  visible,
+  currentMobile,
+  onSave,
+  onCancel,
+}: PatientMobileEditModalProps) {
+  const [value,   setValue]   = useState('');
+  const [error,   setError]   = useState<string | null>(null);
+  const [saving,  setSaving]  = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setValue(currentMobile);
+      setError(null);
+      setSaving(false);
+    }
+  }, [visible, currentMobile]);
+
+  function validate(mobile: string): string | null {
+    if (!mobile) return 'Mobile number is required.';
+    if (!/^\d{10}$/.test(mobile)) return 'Enter a valid 10-digit mobile number.';
+    if (!/^[6-9]/.test(mobile)) return 'Mobile number must start with 6, 7, 8, or 9.';
+    if (mobile === currentMobile) return 'No change — enter a different number.';
+    return null;
+  }
+
+  async function handleSave() {
+    const validationError = validate(value);
+    if (validationError) { setError(validationError); return; }
+    setSaving(true);
+    setError(null);
+    const result = await onSave(value);
+    if (result.error) {
+      setError(result.error);
+      setSaving(false);
+    }
+    // On success onSave() closes the modal — no need to setSaving(false) here.
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onCancel}
+      accessibilityViewIsModal
+    >
+      <KeyboardAvoidingView
+        style={modalStyles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <TouchableOpacity
+          style={modalStyles.backdrop}
+          onPress={onCancel}
+          activeOpacity={1}
+          accessibilityLabel="Close modal"
+        />
+        <View style={modalStyles.sheet}>
+          <View style={modalStyles.handle} />
+          <Text style={modalStyles.title}>Edit Mobile Number</Text>
+          <Text style={modalStyles.fieldLabel}>Mobile Number</Text>
+          <TextInput
+            style={[modalStyles.input, error ? modalStyles.inputError : null]}
+            value={value}
+            onChangeText={(t) => {
+              setValue(t.replace(/\D/g, '').slice(0, 10));
+              setError(null);
+            }}
+            keyboardType="phone-pad"
+            maxLength={10}
+            placeholder="10-digit mobile number"
+            placeholderTextColor="#94A3B8"
+            accessibilityLabel="Mobile number"
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={handleSave}
+          />
+          {error ? (
+            <Text style={modalStyles.errorText} accessibilityRole="alert">{error}</Text>
+          ) : null}
+          <View style={modalStyles.buttonRow}>
+            <TouchableOpacity
+              style={modalStyles.cancelButton}
+              onPress={onCancel}
+              disabled={saving}
+              accessibilityLabel="Cancel"
+              accessibilityRole="button"
+            >
+              <Text style={modalStyles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[modalStyles.saveButton, saving && modalStyles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+              accessibilityLabel="Save mobile number"
+              accessibilityRole="button"
+            >
+              {saving
+                ? <ActivityIndicator size="small" color="#FFFFFF" />
+                : <Text style={modalStyles.saveText}>Save</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex:           1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  sheet: {
+    backgroundColor:   '#FFFFFF',
+    borderTopLeftRadius:  16,
+    borderTopRightRadius: 16,
+    paddingHorizontal:    24,
+    paddingTop:           12,
+    paddingBottom:        32,
+  },
+  handle: {
+    width:           40,
+    height:           4,
+    borderRadius:     2,
+    backgroundColor: '#CBD5E1',
+    alignSelf:       'center',
+    marginBottom:    16,
+  },
+  title: {
+    fontSize:     18,
+    fontWeight:   '600',
+    color:        '#0F172A',
+    marginBottom: 20,
+    textAlign:    'center',
+  },
+  fieldLabel: {
+    fontSize:     13,
+    fontWeight:   '500',
+    color:        '#64748B',
+    marginBottom:  6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  input: {
+    borderWidth:      1,
+    borderColor:      '#CBD5E1',
+    borderRadius:     10,
+    paddingHorizontal: 14,
+    paddingVertical:   14,
+    fontSize:         18,
+    color:            '#0F172A',
+    fontVariant:      ['tabular-nums'],
+    letterSpacing:     1,
+    minHeight:        52,
+  },
+  inputError: {
+    borderColor: '#EF4444',
+  },
+  errorText: {
+    fontSize:   13,
+    color:      '#DC2626',
+    marginTop:   6,
+    lineHeight: 18,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap:            12,
+    marginTop:     24,
+  },
+  cancelButton: {
+    flex:            1,
+    borderWidth:     1,
+    borderColor:     '#CBD5E1',
+    borderRadius:    10,
+    paddingVertical: 14,
+    alignItems:      'center',
+    minHeight:       52,
+    justifyContent:  'center',
+  },
+  cancelText: {
+    fontSize:   16,
+    fontWeight: '500',
+    color:      '#64748B',
+  },
+  saveButton: {
+    flex:            2,
+    backgroundColor: '#2563EB',
+    borderRadius:    10,
+    paddingVertical: 14,
+    alignItems:      'center',
+    minHeight:       52,
+    justifyContent:  'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveText: {
+    fontSize:   16,
+    fontWeight: '600',
+    color:      '#FFFFFF',
+  },
+});
 
 // ─────────────────────────────────────────────────────────────
 // adaptApiVisit — converts ApiVisit → LocalVisit shape for state
@@ -1467,83 +1730,3 @@ const styles = StyleSheet.create({
   },
 });
 
-// ─────────────────────────────────────────────────────────────
-// SyncDebugPanel — visible on-device sync diagnostics
-// DEBUG — remove this component and its call site before merging D3 to main.
-// Purpose: diagnose BUG-D3-DT8-1 (iOS sync worker never completes) by
-// surfacing the sync trigger chain on screen without needing Metro console.
-//
-// What each prefix means:
-//   T0 mount  — initial sync check when SyncWorkerMount mounts
-//   T1 AppState → active  — foreground trigger
-//   T2 NetInfo  — connectivity change trigger
-//   T3 5min  — interval trigger
-//   runSyncWorker called / ABORT / SKIP / drain: N rows
-//   POST /sync OK / ERR
-// ─────────────────────────────────────────────────────────────
-
-function SyncDebugPanel(): React.JSX.Element {
-  const debugLog   = useSyncStore((s) => s.debugLog);
-  const isSyncing  = useSyncStore((s) => s.isSyncing);
-  const lastSyncAt = useSyncStore((s) => s.lastSyncAt);
-
-  // Show most recent lines first; cap at 12 to capture errors from earlier runs.
-  // Store keeps 50 entries (up from 20) so [ERR] lines are not pushed off.
-  const lines = [...debugLog].reverse().slice(0, 12);
-
-  const statusText = isSyncing
-    ? 'SYNCING...'
-    : lastSyncAt
-      ? `last OK ${lastSyncAt.slice(11, 19)}`
-      : 'idle';
-
-  return (
-    <View style={debugPanelStyles.panel}>
-      <Text style={debugPanelStyles.header}>
-        {'[DEBUG] SYNC — '}{statusText}
-      </Text>
-      {lines.length === 0 ? (
-        <Text style={debugPanelStyles.line}>No events yet</Text>
-      ) : (
-        lines.map((line, i) => (
-          <Text
-            key={i}
-            style={[
-              debugPanelStyles.line,
-              line.includes('[ERR]') && debugPanelStyles.errorLine,
-            ]}
-            numberOfLines={2}
-          >
-            {line}
-          </Text>
-        ))
-      )}
-    </View>
-  );
-}
-
-const debugPanelStyles = StyleSheet.create({
-  panel: {
-    backgroundColor: '#FFFDE7',   // pale yellow — clearly a debug element
-    borderBottomWidth: 1,
-    borderBottomColor: '#F9A825',
-    paddingHorizontal: 10,
-    paddingVertical:    5,
-  },
-  header: {
-    fontSize:   11,
-    fontWeight: '700',
-    color:      '#BF360C',   // deep orange — stands out
-    marginBottom: 2,
-  },
-  line: {
-    fontSize:    10,
-    color:       '#333',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fontFamily: ('monospace' as any),
-  },
-  errorLine: {
-    color:      '#B71C1C',  // deep red — [ERR] lines stand out at a glance
-    fontWeight: '700',
-  },
-});

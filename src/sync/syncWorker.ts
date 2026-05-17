@@ -28,8 +28,6 @@ import { markRecordSynced } from '../db/records';
 import { apiFetch, ApiError, API_BASE_URL } from '../api/apiClient';
 import { pinnedFetch } from '../api/pinnedFetch';
 import { REFRESH_TOKEN_KEY } from '../auth/constants';
-import { syncLog } from './syncLogger';
-
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const BATCH_SIZE = 20;  // max operations per POST /sync call (PM spec)
@@ -365,7 +363,6 @@ async function fixOrphanVisitPayloads(
       [serverPatientId, now, entry.entity_local_id],
     );
 
-    syncLog(`pre-drain fix: visit ${entry.entity_local_id} — patient_id resolved to ${serverPatientId}, reset to pending`);
   }
 }
 
@@ -391,19 +388,11 @@ export async function runSyncWorker(
   // Read both from auth store at call time so fresh-login sessions get the
   // correct doctor ID even though useSyncWorker mounted before login completed.
   const { token, user } = useAuthStore.getState();
-  syncLog(`runSyncWorker called — hasToken:${!!token} hasUser:${!!user}`);
-  if (!token || !user) {
-    syncLog('ABORT — no token or user in auth store');
-    return;
-  }
+  if (!token || !user) return;
   const doctorId = user.id;
-  syncLog(`doctorId:${doctorId}`);
 
   // ── Concurrency guard ──────────────────────────────────────────────────
-  if (isSyncing) {
-    syncLog('SKIP — already syncing');
-    return;
-  }
+  if (isSyncing) return;
   isSyncing = true;
   useSyncStore.getState().setSyncing(true);
 
@@ -449,7 +438,6 @@ export async function runSyncWorker(
         [doctorId, BATCH_SIZE],
       );
 
-      syncLog(`drain: ${rows.length} pending rows for doctorId:${doctorId}`);
       if (rows.length === 0) break;
 
       // ── Defer scan record entries — S3 upload is v2 (locked) ─────────
@@ -501,20 +489,11 @@ export async function runSyncWorker(
       // ── POST /sync — with one JWT refresh retry on 401 ────────────────
       let results: SyncResult[];
 
-      syncLog(`POST /sync — ${operations.length} ops: ${operations.map(o => o.entity_type).join(',')}`);
       try {
         results = await postSyncBatch(currentToken, operations);
-        syncLog(`POST /sync OK — ${results.length} results: ${results.map(r => r.status).join(',')}`);
       } catch (err) {
         const isApiErr  = err instanceof ApiError;
         const apiStatus = isApiErr ? (err as ApiError).status : 0;
-
-        // [ERR] prefix makes error lines visually distinct in the SyncDebugPanel.
-        if (isApiErr) {
-          syncLog(`[ERR] POST /sync HTTP ${apiStatus}: ${(err as ApiError).message} (${(err as ApiError).code})`);
-        } else {
-          syncLog(`[ERR] POST /sync network: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`);
-        }
 
         if (isApiErr && apiStatus === 401) {
           // Session expired: attempt token refresh (D7-QA-H4 requirement).
@@ -596,7 +575,6 @@ export async function runSyncWorker(
              WHERE id IN (${batchIds})`,
             [now, ...syncRows.map((r) => r.id)],
           );
-          syncLog('[ERR] transient — reset to pending, aborting run');
           return;
         }
       }
@@ -616,10 +594,6 @@ export async function runSyncWorker(
         if (result.status === 'success' || result.status === 'conflict') {
           await applyResult(db, result, row.entity_type, row.id);
         } else if (result.status === 'error') {
-          // Server rejected this operation (schema validation failure, IDOR check,
-          // or server-side exception). Log visibly so SyncDebugPanel surfaces it.
-          syncLog(`[ERR] operation-level error — ${row.entity_type} ${result.local_id}: ${result.message ?? 'unknown'}`);
-
           // Increment attempts and retry up to max_attempts. After max_attempts,
           // dead-letter so the entry does not loop forever.
           const now = new Date().toISOString();
@@ -670,8 +644,6 @@ export async function runSyncWorker(
       }
 
     }  // end while (drain loop)
-
-    syncLog('drain loop complete');
 
     // ── Audit events flush (after all batches) ─────────────────────────
     // SW-M-1: always flush — flushAuditEvents returns immediately if there

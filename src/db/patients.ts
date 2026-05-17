@@ -101,8 +101,7 @@ export async function upsertPatientFromServer(
        (local_id, doctor_id, server_id, mobile_number, name, date_of_birth, gender,
         consent_granted, last_visit_date, synced_at, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(mobile_number) DO UPDATE SET
-       doctor_id       = COALESCE(doctor_id, excluded.doctor_id),
+     ON CONFLICT(doctor_id, mobile_number) DO UPDATE SET
        server_id       = excluded.server_id,
        name            = COALESCE(excluded.name, name),
        date_of_birth   = COALESCE(excluded.date_of_birth, date_of_birth),
@@ -237,11 +236,11 @@ export async function insertLocalPatient(
     return { localId: patient.local_id, wasInserted: true };
   }
 
-  // INSERT was a no-op — the mobile_number already exists. Look up the existing
-  // row to get the real local_id so downstream callers use the correct ID.
+  // INSERT was a no-op — this doctor already has a row for that mobile number.
+  // Scope by doctor_id to match the composite unique constraint.
   const existing = await db.getFirstAsync<{ local_id: string }>(
-    `SELECT local_id FROM patients WHERE mobile_number = ?`,
-    [patient.mobile_number],
+    `SELECT local_id FROM patients WHERE mobile_number = ? AND doctor_id = ?`,
+    [patient.mobile_number, patient.doctor_id],
   );
   return {
     localId: existing?.local_id ?? patient.local_id,
@@ -265,6 +264,40 @@ export async function setPatientServerId(
      WHERE local_id = ?`,
     [serverId, now, now, localId],
   );
+}
+
+/**
+ * Update a patient's mobile number locally.
+ *
+ * Called by D3 mobile-edit modal when staff correct a wrong mobile number.
+ * Writes to SQLite first (offline-first); the caller enqueues an 'update'
+ * sync operation so the correction reaches the server on reconnect.
+ *
+ * NOTE: The backend POST /sync endpoint does not yet handle patient 'update'
+ * operations — it must be extended before mobile corrections propagate to
+ * the server. This is a known pre-launch gap (D3-mobile-edit build notes).
+ *
+ * Returns { success: true } on update, { success: false, conflict: true }
+ * when another patient already has that mobile number (UNIQUE constraint).
+ */
+export async function updatePatientMobile(
+  db: SQLite.SQLiteDatabase,
+  localId:   string,
+  newMobile: string,
+): Promise<{ success: boolean; conflict: boolean }> {
+  const now = new Date().toISOString();
+  try {
+    const result = await db.runAsync(
+      `UPDATE patients SET mobile_number = ?, updated_at = ? WHERE local_id = ?`,
+      [newMobile, now, localId],
+    );
+    return { success: result.changes > 0, conflict: false };
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
+      return { success: false, conflict: true };
+    }
+    throw err;
+  }
 }
 
 /**

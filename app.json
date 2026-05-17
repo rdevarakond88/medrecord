@@ -7,24 +7,40 @@
     "scheme": "medrecord",
     "platforms": [
       "ios",
-      "android",
-      "web"
+      "android"
     ],
-    "web": {
-      "bundler": "metro",
-      "output": "single"
-    },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.medrecord.app",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "MedRecord uses the camera to scan patient documents.",
+        "NSMicrophoneUsageDescription": "Microphone access is required for camera use.",
+        "NSPhotoLibraryUsageDescription": "MedRecord accesses photos to attach scanned documents."
+      }
     },
     "android": {
+      "package": "com.medrecord.app",
       "adaptiveIcon": {
         "backgroundColor": "#1A6DB5"
-      }
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "plugins": [
       "expo-sqlite",
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      "expo-camera",
+      "./plugins/withSslPinning"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
   }
 }

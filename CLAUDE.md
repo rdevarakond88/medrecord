@@ -48,6 +48,23 @@ Each agent has a defined role. Never perform a task that belongs to an agent wit
 | QA | `agents/agent-qa.md` | After every live screen passes security audit |
 | Device Tester | _(see Device Testing Rules below)_ | After QA test plan is complete AND infrastructure pre-flight passes |
 
+### Mandatory Builder → Persona Critic Sequence
+
+When a Builder session ends after completing a **mockup**, the very next item written into `docs/project-state.md` **MUST** be a Persona Critic session for that same screen. This is a hard rule — not a suggestion.
+
+**Two consecutive Builder mockup sessions with no Persona Critic between them is a workflow violation.**
+
+The end-of-session project-state.md update must interleave Persona Critic sessions after every mockup, like this:
+
+```
+Builder: Px mockup   ← session N
+Persona Critic: Px   ← session N+1  (mandatory — write this at session N end)
+Builder: Py mockup   ← session N+2
+Persona Critic: Py   ← session N+3  (mandatory — write this at session N+2 end)
+```
+
+If the next item in project-state.md is another Builder mockup session with no Persona Critic in between, the opening agent **must stop**, flag the violation, correct the sequence, and ask the user before proceeding.
+
 ---
 
 ## The Non-Negotiable Rule
