@@ -518,6 +518,34 @@ Rule going forward: Whenever a Builder session creates the first screen of a new
 
 ---
 
+**Mistake 14 — No end-to-end integration test across the doctor and patient flows**
+
+What happened: All 14 screens were individually built, security-audited, QA tested, and device tested. Each screen passed its own Device Tester session. The project was declared complete and merged to main. The user then asked: "Did we ever test the full connected loop — doctor creates patient, doctor requests consent, patient grants it on their screen, doctor sees records?" The answer was no. That scenario had never been run as a single connected test.
+
+What was tested in isolation:
+- D9 (doctor requests consent → OTP sent) — tested on its own
+- P4 (patient sees pending request → grants or denies) — tested with seeded mock data, not a live request from D9
+
+What was never tested:
+- Doctor triggers consent request → patient receives it live → patient grants it → doctor's D3 screen reflects access granted
+- Patient revokes access in P4 → doctor loses access in D3 in the same session
+- Doctor creates a new visit → patient sees it appear in their P2 timeline
+- Any cause-and-effect interaction that crosses the doctor/patient boundary in a single connected session
+
+Root cause: The workflow was designed screen-by-screen. Every screen went through PM → Builder → Persona Critic → Security → QA → Device Tester. That pipeline is correct for building individual screens correctly, but it has a structural blind spot — no agent or step asks "does the whole system work as one connected experience?" Individual screen testing is not the same as integration testing. The workflow had no agent that owned cross-flow scenarios.
+
+How it was caught: The user — not any agent — identified the gap after the project was declared complete. No agent in the workflow prompted the question.
+
+Impact: For this project (a learning exercise), the gap is cosmetic — the individual screens all work. In a real clinical deployment, this would be a serious omission. A broken consent grant flow would mean doctors cannot access records even after patients approve, which is the app's core value proposition.
+
+Rule going forward: The workflow now includes a seventh agent — the **Integration Tester** — that runs once, after ALL screens across ALL flows have passed individual Device Tester sessions, and BEFORE PM Moment 2 sign-off. The PM cannot declare "clear to merge" until the Integration Tester has either passed clean or had its bugs fixed by Builder and re-verified.
+
+The Integration Tester's job is exclusively cross-flow scenarios: every action on one side of the app that is supposed to cause a visible effect on the other side must be tested as a single connected session. It never tests screens in isolation — the Device Tester already owns that. It logs defects and hands off to Builder at session end, following the same pattern as the Device Tester.
+
+See `agents/agent-integration-tester.md` for the full agent definition.
+
+---
+
 ## 4. Standard Runbook — Building Each Screen
 
 ### Step 1: Read Before Writing
