@@ -2,17 +2,16 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** MERGED TO MAIN — PR #5 merged 2026-05-16. All 14 screens live on main. Pre-pilot: EAS build + cert pinning validation (Step 26).
-**Last Updated:** 2026-05-16
+**Phase:** COMPLETE — All 14 screens built, tested, and merged to main (PR #5, 2026-05-16). Project is a learning exercise in agent orchestration and workflow automation — not intended for App Store publication.
+**Last Updated:** 2026-05-17
 
-> ⚠️ **BEFORE STARTING THE NEXT CLAUDE SESSION:** Run these commands first (outside Claude), then install the IPA on your iPhone, then type `claude`:
-> ```
-> eas login
-> eas init
-> npm install
-> eas build --profile preview --platform ios
-> ```
-> The build takes ~15–30 min. You'll get a download link by email / Expo dashboard. Install it, then start the Device Tester session.
+> ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
+> Reason: EAS internal distribution requires an Apple Developer Program membership ($99/year). The owner chose not to purchase it because this project's purpose is learning agent orchestration and automation workflows, not shipping a production app.
+>
+> **Why the app cannot be published to the App Store:**
+> Publishing to the App Store requires an active Apple Developer Program membership ($99/year). Without it, you cannot submit apps, create provisioning profiles for device distribution, or use EAS Build for iOS. The app is fully functional and tested via Expo Go on device — it simply cannot be distributed outside of Expo Go without the membership.
+>
+> **No further action required on Step 26.** The project is considered complete.
 
 ---
 
@@ -36,7 +35,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — Step 26 (2026-05-16). Removed empty `ascAppId`/`appleTeamId` from eas.json (commit 16d29ef). Unblocks `eas init`. User must run: `eas login && eas init && eas build --profile preview --platform ios`. After IPA installed → Device Tester session for cert pinning validation.
+**Last Session:** Step 26 closed (2026-05-17). EAS build permanently skipped — Apple Developer Program membership ($99/year) not purchased. Project purpose is learning agent orchestration, not App Store publication. App is fully functional via Expo Go. Project is COMPLETE.
 
 **Previous Session:** Builder Agent — Step 25 (2026-05-16). Verified syncLogger.ts already removed (done 2026-05-10). No code changes required. project-state.md updated.
 
@@ -179,7 +178,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~23~~ | ~~**PM Agent — Moment 2 sign-off (all screens)**~~ | ~~DONE 2026-05-16. CLEAR TO MERGE. Overall: Strong. Pre-pilot conditions: EAS build + cert pinning, syncLogger.ts removal, solo-doctor pilot selection. Review: `reviews/all-screens-pm-review-moment2.md`.~~ |
 | ~~24~~ | ~~**Merge dev → main**~~ | ~~DONE 2026-05-16 — PR #5 merged. Merge commit: f7936ee. All 14 screens live on main.~~ |
 | ~~25~~ | ~~**Builder: remove syncLogger.ts**~~ | ~~Already removed 2026-05-10. Step 25 verified complete 2026-05-16.~~ |
-| **26** | **EAS build + cert pinning validation** | ~~eas.json fix done (commit 16d29ef).~~ Next: user runs `eas login && eas init && eas build --profile preview --platform ios`. After IPA installed on device → Device Tester session to validate cert pinning + login → D9 consent flow smoke test. |
+| ~~**26**~~ | ~~**EAS build + cert pinning validation**~~ | ~~PERMANENTLY SKIPPED 2026-05-17 — Apple Developer Program membership ($99/year) required for EAS iOS builds. Owner chose not to purchase; project purpose is learning agent orchestration, not App Store publication. App is fully functional via Expo Go.~~ |
 
 ---
 
