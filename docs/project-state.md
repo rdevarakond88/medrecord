@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** MERGED TO MAIN — PR #5 merged 2026-05-16. All 14 screens live on main. Pre-pilot: syncLogger.ts removal (Builder), EAS build + cert pinning validation.
+**Phase:** MERGED TO MAIN — PR #5 merged 2026-05-16. All 14 screens live on main. Pre-pilot: EAS build + cert pinning validation (Step 26).
 **Last Updated:** 2026-05-16
 
 ---
@@ -22,12 +22,14 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Patient endpoints | POST /auth/send-otp (role:"patient") + POST /auth/verify-otp → patient JWT. GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond. |
 | Consent endpoints | POST /consent/request → HTTP 401 ✅. POST /consent/verify → HTTP 401 ✅. POST /consent/pending-request → async patient-app flow. |
-| Next action | Step 25: Builder session — remove syncLogger.ts + all call sites. Step 26: EAS build (delete empty ascAppId/appleTeamId from eas.json → eas init → eas build → validate cert pinning). |
+| Next action | Step 26: EAS build (delete empty ascAppId/appleTeamId from eas.json → eas init → eas build → validate cert pinning). |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Merge — Step 24 complete (2026-05-16). PR #5 merged dev → main. Merge commit: f7936ee. All 14 screens live on main. Next: Step 25 (Builder: remove syncLogger.ts) → Step 26 (EAS build + cert pinning validation).
+**Last Session:** Builder Agent — Step 25 (2026-05-16). Verified syncLogger.ts already removed (done 2026-05-10). No code changes required. project-state.md updated. Next: Step 26 (EAS build + cert pinning validation).
+
+**Previous Session:** Merge — Step 24 complete (2026-05-16). PR #5 merged dev → main. Merge commit: f7936ee. All 14 screens live on main.
 
 **Previous Session:** PM Agent — Moment 2 post-flow review (2026-05-16). CLEAR TO MERGE dev → main. Overall: Strong. Key risks: consent OTP friction (solo-doctor pilot recommended), no patient app discovery path (v1.1), EAS cert pinning not yet validated (pre-pilot blocker), syncLogger.ts still active (pre-pilot Builder session required). Review: `reviews/all-screens-pm-review-moment2.md`.
 
@@ -165,7 +167,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~22c~~ | ~~**Device test: P1–P5 Patient App (re-run)**~~ | ~~DONE 2026-05-16. 54/54 PASS, 0 FAIL, 0 bugs. Clear to merge. Session: `reviews/P1-P5-device-test-session.md`.~~ |
 | ~~23~~ | ~~**PM Agent — Moment 2 sign-off (all screens)**~~ | ~~DONE 2026-05-16. CLEAR TO MERGE. Overall: Strong. Pre-pilot conditions: EAS build + cert pinning, syncLogger.ts removal, solo-doctor pilot selection. Review: `reviews/all-screens-pm-review-moment2.md`.~~ |
 | ~~24~~ | ~~**Merge dev → main**~~ | ~~DONE 2026-05-16 — PR #5 merged. Merge commit: f7936ee. All 14 screens live on main.~~ |
-| **25** | **Builder: remove syncLogger.ts** | D6-M-new-1 — remove `src/sync/syncLogger.ts` + all call sites before EAS build ships. |
+| ~~25~~ | ~~**Builder: remove syncLogger.ts**~~ | ~~Already removed 2026-05-10. Step 25 verified complete 2026-05-16.~~ |
 | **26** | **EAS build + cert pinning validation** | Delete empty `ascAppId`/`appleTeamId` from eas.json → `eas init` → `eas build --profile preview --platform ios` → validate cert pinning active on device. |
 
 ---
