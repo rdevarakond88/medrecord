@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — Device testing COMPLETE (22c). 54/54 PASS, 0 bugs. Clear to merge to main.
+**Phase:** ALL SCREENS COMPLETE — PM Agent Moment 2 sign-off required before merge to main.
 **Last Updated:** 2026-05-16
 
 ---
@@ -22,12 +22,14 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 | OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
 | Patient endpoints | POST /auth/send-otp (role:"patient") + POST /auth/verify-otp → patient JWT. GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond. |
 | Consent endpoints | POST /consent/request → HTTP 401 ✅. POST /consent/verify → HTTP 401 ✅. POST /consent/pending-request → async patient-app flow. |
-| Next action | QA Agent — P1–P5 Patient App. |
+| Next action | PM Agent — Moment 2 post-flow sign-off (all screens complete). |
 
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Device Tester — P1–P5 Patient App (22c complete, 2026-05-16). 54/54 PASS, 0 FAIL, 0 bugs. All deferred tests from prior sub-session completed. Session: `reviews/P1-P5-device-test-session.md`. Clear to merge to main.
+**Last Session:** Analysis session (2026-05-16). Confirmed all D1–D9 doctor screens and P1–P5 patient screens are device-tested and clear to merge. D8 "Screens Pending" table entry was stale (sessions 7e–7g completed QA + device testing). PM Agent Moment 2 sign-off identified as the missing step before merge to main.
+
+**Previous Session:** Device Tester — P1–P5 Patient App (22c complete, 2026-05-16). 54/54 PASS, 0 FAIL, 0 bugs. All deferred tests from prior sub-session completed. Session: `reviews/P1-P5-device-test-session.md`. Clear to merge to main.
 
 **Previous Session:** Builder Agent — DT-B1 fix (2026-05-16). Added `__DEV__`-gated "Patient App →" button to doctor's LoginScreen demo block; `navigation.navigate('PatientLogin')`. Zero new TS errors. Pushed to dev.
 
@@ -159,6 +161,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~22~~ | ~~**Device test: P1–P5 Patient App**~~ | ~~BLOCKED 2026-05-16 — DT-B1: no dev nav entry point to PatientLogin. 0/54 tests run. Session: `reviews/P1-P5-device-test-session.md`.~~ |
 | ~~22b~~ | ~~**Builder: fix DT-B1**~~ | ~~DONE 2026-05-16 — "Patient App →" button added to `__DEV__` demo block in LoginScreen.tsx; navigates to PatientLogin. Zero new TS errors.~~ |
 | ~~22c~~ | ~~**Device test: P1–P5 Patient App (re-run)**~~ | ~~DONE 2026-05-16. 54/54 PASS, 0 FAIL, 0 bugs. Clear to merge. Session: `reviews/P1-P5-device-test-session.md`.~~ |
+| **23** | **PM Agent — Moment 2 sign-off (all screens)** | All D1–D9 doctor screens and P1–P5 patient screens are device-tested and clear. PM Agent must run Moment 2 post-flow review before merge to main. No merge until PM sign-off is recorded here. |
 
 ---
 
@@ -235,7 +238,7 @@ _Carry these into every build/mockup session for these screens._
 | D7 — Document Scanner | **COMPLETE — device testing done 2026-03-06.** All 95 checklist items confirmed or deferred with written reason. Security audit v3: Clear to merge. Ready for PR to main. | Tier 1 Critical. Checklist: reviews/D7-VALIDATION-CHECKLIST.md. |
 | D5 — New Patient Form | **DEVICE TESTING COMPLETE (2026-04-12, sessions 1–2). Zero open bugs. Clear to merge to main.** All QA findings C1+C2+E1+H1+H2+H3+H4 fixed (2026-04-11). BUG-D5-DT1-1 (HIGH — isSavingRef stuck on success) VERIFIED fixed. HP-6 (MEDIUM — D5 patients absent from D2 recent list) VERIFIED fixed. Live screen `src/screens/doctor/NewPatientFormScreen.tsx`. Sessions: `reviews/D5-device-test-session.md`, `reviews/D5-device-test-session-2.md`. | Tier 3. Must hash Aadhaar at form boundary when added — locked decision. |
 | D1 — Login / OTP | **DEVICE TESTING COMPLETE (2026-03-19, sessions 1–4). 14 PASS, 0 FAIL, 11 SKIP (cert pinning, SQLite audit events, special tooling — all documented). All BLOCKER bugs fixed (BUG-D1-DT-1 through BUG-D1-DT-5). Clear to merge to main. In PR #1 (2026-04-11).** File: `src/screens/doctor/LoginScreen.tsx`. Session doc: `reviews/D1-device-test-session.md`. Reports: `reviews/D1-persona-critique-r2.md`, `reviews/D1-security-audit-v2.md`, `reviews/D1-qa-test-plan-v2.md`. | Tier 3. Android SMS autofill deferred. SF-3 (individual digit boxes) deferred. |
-| D8 — Full Scan View | **Wire complete (2026-05-12). Security audit complete (2026-05-12) — CLEAR TO MERGE. 0 CRITICAL, 0 HIGH. D8-SA-M1 (logScanViewed) + D8-SA-L1 (resolveScanPath null guard) documented. Audit: `reviews/D8-security-audit.md`. Next: QA Agent.** Wire: `src/screens/doctor/FullScanViewScreen.tsx`, `src/components/ScanImageViewer.tsx`. Persona Critic v2 score 3.55/5. | Tier 3. Image viewer + OCR panel. No new backend dependency — reads device filesystem + SQLite. ScanImageViewer reusable for P3. |
+| D8 — Full Scan View | **DEVICE TESTING COMPLETE (2026-05-16, session 7g). 18/18 PASS, 0 FAIL. No new bugs. Clear to merge. QA complete (7e, 2026-05-12). QA fixes complete (7e-fix). D8-DT-H1 found in session 7f, fixed in 7f-fix, verified in 7g. Security audit: 0 CRITICAL, 0 HIGH. D8-SA-M1 + D8-SA-L1 documented as pre-v1 debt. Audit: `reviews/D8-security-audit.md`.** Wire: `src/screens/doctor/FullScanViewScreen.tsx`, `src/components/ScanImageViewer.tsx`. Persona Critic v2 score 3.55/5. | Tier 3. Image viewer + OCR panel. No new backend dependency — reads device filesystem + SQLite. ScanImageViewer reusable for P3. |
 | D9 — Consent Request Flow | **MERGED TO MAIN (2026-05-10). PM Moment 2 + Moment 3 complete. Device testing COMPLETE (sessions 1–4). Security re-audit v3 — 0 critical/high/medium. D3 `handleRequestAccess` fully wired to D9 (not a stub).** Pre-launch conditions: (1) patient mobile edit in D3, (2) EAS build + cert pinning, (3) D5-M-1 UNIQUE fix, (4) D6 syncLogger removal. Reviews: `reviews/D9-pm-review-v3.md`, `reviews/D9-security-audit-v3.md`. Sessions: `reviews/D9-device-test-session-1.md` through `reviews/D9-device-test-session-4.md`. Live screen: `src/screens/doctor/ConsentRequestScreen.tsx`. | Tier 3. MERGED. |
 | P1 — Patient Login / OTP | **Mockup COMPLETE (2026-05-16). `src/screens/patient/PatientLoginScreen.tsx`. Mock auth — wire step will add real sendOtp/verifyOtp + patient auth store + SecureStore. Patient JWT shape documented in file header. Next: Persona Critic.** | Tier 4. |
 | P2–P5 — Patient App (Timeline, Record Detail, Access, Profile) | Not started | Tier 2 / Tier 4. |
