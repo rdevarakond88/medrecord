@@ -35,7 +35,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Workflow update (2026-05-17). Integration Tester agent created (`agents/agent-integration-tester.md`). CLAUDE.md and AGENT_ORCHESTRATION.md updated to include Step 12. Mistake 14 documented in LESSONS-AND-RUNBOOK.md. Next: Integration Tester session (Step 27) — run 7 connected doctor-patient scenarios to validate the full end-to-end loop before declaring the project functionally complete.
+**Last Session:** Integration Tester — Step 27 (2026-05-17). BLOCKED — 0/7 scenarios completed. 2 CRITICAL pre-condition bugs found. BUG-IT-PRE-1: `pinnedFetch` activates SSL-pinning path in Expo Go (q library installed → require doesn't throw → sslFetch set → RNSslPinning null → all API calls fail). BUG-IT-PRE-2: PatientLoginScreen still uses mock OTP functions — wire step for P1–P5 was never executed. Also fixed ngrok tunnel (v3 binary + @expo/ngrok compat patches). Session: `reviews/integration-test-session.md`. Builder Agent required: fix pinnedFetch.ts + wire PatientLoginScreen.tsx, then re-run all 7 scenarios.
 
 **Previous Session:** Builder Agent — Step 25 (2026-05-16). Verified syncLogger.ts already removed (done 2026-05-10). No code changes required. project-state.md updated.
 
@@ -179,7 +179,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~24~~ | ~~**Merge dev → main**~~ | ~~DONE 2026-05-16 — PR #5 merged. Merge commit: f7936ee. All 14 screens live on main.~~ |
 | ~~25~~ | ~~**Builder: remove syncLogger.ts**~~ | ~~Already removed 2026-05-10. Step 25 verified complete 2026-05-16.~~ |
 | ~~**26**~~ | ~~**EAS build + cert pinning validation**~~ | ~~PERMANENTLY SKIPPED 2026-05-17 — Apple Developer Program membership ($99/year) required for EAS iOS builds. Owner chose not to purchase; project purpose is learning agent orchestration, not App Store publication. App is fully functional via Expo Go.~~ |
-| **27** | **Integration Tester — connected doctor-patient scenarios** | All 14 screens individually device tested. This step validates the full end-to-end loop: doctor actions that should produce visible effects on patient screens, and patient actions that should change what the doctor sees. 7 scenarios. Start dev server (`npm start`), then start Integration Tester session. |
+| **27b** | **Builder Agent — fix BUG-IT-PRE-1 + BUG-IT-PRE-2** | BLOCKED from Step 27 integration testing. BUG-IT-PRE-1: `src/api/pinnedFetch.ts` — guard `sslFetch` with `NativeModules.RNSslPinning` check. BUG-IT-PRE-2: wire `src/screens/patient/PatientLoginScreen.tsx` to real API; add `role` param to `sendOtp` in `src/api/auth.ts`. After fixes: re-run Step 27 (all 7 scenarios). |
+| ~~**27**~~ | ~~**Integration Tester — connected doctor-patient scenarios**~~ | ~~BLOCKED 2026-05-17 — 0/7 scenarios. 2 CRITICAL pre-condition bugs. See session: `reviews/integration-test-session.md`.~~ |
 
 ---
 
