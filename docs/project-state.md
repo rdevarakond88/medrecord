@@ -5,6 +5,15 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 **Phase:** MERGED TO MAIN — PR #5 merged 2026-05-16. All 14 screens live on main. Pre-pilot: EAS build + cert pinning validation (Step 26).
 **Last Updated:** 2026-05-16
 
+> ⚠️ **BEFORE STARTING THE NEXT CLAUDE SESSION:** Run these commands first (outside Claude), then install the IPA on your iPhone, then type `claude`:
+> ```
+> eas login
+> eas init
+> npm install
+> eas build --profile preview --platform ios
+> ```
+> The build takes ~15–30 min. You'll get a download link by email / Expo dashboard. Install it, then start the Device Tester session.
+
 ---
 
 ## Backend Status
