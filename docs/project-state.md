@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** P1–P5 Patient App — QA fixes applied. Ready for device testing.
+**Phase:** P1–P5 Patient App — Device testing BLOCKED. Builder fix required (DT-B1).
 **Last Updated:** 2026-05-16
 
 ---
@@ -27,7 +27,9 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — P1–P5 QA fixes (2026-05-16). P1-M1: handleSendOtp now calls setPhoneError when pasted number has first digit < 6. P4-M1: handleGrant synthesises ActiveConsent from the granted request and pushes to consents state. P4-M2: infoNoteText fontSize 13→14. P5-M1: navigation.navigate→replace in handleLogout. Zero TS errors in changed files. Pushed to dev.
+**Last Session:** Device Tester — P1–P5 Patient App (2026-05-16). BLOCKED before first test case. DT-B1: no dev nav entry point to PatientLogin — doctor's LoginScreen has no `__DEV__` button to navigate to PatientLogin; all 54 test cases blocked. Builder session required to fix DT-B1, then restart device testing. Session doc: `reviews/P1-P5-device-test-session.md`.
+
+**Previous Session:** Builder Agent — P1–P5 QA fixes (2026-05-16). P1-M1: handleSendOtp now calls setPhoneError when pasted number has first digit < 6. P4-M1: handleGrant synthesises ActiveConsent from the granted request and pushes to consents state. P4-M2: infoNoteText fontSize 13→14. P5-M1: navigation.navigate→replace in handleLogout. Zero TS errors in changed files. Pushed to dev.
 
 **Previous Session:** QA Agent — P1–P5 Patient App (2026-05-16). 0 CRITICAL, 0 HIGH, 4 MEDIUM. P1-M1: Send OTP button unresponsive on pasted invalid number. P4-M1: Grant consent removes pending card but does not add to active list. P4-M2: infoNoteText 13px below 14px minimum. P5-M1: handleLogout uses navigate instead of replace. Plus wire-step mandates M-2 (auth guards P2–P5) and M-3 (logout token clearance). Builder session required before device testing. Plan: `reviews/P1-P5-qa-test-plan.md`.
 
@@ -150,7 +152,9 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~20c~~ | ~~**Security re-check: P1–P5**~~ | ~~DONE 2026-05-16. CLEAR TO QA. All 4 mandatory findings verified fixed. Re-check: `reviews/P1-P5-security-recheck.md`.~~ |
 | ~~21~~ | ~~**QA: P1–P5 Patient App**~~ | ~~DONE 2026-05-16. 0 CRITICAL, 0 HIGH, 4 MEDIUM. Builder session required. Plan: `reviews/P1-P5-qa-test-plan.md`.~~ |
 | ~~21b~~ | ~~**Builder: P1–P5 QA fixes**~~ | ~~DONE 2026-05-16 — P1-M1, P4-M1, P4-M2, P5-M1 all fixed. Pushed to dev.~~ |
-| 22 | **Device test: P1–P5 Patient App** | **NEXT** — After QA bugs fixed. Run full test plan: `reviews/P1-P5-qa-test-plan.md`. |
+| ~~22~~ | ~~**Device test: P1–P5 Patient App**~~ | ~~BLOCKED 2026-05-16 — DT-B1: no dev nav entry point to PatientLogin. 0/54 tests run. Session: `reviews/P1-P5-device-test-session.md`.~~ |
+| 22b | **Builder: fix DT-B1** | **NEXT** — Add `__DEV__`-gated "Patient App →" button to doctor's LoginScreen demo block → `navigation.navigate('PatientLogin')`. One change. |
+| 22c | **Device test: P1–P5 Patient App (re-run)** | After DT-B1 fixed. Run full test plan from scratch: `reviews/P1-P5-qa-test-plan.md`. |
 
 ---
 
