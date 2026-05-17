@@ -27,7 +27,9 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — Step 25 (2026-05-16). Verified syncLogger.ts already removed (done 2026-05-10). No code changes required. project-state.md updated. Next: Step 26 (EAS build + cert pinning validation).
+**Last Session:** Builder Agent — Step 26 (2026-05-16). Removed empty `ascAppId`/`appleTeamId` from eas.json (commit 16d29ef). Unblocks `eas init`. User must run: `eas login && eas init && eas build --profile preview --platform ios`. After IPA installed → Device Tester session for cert pinning validation.
+
+**Previous Session:** Builder Agent — Step 25 (2026-05-16). Verified syncLogger.ts already removed (done 2026-05-10). No code changes required. project-state.md updated.
 
 **Previous Session:** Merge — Step 24 complete (2026-05-16). PR #5 merged dev → main. Merge commit: f7936ee. All 14 screens live on main.
 
@@ -168,7 +170,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~23~~ | ~~**PM Agent — Moment 2 sign-off (all screens)**~~ | ~~DONE 2026-05-16. CLEAR TO MERGE. Overall: Strong. Pre-pilot conditions: EAS build + cert pinning, syncLogger.ts removal, solo-doctor pilot selection. Review: `reviews/all-screens-pm-review-moment2.md`.~~ |
 | ~~24~~ | ~~**Merge dev → main**~~ | ~~DONE 2026-05-16 — PR #5 merged. Merge commit: f7936ee. All 14 screens live on main.~~ |
 | ~~25~~ | ~~**Builder: remove syncLogger.ts**~~ | ~~Already removed 2026-05-10. Step 25 verified complete 2026-05-16.~~ |
-| **26** | **EAS build + cert pinning validation** | Delete empty `ascAppId`/`appleTeamId` from eas.json → `eas init` → `eas build --profile preview --platform ios` → validate cert pinning active on device. |
+| **26** | **EAS build + cert pinning validation** | ~~eas.json fix done (commit 16d29ef).~~ Next: user runs `eas login && eas init && eas build --profile preview --platform ios`. After IPA installed on device → Device Tester session to validate cert pinning + login → D9 consent flow smoke test. |
 
 ---
 
