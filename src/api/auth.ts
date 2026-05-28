@@ -9,9 +9,10 @@
  * F-10: No phone numbers, OTPs, user IDs, or JWT fragments in any console.log.
  *
  * Exports:
- *   sendOtp()          — POST /auth/send-otp
- *   verifyOtp()        — POST /auth/verify-otp
- *   refreshAccessToken() — POST /auth/refresh
+ *   sendOtp()             — POST /auth/send-otp  (doctor and patient)
+ *   verifyOtp()           — POST /auth/verify-otp (doctor)
+ *   verifyPatientOtp()    — POST /auth/verify-otp (patient — different response shape)
+ *   refreshAccessToken()  — POST /auth/refresh
  */
 
 import { pinnedFetch } from './pinnedFetch';
@@ -39,6 +40,19 @@ export interface VerifyOtpResponse {
     role:      'doctor' | 'patient';
     name:      string;
     clinic_id: string;
+  };
+}
+
+/** Patient verify-otp response — no clinic_id; has mobile_number instead. */
+export interface PatientVerifyOtpResponse {
+  access_token:  string;
+  refresh_token: string;
+  expires_in:    number;
+  user: {
+    id:            string;
+    role:          'patient';
+    name:          string | null;
+    mobile_number: string;
   };
 }
 
@@ -75,12 +89,13 @@ function throwApiError(body: unknown, status: number): never {
 export async function sendOtp(
   mobileNumber: string,
   channel: OtpChannel = 'sms',
+  role: 'doctor' | 'patient' = 'doctor',
 ): Promise<SendOtpResponse> {
   const response = await pinnedFetch(`${BASE_URL}/auth/send-otp`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     // F-10: mobileNumber is not logged; it goes only in the request body
-    body: JSON.stringify({ mobile_number: mobileNumber, role: 'doctor', channel }),
+    body: JSON.stringify({ mobile_number: mobileNumber, role, channel }),
   });
 
   const body = await response.json();
@@ -117,6 +132,27 @@ export async function verifyOtp(
   if (!response.ok) throwApiError(body, response.status);
 
   return body as VerifyOtpResponse;
+}
+
+/**
+ * POST /auth/verify-otp (patient variant)
+ * Same endpoint as verifyOtp() but the backend returns a patient-shaped user
+ * (mobile_number instead of clinic_id). Called from PatientLoginScreen.
+ */
+export async function verifyPatientOtp(
+  otpToken: string,
+  otp: string,
+): Promise<PatientVerifyOtpResponse> {
+  const response = await pinnedFetch(`${BASE_URL}/auth/verify-otp`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ otp_token: otpToken, otp }),
+  });
+
+  const body = await response.json();
+  if (!response.ok) throwApiError(body, response.status);
+
+  return body as PatientVerifyOtpResponse;
 }
 
 /**

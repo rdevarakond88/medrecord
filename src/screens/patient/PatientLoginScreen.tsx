@@ -4,31 +4,11 @@
  * Spec:    docs/ui-ux-spec.md § P1 ("Same as D1 but subtitle: 'For Patients'")
  * PM:      reviews/P1-P5-pm-review.md
  *
- * MOCKUP — all API calls are mocked (no real network requests yet).
- *
- * Wire step will:
- *   1. Replace mockSendOtp / mockVerifyOtp with real sendOtp / verifyOtp
- *      from api/auth.ts (same backend endpoints — POST /auth/send-otp,
- *      POST /auth/verify-otp — once backend issues patient JWTs).
- *   2. Handle patient JWT shape: { id, role: 'patient', name, mobile_number }
- *      Note: no clinic_id — patient user differs from doctor user.
- *   3. Set up patient auth state (extend useAuthStore with role branching,
- *      or create a separate usePatientAuthStore).
- *   4. Write refresh_token to expo-secure-store (same REFRESH_TOKEN_KEY key
- *      or a separate PATIENT_REFRESH_TOKEN_KEY — decide at wire step).
- *   5. Document patient JWT response in api-contracts.md (Step 5b requirement).
- *
- * Patient JWT shape expected from backend (document in api-contracts.md at wire):
- *   POST /auth/verify-otp → {
- *     access_token:  string,
- *     refresh_token: string,
- *     user: {
- *       id:            string,        // server patient_id (UUID)
- *       role:          'patient',
- *       name:          string | null, // from patients table; null if not registered
- *       mobile_number: string,        // 10-digit Indian mobile number
- *     }
- *   }
+ * Live screen — wired to real API (BUG-IT-PRE-2 fix, 2026-05-27).
+ *   - sendOtp called with role: 'patient' → POST /auth/send-otp
+ *   - verifyPatientOtp → POST /auth/verify-otp (patient JWT response shape)
+ *   - Refresh token stored in expo-secure-store under PATIENT_REFRESH_TOKEN_KEY
+ *   - Access token stored in usePatientAuthStore (in-memory only)
  *
  * Design note (PM review 2026-05-16):
  *   Primary user is a 25-40 year old family member managing records on behalf
@@ -51,72 +31,22 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as SecureStore from 'expo-secure-store';
 import NetInfo from '@react-native-community/netinfo';
 
 import { Colors, Spacing } from '../../constants/theme';
+import { sendOtp, verifyPatientOtp } from '../../api/auth';
+import { ApiError } from '../../api/apiClient';
+import { PATIENT_REFRESH_TOKEN_KEY, PATIENT_USER_PROFILE_KEY } from '../../auth/constants';
+import { usePatientAuthStore } from '../../store/usePatientAuthStore';
 import type { RootStackParamList } from '../../../App';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Phase         = 'phone_entry' | 'loading' | 'otp_entry';
 type LoadingAction = 'sending' | 'verifying';
-type OtpError = null | 'wrong_otp' | 'otp_expired' | 'too_many_attempts' | 'no_connection';
+type OtpError  = null | 'wrong_otp' | 'otp_expired' | 'too_many_attempts' | 'no_connection';
 type SendError = null | 'send_failed' | 'rate_limited' | 'no_connection';
-
-// ─── Mock auth (replace with real api/auth.ts calls at wire step) ─────────────
-
-async function mockSendOtp(
-  _phone: string,
-): Promise<{ otp_token: string }> {
-  await new Promise<void>((r) => setTimeout(r, 800));
-  return { otp_token: `mock_otp_token_${Date.now()}` };
-}
-
-async function mockVerifyOtp(
-  _otpToken: string,
-  otp: string,
-): Promise<{ access_token: string; refresh_token: string; user: MockPatientUser }> {
-  await new Promise<void>((r) => setTimeout(r, 600));
-  // Demo error triggers for Persona Critic review (same bypass as D1):
-  //   '111111' → wrong OTP
-  //   '222222' → OTP expired
-  //   '333333' → too many attempts
-  //   '000000' → success (mirrors TEST_OTP_BYPASS)
-  if (otp === '111111') throw { code: 'WRONG_OTP',          status: 400 };
-  if (otp === '222222') throw { code: 'OTP_EXPIRED',        status: 400 };
-  if (otp === '333333') throw { code: 'TOO_MANY_ATTEMPTS',  status: 400 };
-  return {
-    access_token:  'mock_patient_access_token',
-    refresh_token: 'mock_patient_refresh_token',
-    user: {
-      id:            'mock-patient-id-001',
-      role:          'patient',
-      name:          'Priya Sharma',
-      mobile_number: '8884556234',
-    },
-  };
-}
-
-interface MockPatientUser {
-  id:            string;
-  role:          'patient';
-  name:          string | null;
-  mobile_number: string;
-}
-
-interface MockError {
-  code:   string;
-  status: number;
-}
-
-function isMockError(err: unknown): err is MockError {
-  return (
-    typeof err === 'object' &&
-    err !== null &&
-    'code' in err &&
-    'status' in err
-  );
-}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -131,8 +61,8 @@ const SEND_ERROR_MESSAGES: Record<NonNullable<SendError>, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function PatientLoginScreen() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation   = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const setPatientAuth = usePatientAuthStore((s) => s.setAuth);
 
   const [phase,         setPhase]         = useState<Phase>('phone_entry');
   const [otpError,      setOtpError]      = useState<OtpError>(null);
@@ -217,7 +147,7 @@ export default function PatientLoginScreen() {
     }
 
     try {
-      const { otp_token } = await mockSendOtp(phone);
+      const { otp_token } = await sendOtp(phone, 'sms', 'patient');
       setOtpToken(otp_token);
       setOtp('');
       setOtpSentBanner(true);
@@ -226,9 +156,11 @@ export default function PatientLoginScreen() {
       setPhase('otp_entry');
       startResendCountdown();
       setTimeout(() => otpInputRef.current?.focus(), 300);
-    } catch {
+    } catch (err: unknown) {
       isSendingRef.current = false;
-      const errorType: SendError = 'send_failed';
+      const errorType: SendError = (err instanceof ApiError && err.status === 429)
+        ? 'rate_limited'
+        : 'send_failed';
       if (isResend) {
         setPhase('otp_entry');
         setResendError(errorType);
@@ -250,16 +182,20 @@ export default function PatientLoginScreen() {
     setOtpError(null);
 
     try {
-      await mockVerifyOtp(otpToken, otp);
+      const result = await verifyPatientOtp(otpToken, otp);
       if (timerRef.current) clearInterval(timerRef.current);
 
-      // TODO (wire step): store patient refresh_token in expo-secure-store,
-      //   set patient auth state, then navigate to PatientTimeline.
+      // Store refresh token in SecureStore (access token is in-memory only — F-2)
+      await SecureStore.setItemAsync(PATIENT_REFRESH_TOKEN_KEY, result.refresh_token);
+      await SecureStore.setItemAsync(PATIENT_USER_PROFILE_KEY, JSON.stringify(result.user));
+
+      setPatientAuth(result.access_token, result.user);
+
       navigation.replace('PatientTimeline');
       // Note: no isVerifyingRef reset on success — screen unmounts
     } catch (err: unknown) {
       isVerifyingRef.current = false;
-      const code = isMockError(err) ? err.code : null;
+      const code = err instanceof ApiError ? err.code : null;
 
       if (code === null) {
         setOtpError('no_connection');
@@ -521,11 +457,10 @@ export default function PatientLoginScreen() {
           {/* ── Demo state switcher ────────────────────────────────────── */}
           {__DEV__ && (
             <View style={styles.demoBlock}>
-              <Text style={styles.demoTitle}>Demo states — mockup only</Text>
+              <Text style={styles.demoTitle}>Dev — UI state preview</Text>
               <Text style={styles.demoHint}>
-                Mock auth — does not call the real API.
-                Enter any 6-digit code to verify. Use 000000 for success,
-                111111 for wrong OTP, 222222 for expired, 333333 for too many attempts.
+                These buttons jump to a UI state for inspection only — they do not
+                call the real API. Use 8888888888 + OTP 000000 to test real login.
               </Text>
               <View style={styles.demoRow}>
                 {(
