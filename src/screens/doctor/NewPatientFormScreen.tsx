@@ -337,7 +337,8 @@ export default function NewPatientFormScreen() {
 
       if (isOnline) {
         try {
-          // H3 fix: 10-second timeout prevents an indefinite spinner on 2G/EDGE.
+          // H3 fix: timeout prevents an indefinite spinner on slow connections.
+          // 30s covers Render cold-start (~20-30s); 10s caused false timeouts.
           // On timeout the error falls through to the catch → serverPatientId = null,
           // and the sync worker retries on reconnect.
           const res = await Promise.race([
@@ -351,7 +352,7 @@ export default function NewPatientFormScreen() {
               },
               token,
             ),
-            timeoutAfter(10_000),
+            timeoutAfter(30_000),
           ]);
           // 201: patient created on server — update local row with server_id
           await setPatientServerId(db, actualLocalId, res.patient.id);

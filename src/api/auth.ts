@@ -152,6 +152,17 @@ export async function verifyPatientOtp(
   const body = await response.json();
   if (!response.ok) throwApiError(body, response.status);
 
+  // Doctor registered the patient locally but the patient record hasn't synced
+  // to the server yet — or the patient mobile number is not in the server DB.
+  // OTP was valid, but we can't issue tokens without a patient record.
+  if ((body as any).status === 'new_user') {
+    throw new ApiError(
+      'ACCOUNT_NOT_READY',
+      'Your account is still being set up. Please try again in a moment.',
+      200,
+    );
+  }
+
   return body as PatientVerifyOtpResponse;
 }
 

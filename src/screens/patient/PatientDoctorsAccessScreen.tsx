@@ -1,23 +1,18 @@
 /**
- * PatientDoctorsAccessScreen.tsx — P4: Doctors Who Have Access
+ * PatientDoctorsAccessScreen.tsx — P4: Doctors Who Have Access (live)
  *
  * Spec:    docs/ui-ux-spec.md § P4 (Doctors Who Have Access)
  * Consent: docs/consent-layer-spec.md § Flow 4 (Patient Revoking Access)
  * PM:      reviews/P1-P5-pm-review.md
  *
- * MOCKUP — all data is hardcoded. No real API calls.
- *
- * Wire step will:
- *   1. Replace MOCK_CONSENTS / MOCK_REQUESTS with GET /patient/consents
- *      (returns active grants and pending requests).
- *   2. Wire "Revoke Access" to DELETE /patient/consents/:id + confirmation.
- *   3. Wire "Grant" / "Deny" to POST /patient/consent-requests/:id/respond.
- *
- * States: has_active (2 active + 1 pending), empty.
- * Toggle via DEV demo switcher at bottom.
+ * Live screen — wired to real API (BUG-IT-3 fix, 2026-05-27).
+ *   GET /patient/consents → active grants + pending requests.
+ *   DELETE /patient/consents/:id → revoke active consent.
+ *   POST /patient/consent-requests/:id/respond → approve or deny pending request.
+ *   Auth: patient JWT from usePatientAuthStore.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -26,9 +21,14 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import { apiFetch } from '../../api/apiClient';
+import { usePatientAuthStore } from '../../store/usePatientAuthStore';
 
 import { Colors, Spacing } from '../../constants/theme';
 import type { RootStackParamList } from '../../../App';
@@ -49,31 +49,48 @@ interface PendingRequest {
   requestedDate: string; // formatted display date
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// ─── Server response types ────────────────────────────────────────────────────
 
-const MOCK_CONSENTS: ActiveConsent[] = [
-  {
-    id:          'c-001',
-    doctorName:  'Dr. Anand Krishnamurthy',
-    clinicName:  'Krishnamurthy Clinic, Pune',
-    accessSince: '15 Jan 2025',
-  },
-  {
-    id:          'c-002',
-    doctorName:  'Dr. Meenakshi Iyer',
-    clinicName:  'Iyer Family Clinic, Pune',
-    accessSince: '04 Mar 2024',
-  },
-];
+interface ServerConsent {
+  id:          string;
+  doctor_name: string;
+  clinic_name: string | null;
+  granted_at:  string;
+}
 
-const MOCK_REQUESTS: PendingRequest[] = [
-  {
-    id:            'req-001',
-    doctorName:    'Dr. Rajesh Sharma',
-    clinicName:    'Sharma Medical Centre, Nashik',
-    requestedDate: '14 May 2026',
-  },
-];
+interface ServerPendingRequest {
+  id:           string;
+  doctor_name:  string;
+  clinic_name:  string | null;
+  requested_at: string;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function formatDate(isoString: string): string {
+  const d = new Date(isoString);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function serverToConsent(c: ServerConsent): ActiveConsent {
+  return {
+    id:          c.id,
+    doctorName:  c.doctor_name,
+    clinicName:  c.clinic_name ?? '',
+    accessSince: formatDate(c.granted_at),
+  };
+}
+
+function serverToRequest(r: ServerPendingRequest): PendingRequest {
+  return {
+    id:            r.id,
+    doctorName:    r.doctor_name,
+    clinicName:    r.clinic_name ?? '',
+    requestedDate: formatDate(r.requested_at),
+  };
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -166,16 +183,47 @@ function EmptyState() {
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'PatientDoctorsAccess'>;
 
-type DemoState = 'has_active' | 'empty';
-
 export default function PatientDoctorsAccessScreen() {
   const navigation = useNavigation<NavProp>();
+  const token      = usePatientAuthStore((s) => s.token);
 
-  const [demoState,     setDemoState]    = useState<DemoState>('has_active');
-  const [consents,      setConsents]     = useState<ActiveConsent[]>(MOCK_CONSENTS);
-  const [pendingReqs,   setPendingReqs]  = useState<PendingRequest[]>(MOCK_REQUESTS);
+  const [consents,    setConsents]    = useState<ActiveConsent[]>([]);
+  const [pendingReqs, setPendingReqs] = useState<PendingRequest[]>([]);
+  const [isLoading,   setIsLoading]   = useState(true);
+  const [refreshing,  setRefreshing]  = useState(false);
 
-  const isEmpty = demoState === 'empty';
+  // Auth guard — redirect to patient login if no token
+  useEffect(() => {
+    if (!token) {
+      navigation.replace('PatientLogin');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  const loadConsents = useCallback(async (isRefresh = false) => {
+    if (!token) return;
+    if (isRefresh) setRefreshing(true);
+    else setIsLoading(true);
+    try {
+      const data = await apiFetch<{ active: ServerConsent[]; pending: ServerPendingRequest[] }>(
+        '/patient/consents',
+        token,
+      );
+      setConsents(data.active.map(serverToConsent));
+      setPendingReqs(data.pending.map(serverToRequest));
+    } catch {
+      // Keep existing state on refresh failure — silent for now
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  }, [token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadConsents(false);
+    }, [loadConsents]),
+  );
 
   function handleRevoke(id: string, doctorName: string) {
     Alert.alert(
@@ -186,47 +234,56 @@ export default function PatientDoctorsAccessScreen() {
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: () => {
-            setConsents((prev) => prev.filter((c) => c.id !== id));
+          onPress: async () => {
+            try {
+              await apiFetch(`/patient/consents/${id}`, token!, { method: 'DELETE' });
+              setConsents((prev) => prev.filter((c) => c.id !== id));
+            } catch {
+              Alert.alert('Error', 'Could not remove access. Please try again.');
+            }
           },
         },
       ],
     );
   }
 
-  function handleGrant(id: string) {
+  async function handleGrant(id: string) {
     const req = pendingReqs.find((r) => r.id === id);
-    Alert.alert(
-      'Access Allowed',
-      'This doctor can now view your health records.',
-      [{ text: 'OK' }],
-    );
-    setPendingReqs((prev) => prev.filter((r) => r.id !== id));
-    if (req) {
-      setConsents((prev) => [
-        ...prev,
-        {
-          id:          req.id,
-          doctorName:  req.doctorName,
-          clinicName:  req.clinicName,
-          accessSince: req.requestedDate,
-        },
-      ]);
+    try {
+      await apiFetch(`/patient/consent-requests/${id}/respond`, token!, {
+        method: 'POST',
+        body:   JSON.stringify({ action: 'approve' }),
+      });
+      setPendingReqs((prev) => prev.filter((r) => r.id !== id));
+      if (req) {
+        setConsents((prev) => [
+          ...prev,
+          {
+            id:          id,
+            doctorName:  req.doctorName,
+            clinicName:  req.clinicName,
+            accessSince: 'Just now',
+          },
+        ]);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not grant access. Please try again.');
     }
   }
 
-  function handleDeny(id: string) {
-    Alert.alert(
-      'Access Not Allowed',
-      "The doctor's request has been declined.",
-      [{ text: 'OK' }],
-    );
-    setPendingReqs((prev) => prev.filter((r) => r.id !== id));
+  async function handleDeny(id: string) {
+    try {
+      await apiFetch(`/patient/consent-requests/${id}/respond`, token!, {
+        method: 'POST',
+        body:   JSON.stringify({ action: 'deny' }),
+      });
+      setPendingReqs((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      Alert.alert('Error', 'Could not deny the request. Please try again.');
+    }
   }
 
-  const displayConsents  = isEmpty ? [] : consents;
-  const displayRequests  = isEmpty ? [] : pendingReqs;
-  const nothingToShow    = displayConsents.length === 0 && displayRequests.length === 0;
+  const nothingToShow = consents.length === 0 && pendingReqs.length === 0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -248,20 +305,29 @@ export default function PatientDoctorsAccessScreen() {
         <View style={styles.navSpacer} />
       </View>
 
-      {nothingToShow ? (
-        <EmptyState />
+      {isLoading ? (
+        <View style={styles.loadingBlock}>
+          <ActivityIndicator size="large" color={Colors.primaryBlue} />
+        </View>
+      ) : nothingToShow ? (
+        <ScrollView
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadConsents(true)} />}
+        >
+          <EmptyState />
+        </ScrollView>
       ) : (
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadConsents(true)} />}
         >
 
           {/* ── Active consents ── */}
-          {displayConsents.length > 0 && (
+          {consents.length > 0 && (
             <>
               <Text style={styles.sectionLabel}>Your Doctors</Text>
-              {displayConsents.map((consent) => (
+              {consents.map((consent) => (
                 <ConsentCard
                   key={consent.id}
                   consent={consent}
@@ -272,12 +338,12 @@ export default function PatientDoctorsAccessScreen() {
           )}
 
           {/* ── Pending requests ── */}
-          {displayRequests.length > 0 && (
+          {pendingReqs.length > 0 && (
             <>
-              <Text style={[styles.sectionLabel, displayConsents.length > 0 && styles.sectionLabelSpaced]}>
+              <Text style={[styles.sectionLabel, consents.length > 0 && styles.sectionLabelSpaced]}>
                 New Requests
               </Text>
-              {displayRequests.map((req) => (
+              {pendingReqs.map((req) => (
                 <PendingCard
                   key={req.id}
                   request={req}
@@ -331,36 +397,6 @@ export default function PatientDoctorsAccessScreen() {
           <Text style={styles.tabLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
-
-      {/* ── DEV demo switcher ── */}
-      {__DEV__ && (
-        <View style={styles.demoBlock}>
-          <Text style={styles.demoTitle}>Demo states — mockup only</Text>
-          <View style={styles.demoRow}>
-            {(
-              [
-                ['has_active', 'Has active'],
-                ['empty',      'Empty'],
-              ] as [DemoState, string][]
-            ).map(([state, label]) => (
-              <TouchableOpacity
-                key={state}
-                style={[styles.demoBtn, demoState === state && styles.demoBtnActive]}
-                onPress={() => {
-                  setDemoState(state);
-                  if (state === 'has_active') {
-                    setConsents(MOCK_CONSENTS);
-                    setPendingReqs(MOCK_REQUESTS);
-                  }
-                }}
-                accessibilityLabel={`Demo state: ${label}`}
-              >
-                <Text style={styles.demoBtnText}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
 
     </SafeAreaView>
   );
@@ -622,39 +658,10 @@ const styles = StyleSheet.create({
     marginTop:       3,
   },
 
-  // ── DEV demo switcher
-  demoBlock: {
-    padding:         Spacing.md,
-    backgroundColor: '#FFFBEB',
-    borderTopWidth:  1,
-    borderTopColor:  '#FCD34D',
-  },
-  demoTitle: {
-    fontSize:      11,
-    fontWeight:    '700',
-    color:         '#92400E',
-    textAlign:     'center',
-    marginBottom:  6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  demoRow: {
-    flexDirection:  'row',
-    gap:            Spacing.sm,
+  // ── Loading block
+  loadingBlock: {
+    flex:           1,
+    alignItems:     'center',
     justifyContent: 'center',
-  },
-  demoBtn: {
-    backgroundColor:   '#D97706',
-    paddingVertical:   6,
-    paddingHorizontal: 12,
-    borderRadius:      6,
-  },
-  demoBtnActive: {
-    backgroundColor: '#92400E',
-  },
-  demoBtnText: {
-    color:      '#FFFFFF',
-    fontSize:   12,
-    fontWeight: '600',
   },
 });

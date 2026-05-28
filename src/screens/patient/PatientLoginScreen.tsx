@@ -45,7 +45,7 @@ import type { RootStackParamList } from '../../../App';
 
 type Phase         = 'phone_entry' | 'loading' | 'otp_entry';
 type LoadingAction = 'sending' | 'verifying';
-type OtpError  = null | 'wrong_otp' | 'otp_expired' | 'too_many_attempts' | 'no_connection';
+type OtpError  = null | 'wrong_otp' | 'otp_expired' | 'too_many_attempts' | 'no_connection' | 'account_not_ready';
 type SendError = null | 'send_failed' | 'rate_limited' | 'no_connection';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -208,6 +208,10 @@ export default function PatientLoginScreen() {
         setOtpError('otp_expired');
         setCanResend(true);
         if (timerRef.current) clearInterval(timerRef.current);
+      } else if (code === 'ACCOUNT_NOT_READY') {
+        setOtpError('account_not_ready');
+        setCanResend(true);
+        if (timerRef.current) clearInterval(timerRef.current);
       } else {
         setOtpError('wrong_otp');
       }
@@ -364,6 +368,13 @@ export default function PatientLoginScreen() {
                 <View style={styles.errorBox} accessibilityLiveRegion="assertive">
                   <Text style={styles.errorText}>
                     Too many attempts. Please request a new OTP.
+                  </Text>
+                </View>
+              )}
+              {otpError === 'account_not_ready' && (
+                <View style={styles.errorBox} accessibilityLiveRegion="assertive">
+                  <Text style={styles.errorText}>
+                    Your account is still being set up. Please wait a few seconds and try again.
                   </Text>
                 </View>
               )}
