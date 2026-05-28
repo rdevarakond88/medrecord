@@ -396,8 +396,13 @@ router.delete('/patient/consents/:id', async (req, res) => {
     }
 
     const revokedAt = new Date();
-    await prisma.consent.update({
-      where: { id: consentId },
+
+    // BUG-IT-4 fix: revoke ALL active consents for this doctor-patient pair, not just
+    // the specific record by ID. Multiple consent records can co-exist (e.g. one seeded
+    // at DB setup + one created via D9 OTP flow). Revoking only one leaves "ghost consent"
+    // records that cause GET /patients/:id/visits to return consent_granted=true.
+    await prisma.consent.updateMany({
+      where: { patientId, doctorId: consent.doctorId, revokedAt: null },
       data:  { revokedAt },
     });
 
