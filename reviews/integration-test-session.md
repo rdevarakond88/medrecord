@@ -213,3 +213,113 @@ Pre-flight: **PASS**
 - BUG-IT-3: Investigate GET /patient/consents — ensure it returns ALL active consents for the patient regardless of how they were established (seeded or via D9 flow); or reset the seeded consent and re-establish it via D9 to produce a proper consent record
 
 **SESSION COMPLETE — Next: Builder Agent — fix BUG-IT-1, BUG-IT-2, BUG-IT-3**
+
+---
+
+## Re-run — 2026-05-27 — All 7 scenarios (Step 27d)
+
+**Date:** 2026-05-27
+**Agent:** Integration Tester
+**Step:** 27d — Re-run after BUG-IT-1, BUG-IT-2, BUG-IT-3 fixes (Step 27c)
+
+### Infrastructure Pre-flight
+
+| Check | Result |
+|---|---|
+| Backend `/health` curl | HTTP 200 ✅ |
+| Metro bundler | Running ✅ |
+| ngrok tunnel | Active ✅ |
+| Doctor credentials (9999999999 / 000000) → D2 | ✅ |
+| Patient credentials (8888888888 / 000000) → P2 | ✅ |
+| `__DEV__` "Patient App →" button | Present ✅ |
+
+Pre-flight: **PASS**
+
+Note: Render cold-starts caused repeated "Couldn't send OTP" failures throughout the session. Each was resolved by retrying after the backend warmed up. This is a known infrastructure limitation, not a new bug.
+
+---
+
+### Scenario Results
+
+| # | Scenario | Result | Notes |
+|---|---|---|---|
+| 1 | Doctor creates new patient → patient can log in | **FAIL** | BUG-IT-1 NOT FIXED |
+| 2 | Doctor creates visit → patient sees it in timeline | **PASS** ✅ | BUG-IT-2 FIXED |
+| 3 | Doctor requests consent → patient sees pending request | **BLOCKED** | BUG-IT-4 (new) |
+| 4 | Patient grants access → doctor sees records | **BLOCKED** | BUG-IT-4 (new) |
+| 5 | Patient denies access → doctor cannot see records | **BLOCKED** | BUG-IT-4 (new) |
+| 6 | Patient revokes access → doctor loses access | **FAIL** | BUG-IT-4 (new) |
+| 7 | Doctor creates visit after consent → patient sees timeline | **PASS** ✅ | BUG-IT-2 fix re-confirmed |
+
+---
+
+### Fixes Verified
+
+- **BUG-IT-2 VERIFIED FIXED:** Doctor-created visit now appears in patient P2 timeline. Verified in both Scenario 2 and Scenario 7.
+- **BUG-IT-3 VERIFIED FIXED:** P4 (Doctors Who Have Access) now shows real consent data via GET /patient/consents. Doctor Test Doctor was visible in P4 "Your Doctors" with "Remove Access" button before Scenario 3 setup. Previously P4 showed mock data only.
+
+---
+
+### Bugs Found
+
+#### BUG-IT-1: Patient OTP login fails for doctor-created patients — NOT FIXED
+**Severity:** HIGH
+**Scenario:** 1 — Doctor creates new patient → patient can log in
+**Steps to reproduce:**
+  1. Doctor (D5) creates new patient with mobile 7111111111 — Save and Begin Visit succeeds, takes to D7
+  2. Doctor navigates back to D2 — patient 7111111111 visible in search results (saved to local SQLite)
+  3. Patient side: enter 7111111111 → Send OTP
+  4. Error: "Couldn't send OTP. Please check your connection and try again."
+**Expected:** Login succeeds; P2 timeline loads (empty)
+**Actual:** sendOtp fails — patient does not exist on the backend server
+**Root cause:** D5 saves patient to local SQLite and enqueues a sync operation. The backend never receives the patient record before the patient tries to log in. The 30s timeout fix (Step 27c) did not resolve this because D5 uses async sync queue, not a direct API call at save time. The patient must be synced to the server by the sync worker before patient login is possible.
+**Fix required:**
+  - Option A: D5 should make a direct synchronous API call to POST the patient to the server at save time (in addition to SQLite save), with 30s timeout
+  - Option B: After D5 save, display a "syncing…" state and block navigation until the patient is confirmed on the server
+  - Option C: Backend TEST_OTP_BYPASS should work even before the patient account is fully provisioned (create-on-demand for test environment)
+**Screens involved:** D5 → P1
+
+---
+
+#### BUG-IT-4: Patient consent revoke in P4 does not propagate to doctor's D3
+**Severity:** CRITICAL
+**Scenario:** 6 — Patient revokes access → doctor loses access; also blocks Scenarios 3, 4, 5
+**Steps to reproduce:**
+  1. Doctor opens D3 for patient 8888888888 — "Access Granted" badge visible (green)
+  2. Patient (8888888888) opens P4 — Doctor Test Doctor visible in "Your Doctors" with "Remove Access" button
+  3. Patient taps "Remove Access" → confirms → P4 now shows "No doctors have access to it" ✅
+  4. Doctor navigates back to D2 → re-opens D3 for 8888888888
+  5. D3 still shows "Access Granted" badge (green) — no-consent view not shown
+**Expected:** D3 shows no-consent view after patient revokes; "Request Access" button visible
+**Actual:** D3 still shows "Access Granted" — doctor retains visible access even after patient revoked
+**Root cause candidate:**
+  - DELETE /patient/consents/:id in P4 removes a record from the consent_grants or consent_requests table
+  - But the seeded consent for Doctor Test Doctor may live in a separate table that this DELETE does not touch
+  - GET /patients/:serverId/visits (called by D3) returns consent_granted=true because the seeded record still exists
+  - Result: two consent records for the same doctor-patient pair — one revocable via P4, one not
+**Why it blocks Scenarios 3–5:** Cannot reach the "no active consent" setup state for 8888888888 since D3 always shows Access Granted regardless of P4 revoke
+**Fix required:**
+  - Backend: ensure DELETE /patient/consents/:id removes ALL consent grant records for this doctor-patient pair, including seeded records; or unify the consent storage so there is only one record per pair
+  - Backend: ensure GET /patients/:id/visits consent_granted check queries the same unified consent state
+  - Verify: after a patient revoke, D3 re-fetch returns consent_granted=false
+**Screens involved:** P4 → D3
+
+---
+
+### Session End
+
+**2 of 7 scenarios PASS. 2 FAIL. 3 BLOCKED.**
+
+**Fixes verified:**
+- BUG-IT-2: FIXED ✅
+- BUG-IT-3: FIXED ✅
+
+**Bugs remaining / new:**
+- BUG-IT-1: HIGH — NOT FIXED — doctor-created patient (7111111111) not synced to server; patient cannot log in
+- BUG-IT-4: CRITICAL (new) — patient consent revoke in P4 does not propagate to doctor's D3; D3 retains "Access Granted" after revoke
+
+**Builder Agent session required — items:**
+- BUG-IT-1: D5 must synchronously POST patient to server at save time (not via async sync queue); patient login with 000000 bypass must work immediately after doctor creates them
+- BUG-IT-4: Backend — DELETE /patient/consents/:id must remove all consent records for the doctor-patient pair; GET /patients/:id/visits must return correct consent_granted state after revoke
+
+**SESSION COMPLETE — Next: Builder Agent — fix BUG-IT-1, BUG-IT-4**
