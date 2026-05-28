@@ -35,7 +35,9 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — Step 27b (2026-05-27). Fixed BUG-IT-PRE-1 + BUG-IT-PRE-2. BUG-IT-PRE-1: `pinnedFetch.ts` — guard `sslFetch` assignment with `NativeModules.RNSslPinning` check (Expo Go fix). BUG-IT-PRE-2: `PatientLoginScreen.tsx` wired to real API — `sendOtp(role:'patient')` + `verifyPatientOtp()`, tokens stored in `PATIENT_REFRESH_TOKEN_KEY`/`PATIENT_USER_PROFILE_KEY`, auth state in new `usePatientAuthStore`. Also: `sendOtp` in `auth.ts` now accepts `role` param (default 'doctor' — backward compatible). Zero new TS errors. Ready for Integration Tester re-run (all 7 scenarios).
+**Last Session:** Integration Tester — Step 27-rerun (2026-05-27). Re-ran all 7 scenarios after BUG-IT-PRE-1 + BUG-IT-PRE-2 fixes confirmed. Pre-flight PASS. 0/7 scenarios PASS. 3 FAIL, 4 BLOCKED. BUG-IT-1 (HIGH): OTP bypass 000000 fails for doctor-created patients (non-seeded). BUG-IT-2 (HIGH): Doctor-created visit does not appear in patient P2 timeline — visit not synced to server before logout. BUG-IT-3 (CRITICAL): Doctor Test Doctor has active consent in D3 but is invisible to patient in P4 — patient cannot revoke this consent. Builder session required. Session: `reviews/integration-test-session.md`.
+
+**Previous Session:** Builder Agent — Step 27b (2026-05-27). Fixed BUG-IT-PRE-1 + BUG-IT-PRE-2. BUG-IT-PRE-1: `pinnedFetch.ts` — guard `sslFetch` assignment with `NativeModules.RNSslPinning` check (Expo Go fix). BUG-IT-PRE-2: `PatientLoginScreen.tsx` wired to real API — `sendOtp(role:'patient')` + `verifyPatientOtp()`, tokens stored in `PATIENT_REFRESH_TOKEN_KEY`/`PATIENT_USER_PROFILE_KEY`, auth state in new `usePatientAuthStore`. Also: `sendOtp` in `auth.ts` now accepts `role` param (default 'doctor' — backward compatible). Zero new TS errors.
 
 **Previous Session:** Builder Agent — Step 25 (2026-05-16). Verified syncLogger.ts already removed (done 2026-05-10). No code changes required. project-state.md updated.
 
@@ -180,7 +182,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~25~~ | ~~**Builder: remove syncLogger.ts**~~ | ~~Already removed 2026-05-10. Step 25 verified complete 2026-05-16.~~ |
 | ~~**26**~~ | ~~**EAS build + cert pinning validation**~~ | ~~PERMANENTLY SKIPPED 2026-05-17 — Apple Developer Program membership ($99/year) required for EAS iOS builds. Owner chose not to purchase; project purpose is learning agent orchestration, not App Store publication. App is fully functional via Expo Go.~~ |
 | ~~**27b**~~ | ~~**Builder Agent — fix BUG-IT-PRE-1 + BUG-IT-PRE-2**~~ | ~~DONE 2026-05-27. pinnedFetch.ts: NativeModules.RNSslPinning guard added. auth.ts: sendOtp role param + verifyPatientOtp(). PatientLoginScreen.tsx wired to real API. usePatientAuthStore.ts created. Zero TS errors.~~ |
-| **27-rerun** | **Integration Tester — re-run all 7 scenarios** | Both pre-condition bugs fixed. Start fresh Integration Tester session; re-run all 7 scenarios from the top. |
+| ~~**27-rerun**~~ | ~~**Integration Tester — re-run all 7 scenarios**~~ | ~~DONE 2026-05-27. 0/7 PASS. BUG-IT-1 (HIGH), BUG-IT-2 (HIGH), BUG-IT-3 (CRITICAL). Builder session required.~~ |
+| **27c** | **Builder Agent — fix BUG-IT-1, BUG-IT-2, BUG-IT-3** | BUG-IT-1: OTP bypass scope for non-seeded patients. BUG-IT-2: Visit sync before logout — ensure visit reaches server. BUG-IT-3: GET /patient/consents missing seeded/non-D9 consents. After fixes: Integration Tester re-run. |
 | ~~**27**~~ | ~~**Integration Tester — connected doctor-patient scenarios**~~ | ~~BLOCKED 2026-05-17 — 0/7 scenarios. 2 CRITICAL pre-condition bugs. See session: `reviews/integration-test-session.md`.~~ |
 
 ---

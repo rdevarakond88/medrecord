@@ -102,3 +102,114 @@ Pre-flight: **BLOCKED — 2 critical pre-condition bugs found before Scenario 1 
 After Builder fixes: re-run all 7 scenarios (all were blocked at pre-condition, none partially completed).
 
 **SESSION COMPLETE — Next: Builder Agent — fix BUG-IT-PRE-1 + BUG-IT-PRE-2**
+
+---
+
+## Re-run — 2026-05-27 — All 7 scenarios
+
+**Date:** 2026-05-27
+**Agent:** Integration Tester
+**Step:** 27-rerun — Re-run after BUG-IT-PRE-1 + BUG-IT-PRE-2 fixes
+
+### Infrastructure Pre-flight
+| Check | Result |
+|---|---|
+| Backend `/health` curl | HTTP 200 ✅ |
+| Metro bundler | Running on 8082 ✅ |
+| ngrok tunnel | Active ✅ |
+| Doctor credentials (9999999999 / 000000) | Login confirmed ✅ — reached D2 |
+| Patient credentials (8888888888 / 000000) | Login confirmed ✅ — reached P2 |
+| `__DEV__` "Patient App →" button | Present ✅ |
+| BUG-IT-PRE-1 fix verified | Doctor login works — pinnedFetch Expo Go guard active ✅ |
+| BUG-IT-PRE-2 fix verified | Patient login hits real API — reached P2 with real credentials ✅ |
+
+Pre-flight: **PASS**
+
+---
+
+### Scenario Results
+
+| # | Scenario | Result | Notes |
+|---|---|---|---|
+| 1 | Doctor creates new patient → patient can log in | FAIL | BUG-IT-1 |
+| 2 | Doctor creates visit → patient sees it in timeline | FAIL | BUG-IT-2 |
+| 3 | Doctor requests consent → patient sees pending request | BLOCKED | BUG-IT-3 |
+| 4 | Patient grants access → doctor sees records | BLOCKED | BUG-IT-3 |
+| 5 | Patient denies access → doctor cannot see records | BLOCKED | BUG-IT-3 |
+| 6 | Patient revokes access → doctor loses access | BLOCKED | BUG-IT-3 |
+| 7 | Doctor creates visit after consent granted → patient sees it | FAIL | BUG-IT-2 |
+
+---
+
+### Bugs Found
+
+#### BUG-IT-1: Patient OTP login fails for doctor-created patient
+**Severity:** HIGH
+**Scenario:** 1 — Doctor creates new patient → patient can log in
+**Steps to reproduce:**
+  1. Doctor (D5) creates new patient with mobile 6543210987
+  2. Patient side: enter 6543210987 → Send OTP → OTP entry screen appears
+  3. Enter 000000 → "OTP is incorrect. Please check and try again."
+**Expected:** Login succeeds; P2 timeline loads (empty)
+**Actual:** OTP verification rejected with bypass code 000000
+**Root cause candidates:**
+  (a) Patient 6543210987 not yet synced to server — only in local SQLite; backend
+      sends a real OTP but TEST_OTP_BYPASS only works for patients already in the DB
+  (b) TEST_OTP_BYPASS only applies to seeded test patients (8888888888, 9999999999)
+**Screens involved:** D5 → P1
+
+---
+
+#### BUG-IT-2: Doctor-created visit does not appear in patient P2 timeline
+**Severity:** HIGH
+**Scenario:** 2 and 7 — Doctor creates visit → patient sees it in timeline
+**Steps to reproduce:**
+  1. Doctor logs in, opens patient 8888888888 in D3 (consent active)
+  2. Doctor creates new visit via D6 with chief complaint "Integration test visit"
+  3. Visit confirmed visible in D3 (no cloud icon, "Draft" label = recordCount 0) and in D4
+  4. Patient logs in → P2 My Records tab → empty
+  5. P2 has no pull-to-refresh
+  6. Repeated in Scenario 7 with chief complaint "Scenario 7 integration test" — same result
+**Expected:** New visit appears in patient P2 My Records with chief complaint visible
+**Actual:** P2 My Records is empty; visit visible on doctor side only
+**Root cause candidate:** Visit still in visits_draft on doctor side (not yet POSTed to server);
+  GET /patient/timeline only returns server-side visits; sync worker did not run before
+  doctor logged out / force-quit
+**Screens involved:** D6 → P2
+
+---
+
+#### BUG-IT-3: Consent state inconsistent between D3 (doctor) and P4 (patient)
+**Severity:** CRITICAL
+**Scenario:** Blocks Scenarios 3, 4, 5, 6
+**Steps to reproduce:**
+  1. Doctor logs in → searches 8888888888 → D3 shows "Access Granted" badge (green)
+  2. Patient logs in → P4 "Doctors" tab → lists Dr. Anand Krishnamurthy, Dr. Meenakshi Air,
+     Dr. Rajesh Sharma (pending) — Doctor Test Doctor absent
+**Expected:** If consent is active for Doctor Test Doctor, that doctor appears in P4 "Your Doctors"
+  with a "Remove Access" button
+**Actual:** Doctor Test Doctor has active consent per D3 but is invisible to the patient in P4 —
+  patient cannot see, manage, or revoke this consent
+**Root cause candidate:** Consent for Doctor Test Doctor was seeded directly in the backend DB
+  (not established through the D9 consent request flow). GET /patient/consents returns only
+  consents created via D9 / the consent_grants table, not the seeded consent record. This means
+  the doctor has persistent invisible access that the patient cannot revoke.
+**Screens involved:** D3 ↔ P4
+
+---
+
+### Session End
+
+**0 of 7 scenarios PASS. 3 FAIL. 4 BLOCKED.**
+
+**3 bugs found:**
+- BUG-IT-1: HIGH — Patient OTP login (000000 bypass) fails for doctor-created patients
+- BUG-IT-2: HIGH — Doctor-created visit never appears in patient P2 timeline
+- BUG-IT-3: CRITICAL — Doctor has invisible consent that patient cannot see or revoke in P4
+
+**Builder Agent session required — items:**
+- BUG-IT-1: Investigate TEST_OTP_BYPASS scope — confirm whether bypass applies only to seeded patients or all patients; fix so doctor-created patients can log in with 000000 in test environment
+- BUG-IT-2: Investigate visit sync flow — ensure visit is POSTed to server before or independent of logout/force-quit; consider: (a) trigger sync immediately on D6 save, (b) block logout until sync completes for draft visits, or (c) confirm sync worker fires reliably on app foreground
+- BUG-IT-3: Investigate GET /patient/consents — ensure it returns ALL active consents for the patient regardless of how they were established (seeded or via D9 flow); or reset the seeded consent and re-establish it via D9 to produce a proper consent record
+
+**SESSION COMPLETE — Next: Builder Agent — fix BUG-IT-1, BUG-IT-2, BUG-IT-3**
