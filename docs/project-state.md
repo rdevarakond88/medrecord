@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** POST-COMPLETION — All pre-pilot requirements complete as of 2026-05-30. Step 28e complete: Security re-check on PATCH /patient/profile mobile guard — CLEAR TO MERGE. No open pre-pilot blockers remain.
+**Phase:** POST-COMPLETION — PM Moment 3 sign-off complete 2026-05-30. CLEAR TO MERGE dev → main. All pre-pilot requirements done. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch.
 **Last Updated:** 2026-05-30
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
@@ -35,9 +35,11 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Security Agent — Step 28e (2026-05-30). PATCH /patient/profile re-check. CLEAR TO MERGE. 0 CRITICAL, 0 HIGH, 0 MEDIUM. 28e-L1 (LOW): no audit event on MOBILE_IMMUTABLE rejection — v2 debt. Guard verified: fires before validate(); HTTP 400 + MOBILE_IMMUTABLE on mobile_number in body; auth chain intact (requirePatientAuth at router level); no PII in error response; Zod schema provides second-layer protection. Re-check: `reviews/step28e-security-recheck.md`.
+**Last Session:** PM Agent — Moment 3 Pre-Launch Gate (2026-05-30). CLEAR TO MERGE dev → main. No new adoption or regulatory risks. Functional fixes (P3/P5 real API, integration bugs) make main materially correct. Pre-pilot requirements complete. Standing condition: cert pinning inactive (Expo Go only) — no real patient data until EAS build validates pinnedFetch. Review: `reviews/pre-pilot-pm-review-moment3.md`.
 
-**Next required session:** No open pre-pilot blockers remain. All pre-pilot requirements (OTP resend cooldown, mobile immutability guard, security re-check) are complete. Project ready for pilot deployment via Expo Go.
+**Previous Session:** Security Agent — Step 28e (2026-05-30). PATCH /patient/profile re-check CLEAR TO MERGE. Re-check: `reviews/step28e-security-recheck.md`.
+
+**Next required session:** Merge dev → main (PR). Then pilot deployment.
 
 **Previous Session:** Builder micro-session + Lessons (2026-05-30). Two findings by human owner after project was declared complete:
 
