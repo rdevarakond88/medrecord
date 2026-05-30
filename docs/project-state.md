@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** POST-COMPLETION — P3 and P5 re-wired to real API (2026-05-30). Three product gaps identified by human owner and documented. PM Agent session queued to define sign-up, account deletion, and recovery flows before any new build begins.
+**Phase:** POST-COMPLETION — P3 and P5 device-verified clean (2026-05-30). No orange buttons, real API data confirmed on device. PM Agent session queued to define sign-up, account deletion, and recovery flows before any new build begins.
 **Last Updated:** 2026-05-30
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
@@ -41,7 +41,9 @@ _Update this section whenever backend status changes. Every device testing sessi
 
 (2) **Three product gaps documented in LESSONS-AND-RUNBOOK.md** — Mistakes 15 (no sign-up flow; seeding masked the absence), 16 (account deletion + data retention never designed), 17 (account recovery path never built). New Section 4: "Why Human Oversight Is Non-Negotiable" — case study on what agents cannot do alone. New Section 2.6: pipeline scope classification (when full pipeline required vs. Builder micro-session). All three gaps require PM Agent decisions before any build.
 
-**Next required session:** Device verify — P3 and P5 (confirm orange buttons gone, real data loads from API). Then PM Agent — sign-up / account deletion / recovery decisions.
+**Next required session:** PM Agent — sign-up / account deletion / recovery decisions (Step 28c). Three product gaps: doctor registration model, patient self-registration policy, deletion policy (DPDP + healthcare retention), account recovery model for doctors.
+
+**Previous Session:** Device Tester — Step 28b (2026-05-30). P3 + P5 device verify. 4/4 PASS, 0 bugs. No orange demo buttons on either screen. P5: real profile loads, PATCH save works, logout clean. P3: real visit data loads (date, doctor name, clinic name, records). Both screens confirmed clean.
 
 **Previous Session:** Integration Tester — Step 27f (2026-05-27). Re-ran all 7 scenarios after Step 27e fixes. Pre-flight PASS. 6/7 PASS, 0 FAIL, 1 SKIP. BUG-IT-1 VERIFIED FIXED (patient 7222222222 created by doctor; patient logged in immediately with OTP 000000). BUG-IT-4 VERIFIED FIXED (patient revoked consent in P4; D3 correctly showed no-consent view on re-open). Scenario 5 SKIP (async deny flow not reachable via synchronous D9 OTP path). Observation: P5 shows mobile "+91-88845562434" for account 8888888888 (seed data format discrepancy, no functional impact). Integration testing COMPLETE — no open bugs. Session: `reviews/integration-test-session.md`.
 
@@ -203,7 +205,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~**27f**~~ | ~~**Integration Tester — re-run all 7 scenarios**~~ | ~~DONE 2026-05-27. 6/7 PASS, 0 FAIL, 1 SKIP. BUG-IT-1 + BUG-IT-4 VERIFIED FIXED. Integration testing COMPLETE.~~ |
 | ~~**27**~~ | ~~**Integration Tester — connected doctor-patient scenarios**~~ | ~~BLOCKED 2026-05-17 — 0/7 scenarios. 2 CRITICAL pre-condition bugs. See session: `reviews/integration-test-session.md`.~~ |
 | ~~**28a**~~ | ~~**Builder micro-session — wire P3 + P5 + remove demo UI**~~ | ~~DONE 2026-05-30. P3: wired GET /patient/visits/:id; mock data + demo switcher removed. P5: wired GET/PATCH /patient/profile; SecureStore logout fixed; mock data + demo switcher removed. Commit: 95096b6.~~ |
-| **28b** | **Device verify — P3 and P5** | Confirm orange demo buttons gone on device. Confirm P3 shows real visit records from API. Confirm P5 loads real profile, saves edits via PATCH, logs out cleanly. Builder micro-session only — no full pipeline needed. |
+| ~~**28b**~~ | ~~**Device verify — P3 and P5**~~ | ~~DONE 2026-05-30. 4/4 PASS, 0 bugs. No orange buttons. P5: real profile, PATCH save, logout clean. P3: real visit data. Both screens confirmed clean.~~ |
 | **28c** | **PM Agent — sign-up / account deletion / recovery decisions** | Three product gaps identified by human owner (Mistakes 15/16/17 in LESSONS-AND-RUNBOOK.md). PM must define: (1) doctor registration model (self-serve vs admin-provisioned); (2) patient self-registration policy (doctor-initiated only, or self-serve); (3) deletion policy (DPDP + healthcare retention, re-join handling); (4) account recovery model for doctors (mobile number change path). No build begins until all four decisions are documented in Locked Decisions. |
 
 ---
