@@ -603,6 +603,23 @@ What "sign-up" means for each role:
 - **Doctor:** There is no `POST /auth/register` endpoint and no registration screen. A new doctor cannot create an account. This must be a PM-level decision: self-serve registration (doctor fills a form), or admin-provisioned (clinic admin creates doctor accounts in a separate admin panel). The answer changes what gets built.
 - **Patient:** This is partially designed — a patient is *created by a doctor* via D5 (New Patient Form), and then logs in via P1 with their mobile OTP. Patient registration is doctor-initiated. This is a valid product design, but it was never explicitly decided or documented. It only happened to work because the seeded patient was already in the system.
 
+**Why patient self-registration is deferred — and why this is different from the doctor restriction:**
+
+The doctor restriction is a hard security requirement. Self-serve doctor registration with no verification means anyone can claim doctor role and read any patient's records. That cannot ship in any version.
+
+The patient restriction is a practical flow decision, not a security concern. A patient can only see their own records — there is no privilege escalation risk. The question is purely: does patient self-registration add value?
+
+In this app's model, it does not — for v1. A patient who self-registers before any doctor has enrolled them would open P2 (Timeline) to an empty screen. P4 (Doctors Access) — empty. P3 (Visit Detail) — nothing to open. The app only has value for a patient once a doctor has recorded a visit using D6.
+
+**D5 is the patient's sign-up.** When the doctor runs D5 during a consultation, a patient account is created in the backend against the patient's mobile number. The patient then uses P1 to log in with OTP. There is no separate "sign-up" step needed — the account already exists. The gap was that this was never consciously designed; it emerged as a side-effect of the D5 → P1 flow.
+
+Patient self-registration becomes a meaningful feature in v1.1 if any of the following are added:
+- Patient can set language preferences or profile data before their first clinic visit
+- Patient can proactively grant consent to a doctor before arriving (rather than waiting for D9)
+- Patient can upload their own documents or log symptoms
+
+None of these exist in v1, so deferring patient self-registration is the correct call — not a security concern, but a "no-op for now" decision.
+
 Rule going forward — **PM Agent Product Completeness Checklist:**
 The PM Agent Moment 1 review (pre-flow gate) must now explicitly verify the following before approving any flow for build:
 
