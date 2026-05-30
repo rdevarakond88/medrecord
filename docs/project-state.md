@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** POST-COMPLETION — All pre-pilot requirements complete as of 2026-05-30. Step 28d complete: OTP resend cooldown reduced 45s→30s on D1 + P1; PATCH /patient/profile mobile guard added to backend. Security Agent re-check on mobile field guard is the required next session.
+**Phase:** POST-COMPLETION — All pre-pilot requirements complete as of 2026-05-30. Step 28e complete: Security re-check on PATCH /patient/profile mobile guard — CLEAR TO MERGE. No open pre-pilot blockers remain.
 **Last Updated:** 2026-05-30
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
@@ -35,9 +35,9 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — Step 28d (2026-05-30). Pre-pilot OTP resend + mobile guard. (1) `RESEND_SECONDS` 45→30 in `LoginScreen.tsx` (D1) and `PatientLoginScreen.tsx` (P1). (2) Backend `PATCH /patient/profile`: inline middleware added before `validate()` — if `mobile_number` is present in raw request body, returns HTTP 400 `MOBILE_IMMUTABLE` before Zod strips the field. Zero new TS errors in changed files.
+**Last Session:** Security Agent — Step 28e (2026-05-30). PATCH /patient/profile re-check. CLEAR TO MERGE. 0 CRITICAL, 0 HIGH, 0 MEDIUM. 28e-L1 (LOW): no audit event on MOBILE_IMMUTABLE rejection — v2 debt. Guard verified: fires before validate(); HTTP 400 + MOBILE_IMMUTABLE on mobile_number in body; auth chain intact (requirePatientAuth at router level); no PII in error response; Zod schema provides second-layer protection. Re-check: `reviews/step28e-security-recheck.md`.
 
-**Next required session:** Security Agent — re-check on mobile field guard only (`PATCH /patient/profile` change touches auth + PII). No other changes require re-audit. No new screens; no persona critique needed.
+**Next required session:** No open pre-pilot blockers remain. All pre-pilot requirements (OTP resend cooldown, mobile immutability guard, security re-check) are complete. Project ready for pilot deployment via Expo Go.
 
 **Previous Session:** Builder micro-session + Lessons (2026-05-30). Two findings by human owner after project was declared complete:
 
@@ -212,7 +212,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~**28b**~~ | ~~**Device verify — P3 and P5**~~ | ~~DONE 2026-05-30. 4/4 PASS, 0 bugs. No orange buttons. P5: real profile, PATCH save, logout clean. P3: real visit data. Both screens confirmed clean.~~ |
 | ~~**28c**~~ | ~~**PM Agent — sign-up / account deletion / recovery decisions**~~ | ~~DONE 2026-05-30. All four decisions documented as Locked Decisions. Review: `reviews/step28c-pm-review.md`.~~ |
 | ~~**28d**~~ | ~~**Builder Agent — pre-pilot OTP resend + mobile guard**~~ | ~~DONE 2026-05-30. RESEND_SECONDS 45→30 on D1 + P1. Backend PATCH /patient/profile: MOBILE_IMMUTABLE guard added (inline middleware before validate). Zero new TS errors.~~ |
-| **28e** | **Security Agent — PATCH /patient/profile re-check** | Re-audit mobile field guard only. Scope: `backend/src/routes/patient.ts` lines 77–137 (`PATCH /patient/profile`). Confirm: guard fires before validate(); HTTP 400 + MOBILE_IMMUTABLE on mobile_number in body; no new auth/PII exposure. |
+| ~~**28e**~~ | ~~**Security Agent — PATCH /patient/profile re-check**~~ | ~~DONE 2026-05-30. CLEAR TO MERGE. 0 CRITICAL, 0 HIGH, 0 MEDIUM. 28e-L1 (LOW): no audit event on MOBILE_IMMUTABLE rejection — informational, accepted as v2 debt. Guard execution order verified: requirePatientAuth → inline guard → validate() → handler. No bypass vectors. Re-check: `reviews/step28e-security-recheck.md`.~~ |
 
 ---
 
