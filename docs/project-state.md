@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** POST-COMPLETION — P3 and P5 device-verified clean (2026-05-30). No orange buttons, real API data confirmed on device. PM Agent session queued to define sign-up, account deletion, and recovery flows before any new build begins.
+**Phase:** POST-COMPLETION — All product gaps resolved (2026-05-30). PM Agent Step 28c complete: doctor registration, patient registration, deletion policy, and account recovery decisions all documented as Locked Decisions. One pre-pilot Builder micro-session required: OTP resend (D1 + P1) + PATCH /patient/profile mobile guard.
 **Last Updated:** 2026-05-30
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
@@ -35,13 +35,17 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder micro-session + Lessons (2026-05-30). Two findings by human owner after project was declared complete:
+**Last Session:** PM Agent — Step 28c (2026-05-30). All four product gaps from Mistakes 15/16/17 resolved. Decisions: (1) Doctor registration — admin-provisioned for v1, no self-serve screen. (2) Patient registration — doctor-initiated via D5, intentionally locked. (3) Deletion policy — PII deleted on request; clinical records retained 3yr anonymized per MCI guidelines; no deletion UI in v1 (support escalation). Re-join: fresh account, no link to prior records. (4) Account recovery — patient mobile number immutable (admin-reset path); OTP resend with 30s cooldown required on D1 + P1 before pilot. PATCH /patient/profile must block mobile changes (Builder + Security task). Review: `reviews/step28c-pm-review.md`.
+
+**Next required session:** Builder Agent — pre-pilot micro-session. Add OTP resend (30s cooldown) to D1 (LoginScreen.tsx) + P1 (PatientLoginScreen.tsx). Verify/add guard on backend PATCH /patient/profile to reject mobile field changes. Security Agent re-check on mobile field guard only (touches auth + PII). No persona critique needed (no new screens).
+
+**Previous Session:** Builder micro-session + Lessons (2026-05-30). Two findings by human owner after project was declared complete:
 
 (1) **P3 + P5 never wired to real API** — both screens were still running entirely on mock data. `PatientVisitDetailScreen.tsx`: `records` was always `mockVisit.records` regardless of `__DEV__`; orange demo switcher buttons visible in Expo Go. Fixed: wired to `GET /patient/visits/:id` with patient JWT; loading/error states added; all mock data and demo switcher removed. `PatientProfileScreen.tsx`: profile always showed `MOCK_PROFILE`; demo switcher buttons visible. Fixed: wired to `GET /patient/profile` (useFocusEffect) + `PATCH /patient/profile` on save; logout now properly clears `PATIENT_REFRESH_TOKEN_KEY` + `PATIENT_USER_PROFILE_KEY` from SecureStore before `clearAuth()`; `isSavingRef` tap guard added; all mock data and demo switcher removed. Zero new TS errors. Commits: `62795be` (lessons), `95096b6` (P3/P5 wire).
 
 (2) **Three product gaps documented in LESSONS-AND-RUNBOOK.md** — Mistakes 15 (no sign-up flow; seeding masked the absence), 16 (account deletion + data retention never designed), 17 (account recovery path never built). New Section 4: "Why Human Oversight Is Non-Negotiable" — case study on what agents cannot do alone. New Section 2.6: pipeline scope classification (when full pipeline required vs. Builder micro-session). All three gaps require PM Agent decisions before any build.
 
-**Next required session:** PM Agent — sign-up / account deletion / recovery decisions (Step 28c). Three product gaps: doctor registration model, patient self-registration policy, deletion policy (DPDP + healthcare retention), account recovery model for doctors.
+**Previous Step 28c:** PM Agent — sign-up / account deletion / recovery decisions. COMPLETE 2026-05-30. All decisions documented. See `reviews/step28c-pm-review.md`.
 
 **Previous Session:** Device Tester — Step 28b (2026-05-30). P3 + P5 device verify. 4/4 PASS, 0 bugs. No orange demo buttons on either screen. P5: real profile loads, PATCH save works, logout clean. P3: real visit data loads (date, doctor name, clinic name, records). Both screens confirmed clean.
 
@@ -206,7 +210,8 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~**27**~~ | ~~**Integration Tester — connected doctor-patient scenarios**~~ | ~~BLOCKED 2026-05-17 — 0/7 scenarios. 2 CRITICAL pre-condition bugs. See session: `reviews/integration-test-session.md`.~~ |
 | ~~**28a**~~ | ~~**Builder micro-session — wire P3 + P5 + remove demo UI**~~ | ~~DONE 2026-05-30. P3: wired GET /patient/visits/:id; mock data + demo switcher removed. P5: wired GET/PATCH /patient/profile; SecureStore logout fixed; mock data + demo switcher removed. Commit: 95096b6.~~ |
 | ~~**28b**~~ | ~~**Device verify — P3 and P5**~~ | ~~DONE 2026-05-30. 4/4 PASS, 0 bugs. No orange buttons. P5: real profile, PATCH save, logout clean. P3: real visit data. Both screens confirmed clean.~~ |
-| **28c** | **PM Agent — sign-up / account deletion / recovery decisions** | Three product gaps identified by human owner (Mistakes 15/16/17 in LESSONS-AND-RUNBOOK.md). PM must define: (1) doctor registration model (self-serve vs admin-provisioned); (2) patient self-registration policy (doctor-initiated only, or self-serve); (3) deletion policy (DPDP + healthcare retention, re-join handling); (4) account recovery model for doctors (mobile number change path). No build begins until all four decisions are documented in Locked Decisions. |
+| ~~**28c**~~ | ~~**PM Agent — sign-up / account deletion / recovery decisions**~~ | ~~DONE 2026-05-30. All four decisions documented as Locked Decisions. Review: `reviews/step28c-pm-review.md`.~~ |
+| **28d** | **Builder Agent — pre-pilot OTP resend + mobile guard** | Add OTP resend (30s cooldown) to D1 (LoginScreen.tsx) + P1 (PatientLoginScreen.tsx). Verify/add guard on backend PATCH /patient/profile to reject mobile field changes. Security Agent re-check on mobile field guard only (touches auth + PII). No new screens, no persona critique needed. |
 
 ---
 
@@ -227,6 +232,12 @@ _Update this section whenever backend status changes. Every device testing sessi
 | Aadhaar field omitted from D5 (New Patient Form) for v1. Mobile number is sufficient as the primary patient key. Aadhaar adds UIDAI compliance overhead premature for v1 and hurts the 20-second completion target. When added in v2, hash at form boundary — raw Aadhaar must never enter the call stack. | — |
 | D7 (Document Scanner) defaults to manual tap-to-capture; auto-capture deferred to v2 | Auto-capture is unreliable on low-end Android under inconsistent clinic lighting |
 | D5 (New Patient Form) must hash Aadhaar at the form submission boundary — raw Aadhaar must never travel through the call stack or reach any storage layer | UIDAI compliance; data minimisation; extends existing SHA-256 hash decision |
+| Doctor registration is admin-provisioned for v1 — no self-serve registration screen | Self-serve requires NMC verification; premature for a controlled one-clinic pilot where all doctors are known personally. Doctor self-registration deferred to v1.1. |
+| Patient creation is doctor-initiated for v1 — patient cannot self-register | Patient is added by doctor via D5 in real time during consultation; clinically correct. Patient self-registration deferred to v1.1. |
+| Deletion policy: PII deleted on request; clinical records retained 3yr (outpatient) anonymized, per MCI guidelines | DPDP Act 2023 (PII erasure) + MCI retention requirements. No deletion UI in v1 — support escalation only. Re-join: fresh account with no access to prior anonymous records. |
+| Patient mobile number is immutable primary key in v1 — PATCH /patient/profile must block mobile field changes | Mobile is primary patient key; self-change breaks visit history and consent linkage. Mobile number change requires admin-reset via support escalation. |
+| Doctor account recovery for v1 is admin-reset via support escalation; doctor profile screen deferred to v1.1 | Pilot involves known doctors; personal support escalation is sufficient for v1. |
+| OTP resend with 30s cooldown is a pre-pilot requirement on D1 and P1 | If SMS OTP doesn't arrive, user has no recourse. Must be present before any real user interaction. |
 
 ---
 
