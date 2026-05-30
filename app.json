@@ -15,7 +15,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "MedRecord uses the camera to scan patient documents.",
         "NSMicrophoneUsageDescription": "Microphone access is required for camera use.",
-        "NSPhotoLibraryUsageDescription": "MedRecord accesses photos to attach scanned documents."
+        "NSPhotoLibraryUsageDescription": "MedRecord accesses photos to attach scanned documents.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -28,7 +29,9 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
@@ -39,8 +42,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "6de7657a-5d63-4727-8c52-917cf6ba301c"
       }
-    }
+    },
+    "owner": "rdevarakonda88"
   }
 }

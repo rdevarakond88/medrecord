@@ -282,13 +282,37 @@ Update docs/project-state.md Backend Status section when deployment is confirmed
 
 ---
 
-Once all four screens are done and the backend is deployed, run the PM agent again (Moment 2):
+Once all screens across all flows are device tested, run Step 12 before PM Moment 2.
+
+---
+
+### STEP 12 — Integration Tester (run once, after ALL screens are device tested)
+
+**Who:** You, in a fresh Claude Code session
+**When:** After every screen across every flow has passed its individual Device Tester session
+**Why:** Individual screen testing does not verify that doctor actions produce the correct visible effect on the patient side, or vice versa. This is the only step that tests the full connected loop.
+**Prompt to paste:**
+```
+Read agents/agent-integration-tester.md, docs/project-state.md.
+
+All screens have passed individual device testing.
+Run the Integration Tester infrastructure pre-flight, then guide me
+through all 7 connected scenarios in order.
+```
+**Output you expect:** `reviews/integration-test-session.md` with all 7 scenarios recorded as PASS / FAIL / SKIP
+**If bugs found:** Exit session. Start a Builder Agent session to fix them. Re-run only the affected scenarios to verify. Repeat until all 7 scenarios pass.
+**Then:** Exit session. PM Moment 2 sign-off can now proceed.
+
+---
+
+### PM Moment 2 — Post-Flow Sign-off (only after Step 12 passes clean)
+
 ```
 Read agents/agent-pm.md, docs/project-state.md.
 
-The complete Doctor Visit Flow (D2, D3, D6, D7) is now built.
-Run your Moment 2 post-flow review and produce the output in the
-format specified in your agent file.
+All screens are individually device tested AND integration testing
+is complete (reviews/integration-test-session.md shows all scenarios pass).
+Run your Moment 2 post-flow review.
 ```
 
 ---

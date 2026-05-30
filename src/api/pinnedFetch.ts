@@ -36,12 +36,21 @@
 
 // react-native-ssl-pinning is a native module — not available in Expo Go.
 // Falls back to standard fetch so Expo Go device testing still works.
+//
+// BUG-IT-PRE-1 fix: require() does NOT throw in Expo Go because the `q` npm
+// dependency is installed, so the JS module loads. But NativeModules.RNSslPinning
+// is null in Expo Go (the native side was never compiled in), causing a crash
+// when sslFetch() is called. Guard on the native module presence first.
+import { NativeModules } from 'react-native';
+
 let sslFetch: typeof fetch | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  sslFetch = require('react-native-ssl-pinning').fetch;
+  if (NativeModules.RNSslPinning) {
+    sslFetch = require('react-native-ssl-pinning').fetch;
+  }
 } catch {
-  // Expo Go — native module not bundled; pinnedFetch uses standard fetch below
+  // Require failed (e.g. module stripped from bundle) — use standard fetch below
 }
 
 // The intermediate CA cert filename (without .cer extension).

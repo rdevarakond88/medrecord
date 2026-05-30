@@ -47,6 +47,7 @@ Each agent has a defined role. Never perform a task that belongs to an agent wit
 | Security | `agents/agent-security.md` | After every live screen build; whenever a fix touches storage, auth, or PII |
 | QA | `agents/agent-qa.md` | After every live screen passes security audit |
 | Device Tester | _(see Device Testing Rules below)_ | After QA test plan is complete AND infrastructure pre-flight passes |
+| Integration Tester | `agents/agent-integration-tester.md` | Once — after ALL screens across ALL flows have passed individual Device Tester sessions, before PM Moment 2 sign-off. Tests full connected journeys across doctor and patient sides. Never invoked for individual screens. |
 
 ### Mandatory Builder → Persona Critic Sequence
 

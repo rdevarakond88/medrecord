@@ -27,3 +27,13 @@ export const REFRESH_TOKEN_KEY = 'medrecord_refresh_token';
  * restoration so App.tsx can call setAuth() without a separate /me endpoint.
  */
 export const USER_PROFILE_KEY = 'medrecord_user_profile';
+
+// ─── Patient auth keys ──────────────────────────────────────────────────────
+// Separate keys prevent collision when testing both doctor and patient flows
+// on the same device (e.g. during integration testing).
+
+/** Patient JWT refresh token — stored in expo-secure-store after P1 login. */
+export const PATIENT_REFRESH_TOKEN_KEY = 'medrecord_patient_refresh_token';
+
+/** Serialised PatientUser profile — stored alongside patient refresh token. */
+export const PATIENT_USER_PROFILE_KEY = 'medrecord_patient_user_profile';

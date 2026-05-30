@@ -1,24 +1,17 @@
 /**
- * PatientTimelineScreen.tsx — P2: My Records Timeline
+ * PatientTimelineScreen.tsx — P2: My Records Timeline (live)
  *
  * Spec:    docs/ui-ux-spec.md § P2 (My Records / Timeline)
  * PM:      reviews/P1-P5-pm-review.md
  *
- * MOCKUP — all data is hardcoded. No real API calls.
- *
- * Wire step will:
- *   1. Replace MOCK_TIMELINE_DATA with a React Query hook calling
- *      GET /patient/timeline (patient-facing endpoint — not yet built).
- *   2. Pass real patientId from patient auth state.
- *   3. Implement thumbnail lazy-loading from local filesystem / S3.
- *   4. Wire "By Doctor" / "By Clinic" filter to server-side params or
- *      client-side filter over cached data.
- *
- * States shown: has-data (grouped by year / doctor / clinic), empty state.
- * Toggle via DEV demo switcher at bottom.
+ * Live screen — wired to real API (BUG-IT-2 fix, 2026-05-27).
+ *   GET /patient/timeline → all visits for the logged-in patient, newest first.
+ *   Auth: patient JWT from usePatientAuthStore.
+ *   Refresh: useFocusEffect + pull-to-refresh on FlatList.
+ *   Filter: client-side grouping (by year / by doctor / by clinic).
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -26,9 +19,14 @@ import {
   StyleSheet,
   FlatList,
   SafeAreaView,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import { apiFetch } from '../../api/apiClient';
+import { usePatientAuthStore } from '../../store/usePatientAuthStore';
 
 import { Colors, Spacing } from '../../constants/theme';
 import type { RootStackParamList } from '../../../App';
@@ -67,83 +65,46 @@ type ListItem =
   | { kind: 'group_header'; label: string }
   | { kind: 'visit';        entry: VisitEntry };
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// ─── Server response types ────────────────────────────────────────────────────
 
-const MOCK_TIMELINE: VisitEntry[] = [
-  {
-    id:         'v-2026-001',
-    date:       '10/05/2026',
-    year:       '2026',
-    doctorName: 'Dr. Anand Krishnamurthy',
-    clinicName: 'Krishnamurthy Clinic, Pune',
-    summary:    'Fever and body ache — 3 days',
-    records: [
-      {
-        id:           'r-001a',
-        type:         'scan',
-        thumbnailUri: null,
-        ocrPreview:   'Tab. Paracetamol 500mg — twice daily × 5 days. Tab. Cetirizine 10mg — at night.',
-      },
-      {
-        id:           'r-001b',
-        type:         'note',
-        preview:      'Patient reports fever since 3 days, max 101°F. No cough. Advised rest and fluids.',
-      },
-    ],
-  },
-  {
-    id:         'v-2025-003',
-    date:       '22/11/2025',
-    year:       '2025',
-    doctorName: 'Dr. Meenakshi Iyer',
-    clinicName: 'Iyer Family Clinic, Pune',
-    summary:    'Annual health check-up',
-    records: [
-      {
-        id:           'r-003a',
-        type:         'scan',
-        thumbnailUri: null,
-        ocrPreview:   'Blood pressure: 118/76 mmHg. Blood glucose (fasting): 92 mg/dL. Haemoglobin: 13.2 g/dL.',
-      },
-    ],
-  },
-  {
-    id:         'v-2025-002',
-    date:       '04/08/2025',
-    year:       '2025',
-    doctorName: 'Dr. Anand Krishnamurthy',
-    clinicName: 'Krishnamurthy Clinic, Pune',
-    summary:    'Knee pain — right knee',
-    records: [
-      {
-        id:           'r-002a',
-        type:         'note',
-        preview:      'Mild osteoarthritis Grade I. Prescribed physiotherapy — 10 sessions. Avoid stairs for 2 weeks.',
-      },
-      {
-        id:           'r-002b',
-        type:         'scan',
-        thumbnailUri: null,
-        ocrPreview:   'X-Ray Right Knee: Mild joint space narrowing. No fracture or effusion.',
-      },
-    ],
-  },
-  {
-    id:         'v-2024-001',
-    date:       '13/03/2024',
-    year:       '2024',
-    doctorName: 'Dr. Meenakshi Iyer',
-    clinicName: 'Iyer Family Clinic, Pune',
-    summary:    'Throat infection',
-    records: [
-      {
-        id:           'r-004a',
-        type:         'note',
-        preview:      'Streptococcal pharyngitis. Tab. Amoxicillin 500mg — thrice daily × 7 days. Gargle with warm salt water.',
-      },
-    ],
-  },
-];
+interface ServerRecord {
+  id:          string;
+  type:        'note' | 'scan';
+  preview?:    string;     // note records only
+  ocr_preview?: string;   // scan records only
+}
+
+interface ServerVisit {
+  id:          string;
+  visit_date:  string;     // YYYY-MM-DD
+  doctor_name: string;
+  clinic_name: string | null;
+  summary:     string | null;
+  records:     ServerRecord[];
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function serverToEntry(v: ServerVisit): VisitEntry {
+  const parts = v.visit_date.split('-');
+  const year  = parts[0];
+  const month = parts[1];
+  const day   = parts[2];
+  return {
+    id:          v.id,
+    date:        `${day}/${month}/${year}`,
+    year,
+    doctorName:  v.doctor_name,
+    clinicName:  v.clinic_name ?? '',
+    summary:     v.summary,
+    records: v.records.map((r): VisitRecord => {
+      if (r.type === 'note') {
+        return { id: r.id, type: 'note', preview: r.preview ?? '' };
+      }
+      return { id: r.id, type: 'scan', thumbnailUri: null, ocrPreview: r.ocr_preview ?? null };
+    }),
+  };
+}
 
 // ─── Helpers: build flat list items ──────────────────────────────────────────
 
@@ -334,14 +295,47 @@ function EmptyState() {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PatientTimelineScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation   = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const token        = usePatientAuthStore((s) => s.token);
 
-  const [filter,       setFilter]       = useState<FilterOption>('all');
-  const [expandedId,   setExpandedId]   = useState<string | null>(null);
-  const [showEmpty,    setShowEmpty]    = useState(false);
+  const [filter,      setFilter]    = useState<FilterOption>('all');
+  const [expandedId,  setExpandedId]= useState<string | null>(null);
+  const [visits,      setVisits]    = useState<VisitEntry[]>([]);
+  const [isLoading,   setIsLoading] = useState(true);
+  const [refreshing,  setRefreshing]= useState(false);
+  const [fetchError,  setFetchError]= useState<string | null>(null);
 
-  const visits    = showEmpty ? [] : MOCK_TIMELINE;
+  // Auth guard — redirect to patient login if no token
+  useEffect(() => {
+    if (!token) {
+      navigation.replace('PatientLogin');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   const listItems = buildListItems(visits, filter);
+
+  const loadTimeline = useCallback(async (isRefresh = false) => {
+    if (!token) return;
+    if (isRefresh) setRefreshing(true);
+    else setIsLoading(true);
+    setFetchError(null);
+    try {
+      const data = await apiFetch<{ visits: ServerVisit[] }>('/patient/timeline', token);
+      setVisits(data.visits.map(serverToEntry));
+    } catch {
+      setFetchError('Could not load records. Pull down to retry.');
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  }, [token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTimeline(false);
+    }, [loadTimeline]),
+  );
 
   function handleToggle(id: string) {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -411,9 +405,25 @@ export default function PatientTimelineScreen() {
         ))}
       </View>
 
-      {/* ── Timeline list / empty state ── */}
-      {visits.length === 0 ? (
-        <EmptyState />
+      {/* ── Timeline list / loading / empty state ── */}
+      {isLoading ? (
+        <View style={styles.loadingBlock}>
+          <ActivityIndicator size="large" color={Colors.primaryBlue} />
+        </View>
+      ) : fetchError ? (
+        <View style={styles.loadingBlock}>
+          <Text style={styles.errorText}>{fetchError}</Text>
+        </View>
+      ) : visits.length === 0 ? (
+        <FlatList
+          data={[]}
+          renderItem={() => null}
+          ListEmptyComponent={<EmptyState />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => loadTimeline(true)} />
+          }
+          contentContainerStyle={styles.listContent}
+        />
       ) : (
         <FlatList
           data={listItems}
@@ -425,6 +435,9 @@ export default function PatientTimelineScreen() {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => loadTimeline(true)} />
+          }
         />
       )}
 
@@ -461,29 +474,6 @@ export default function PatientTimelineScreen() {
           <Text style={styles.tabLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
-
-      {/* ── DEV demo switcher ── */}
-      {__DEV__ && (
-        <View style={styles.demoBlock}>
-          <Text style={styles.demoTitle}>Demo states — mockup only</Text>
-          <View style={styles.demoRow}>
-            <TouchableOpacity
-              style={[styles.demoBtn, !showEmpty && styles.demoBtnActive]}
-              onPress={() => { setShowEmpty(false); setExpandedId(null); }}
-              accessibilityLabel="Demo state: Has data"
-            >
-              <Text style={styles.demoBtnText}>Has data</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.demoBtn, showEmpty && styles.demoBtnActive]}
-              onPress={() => setShowEmpty(true)}
-              accessibilityLabel="Demo state: Empty"
-            >
-              <Text style={styles.demoBtnText}>Empty</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
 
     </SafeAreaView>
   );
@@ -805,39 +795,17 @@ const styles = StyleSheet.create({
     marginTop:       3,
   },
 
-  // ── DEV demo switcher
-  demoBlock: {
-    padding:         Spacing.md,
-    backgroundColor: '#FFFBEB',
-    borderTopWidth:  1,
-    borderTopColor:  '#FCD34D',
-  },
-  demoTitle: {
-    fontSize:      11,
-    fontWeight:    '700',
-    color:         '#92400E',
-    textAlign:     'center',
-    marginBottom:  6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  demoRow: {
-    flexDirection:  'row',
-    gap:            Spacing.sm,
+  // ── Loading / error block
+  loadingBlock: {
+    flex:           1,
+    alignItems:     'center',
     justifyContent: 'center',
+    paddingBottom:  80,
   },
-  demoBtn: {
-    backgroundColor:  '#D97706',
-    paddingVertical:  6,
-    paddingHorizontal: 16,
-    borderRadius:     6,
-  },
-  demoBtnActive: {
-    backgroundColor: '#92400E',
-  },
-  demoBtnText: {
-    color:      '#FFFFFF',
-    fontSize:   12,
-    fontWeight: '600',
+  errorText: {
+    fontSize:   15,
+    color:      Colors.textSecondary,
+    textAlign:  'center',
+    paddingHorizontal: 32,
   },
 });

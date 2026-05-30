@@ -332,62 +332,79 @@ export default function NewPatientFormScreen() {
         }
       });
 
-      // ── Step 3: Optimistic server call (online only) ─────────────────
+      // ── Step 3: Server registration (mandatory when reachable) ──────────
+      // BUG-IT-1 fix: always attempt the server call — do not gate on isOnline state.
+      // The isOnline hook starts false and lags on first load; gating on it causes
+      // the call to be skipped entirely when the doctor saves quickly after opening D5.
+      //
+      // Error handling:
+      //   - 201: patient created on server → update local row with server_id ✅
+      //   - 409: race / already exists → look up server_id and update local row ✅
+      //   - TypeError (network error): truly offline → proceed without server_id;
+      //     patient cannot log in until the sync worker uploads the record (acceptable)
+      //   - timeout / ApiError non-409: backend unreachable/slow → BLOCK navigation,
+      //     show error, let doctor retry. Patient must exist on server before login.
       let serverPatientId: string | null = null;
 
-      if (isOnline) {
-        try {
-          // H3 fix: 10-second timeout prevents an indefinite spinner on 2G/EDGE.
-          // On timeout the error falls through to the catch → serverPatientId = null,
-          // and the sync worker retries on reconnect.
-          const res = await Promise.race([
-            createPatient(
-              {
-                localId:      actualLocalId,
-                mobileNumber: mobile,
-                name:         trimmedName,
-                dateOfBirth:  dobISO,
-                gender,
-              },
-              token,
-            ),
-            timeoutAfter(10_000),
-          ]);
-          // 201: patient created on server — update local row with server_id
-          await setPatientServerId(db, actualLocalId, res.patient.id);
-          serverPatientId = res.patient.id;
-        } catch (apiErr) {
-          if (apiErr instanceof ApiError && apiErr.status === 409) {
-            // Race condition: another device registered this patient first.
-            // Look up the existing server patient to get their UUID.
-            try {
-              const existing = await lookupPatient(mobile, token);
-              if (existing) {
-                await upsertPatientFromServer(db, {
-                  doctor_id:       user.id,
-                  server_id:       existing.id,
-                  mobile_number:   existing.mobile_number,
-                  name:            existing.name,
-                  date_of_birth:   existing.date_of_birth,
-                  gender:          existing.gender,
-                  consent_granted: existing.consent_granted,
-                  last_visit_date: existing.last_visit_date,
-                });
-                serverPatientId = existing.id;
-                // H4 fix: mark the pending 'create' queue entry as success so the
-                // sync worker doesn't re-attempt a POST that will get another 409
-                // and eventually dead-letter at max_attempts.
-                if (wasInserted) {
-                  await markSyncEntrySuccess(db, actualLocalId, 'patient');
-                }
+      try {
+        const res = await Promise.race([
+          createPatient(
+            {
+              localId:      actualLocalId,
+              mobileNumber: mobile,
+              name:         trimmedName,
+              dateOfBirth:  dobISO,
+              gender,
+            },
+            token,
+          ),
+          timeoutAfter(30_000),
+        ]);
+        // 201: patient created on server — update local row with server_id
+        await setPatientServerId(db, actualLocalId, res.patient.id);
+        serverPatientId = res.patient.id;
+      } catch (apiErr) {
+        if (apiErr instanceof ApiError && apiErr.status === 409) {
+          // Race condition: another device registered this patient first.
+          // Look up the existing server patient to get their UUID.
+          try {
+            const existing = await lookupPatient(mobile, token);
+            if (existing) {
+              await upsertPatientFromServer(db, {
+                doctor_id:       user.id,
+                server_id:       existing.id,
+                mobile_number:   existing.mobile_number,
+                name:            existing.name,
+                date_of_birth:   existing.date_of_birth,
+                gender:          existing.gender,
+                consent_granted: existing.consent_granted,
+                last_visit_date: existing.last_visit_date,
+              });
+              serverPatientId = existing.id;
+              // H4 fix: mark the pending 'create' queue entry as success so the
+              // sync worker doesn't re-attempt a POST that will get another 409.
+              if (wasInserted) {
+                await markSyncEntrySuccess(db, actualLocalId, 'patient');
               }
-            } catch {
-              // Lookup also failed — proceed with null server ID.
-              // The sync worker will resolve the conflict on the next run.
             }
+          } catch {
+            // Lookup also failed — serverPatientId stays null.
           }
-          // All other errors (including timeout): silently continue. The local row
-          // + sync queue are the source of truth. The sync worker will retry.
+        } else if (apiErr instanceof TypeError) {
+          // Network error — device is truly offline. The local SQLite row + sync
+          // queue entry are the source of truth; sync worker will upload on reconnect.
+          // serverPatientId stays null; patient cannot log in until then.
+          serverPatientId = null;
+        } else {
+          // Timeout (Error('timeout')) or other ApiError (non-409, non-network).
+          // Patient was saved to SQLite but is NOT on the server yet.
+          // Block navigation — the patient cannot log in until they are registered.
+          setSaveError(
+            'Could not register patient with the server. Check your connection and tap the button to try again.',
+          );
+          isSavingRef.current = false;
+          setIsSaving(false);
+          return;
         }
       }
 

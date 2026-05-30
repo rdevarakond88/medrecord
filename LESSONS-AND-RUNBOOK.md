@@ -1,6 +1,6 @@
 # MedRecord — Lessons & Runbook
 
-_Source of truth for environment setup, agent workflows, build mistakes, and the standard screen-building runbook. Based entirely on `docs/` and `agents/` files. Updated: 2026-03-03._
+_Source of truth for environment setup, agent workflows, build mistakes, and the standard screen-building runbook. Based entirely on `docs/` and `agents/` files. Updated: 2026-05-30._
 
 ---
 
@@ -8,10 +8,16 @@ _Source of truth for environment setup, agent workflows, build mistakes, and the
 
 1. [Environment Setup — Issues and Fixes](#1-environment-setup--issues-and-fixes)
 2. [Agent Workflow Rules](#2-agent-workflow-rules)
+   - [2.6 Session Scope Classification — When to Run the Full Pipeline](#26-session-scope-classification--when-to-run-the-full-pipeline)
 3. [Mistakes and Rules — D2, D3, D6 Builds](#3-mistakes-and-rules--d2-d3-d6-builds)
    - [3.4 Device Testing Mistakes (D2, D3, D6)](#34-device-testing-mistakes-d2-d3-d6)
    - [3.5 Process Mistakes](#35-process-mistakes)
-4. [Standard Runbook — Building Each Screen](#4-standard-runbook--building-each-screen)
+     - [Mistake 15 — Sign-up flow never built; seeding masked the absence](#mistake-15--no-sign-up-flow-built-test-user-seeding-masked-the-absence)
+     - [Mistake 16 — Account deletion and data retention never designed](#mistake-16--account-deletion-and-data-retention-never-designed)
+     - [Mistake 17 — Account recovery path never designed or built](#mistake-17--account-recovery-path-never-designed-or-built)
+     - [Mistake 18 — SESSION COMPLETE declared before end-of-session checklist was finished](#mistake-18--session-complete-declared-before-end-of-session-checklist-was-finished)
+4. [Why Human Oversight Is Non-Negotiable — What Agents Cannot Do Alone](#4-why-human-oversight-is-non-negotiable--what-agents-cannot-do-alone)
+5. [Standard Runbook — Building Each Screen](#5-standard-runbook--building-each-screen)
 
 ---
 
@@ -235,7 +241,42 @@ expo-sqlite, expo-crypto, @tanstack/react-query, @react-navigation/native,
 3. Commit and push to `dev`.
 4. Confirm commit hash.
 
-### 2.6 Session Commit Convention
+### 2.6 Session Scope Classification — When to Run the Full Pipeline
+
+Not every code change requires the full PM → Builder → Persona Critic → Security → QA → Device Test pipeline. Running the full pipeline for a one-line fix wastes sessions and obscures the real purpose of each agent. The rule is: **pipeline depth is proportional to scope and risk.**
+
+**Full pipeline required** (PM → Builder → Persona Critic → Security → QA → Device Test):
+- New screen or new navigation flow
+- New product feature or new user-facing capability
+- Any change to authentication, consent logic, or PII storage
+- Any change to the sync queue, data model, or API contract
+- Any change that introduces new backend endpoints
+
+**Builder + Device verify** (Builder session → quick device confirmation, no other agents):
+- Removing dev scaffolding (demo switchers, `__DEV__` placeholder buttons)
+- Cosmetic cleanup with no data or security implications
+- One-line bug fixes where the fix reduces surface area rather than adding it
+- Fixing broken navigation, wrong label text, or incorrect color/sizing
+- Any fix where a human can visually confirm "it works" in under 5 minutes on device
+
+**Builder only** (no device test needed):
+- Removing dead code, unused imports, or console.log statements
+- Fixing TypeScript errors with no runtime behavior change
+- Documentation and comment updates in code files
+
+**PM micro-session only** (no build required):
+- Documenting a locked decision that was made verbally
+- Defining a policy (e.g. data retention, account deletion) before any build begins
+- Scoping a new flow to determine which agents and steps are needed
+
+**How to document a Builder micro-session in `project-state.md`:**
+Add it to Recommended Next Session Order with a `[micro]` tag and a one-line scope description. Example:
+```
+| next | Builder [micro] — remove __DEV__ demo switchers from patient screens | No security/data implications — device verify only |
+```
+The `[micro]` tag signals to the opening agent that no PM gate, no Persona Critic, and no QA test plan are required. The Builder states this explicitly in its opening declaration.
+
+### 2.7 Session Commit Convention
 
 ```
 [screen/feature] short description
@@ -518,7 +559,229 @@ Rule going forward: Whenever a Builder session creates the first screen of a new
 
 ---
 
-## 4. Standard Runbook — Building Each Screen
+**Mistake 14 — No end-to-end integration test across the doctor and patient flows**
+
+What happened: All 14 screens were individually built, security-audited, QA tested, and device tested. Each screen passed its own Device Tester session. The project was declared complete and merged to main. The user then asked: "Did we ever test the full connected loop — doctor creates patient, doctor requests consent, patient grants it on their screen, doctor sees records?" The answer was no. That scenario had never been run as a single connected test.
+
+What was tested in isolation:
+- D9 (doctor requests consent → OTP sent) — tested on its own
+- P4 (patient sees pending request → grants or denies) — tested with seeded mock data, not a live request from D9
+
+What was never tested:
+- Doctor triggers consent request → patient receives it live → patient grants it → doctor's D3 screen reflects access granted
+- Patient revokes access in P4 → doctor loses access in D3 in the same session
+- Doctor creates a new visit → patient sees it appear in their P2 timeline
+- Any cause-and-effect interaction that crosses the doctor/patient boundary in a single connected session
+
+Root cause: The workflow was designed screen-by-screen. Every screen went through PM → Builder → Persona Critic → Security → QA → Device Tester. That pipeline is correct for building individual screens correctly, but it has a structural blind spot — no agent or step asks "does the whole system work as one connected experience?" Individual screen testing is not the same as integration testing. The workflow had no agent that owned cross-flow scenarios.
+
+How it was caught: The user — not any agent — identified the gap after the project was declared complete. No agent in the workflow prompted the question.
+
+Impact: For this project (a learning exercise), the gap is cosmetic — the individual screens all work. In a real clinical deployment, this would be a serious omission. A broken consent grant flow would mean doctors cannot access records even after patients approve, which is the app's core value proposition.
+
+Rule going forward: The workflow now includes a seventh agent — the **Integration Tester** — that runs once, after ALL screens across ALL flows have passed individual Device Tester sessions, and BEFORE PM Moment 2 sign-off. The PM cannot declare "clear to merge" until the Integration Tester has either passed clean or had its bugs fixed by Builder and re-verified.
+
+The Integration Tester's job is exclusively cross-flow scenarios: every action on one side of the app that is supposed to cause a visible effect on the other side must be tested as a single connected session. It never tests screens in isolation — the Device Tester already owns that. It logs defects and hands off to Builder at session end, following the same pattern as the Device Tester.
+
+See `agents/agent-integration-tester.md` for the full agent definition.
+
+---
+
+**Mistake 15 — No sign-up flow built; test user seeding masked the absence**
+
+What happened: The project was declared complete with 14 screens built, security-audited, QA-tested, device-tested, and integration-tested. The doctor and patient login screens (D1, P1) were built and fully verified. No sign-up screen was ever built for either role. A brand-new user — doctor or patient — could not create an account.
+
+Why it was never caught by any agent:
+- The backend seeded a test doctor (Dr. Test Doctor, mobile `9999999999`) and a test patient (Priya Sharma, mobile `8888888888`) directly into the database at startup.
+- Every session — Builder, Device Tester, Integration Tester — used these seeded accounts. The login screen worked perfectly. No agent ever asked: "How did this user get into the system in the first place?"
+- The PM Agent reviews (Moment 1 and Moment 2) focused on whether existing screens worked correctly, not whether the product could be adopted by a new user from day zero.
+- The QA Agent's test categories cover offline/connectivity, data integrity, consent edge cases, and sync conflicts — none cover onboarding completeness.
+
+How it was caught: The user — not any agent — identified the gap after the project was declared complete.
+
+What "sign-up" means for each role:
+- **Doctor:** There is no `POST /auth/register` endpoint and no registration screen. A new doctor cannot create an account. This must be a PM-level decision: self-serve registration (doctor fills a form), or admin-provisioned (clinic admin creates doctor accounts in a separate admin panel). The answer changes what gets built.
+- **Patient:** This is partially designed — a patient is *created by a doctor* via D5 (New Patient Form), and then logs in via P1 with their mobile OTP. Patient registration is doctor-initiated. This is a valid product design, but it was never explicitly decided or documented. It only happened to work because the seeded patient was already in the system.
+
+**Why patient self-registration is deferred — and why this is different from the doctor restriction:**
+
+The doctor restriction is a hard security requirement. Self-serve doctor registration with no verification means anyone can claim doctor role and read any patient's records. That cannot ship in any version.
+
+The patient restriction is a practical flow decision, not a security concern. A patient can only see their own records — there is no privilege escalation risk. The question is purely: does patient self-registration add value?
+
+In this app's model, it does not — for v1. A patient who self-registers before any doctor has enrolled them would open P2 (Timeline) to an empty screen. P4 (Doctors Access) — empty. P3 (Visit Detail) — nothing to open. The app only has value for a patient once a doctor has recorded a visit using D6.
+
+**D5 is the patient's sign-up.** When the doctor runs D5 during a consultation, a patient account is created in the backend against the patient's mobile number. The patient then uses P1 to log in with OTP. There is no separate "sign-up" step needed — the account already exists. The gap was that this was never consciously designed; it emerged as a side-effect of the D5 → P1 flow.
+
+Patient self-registration becomes a meaningful feature in v1.1 if any of the following are added:
+- Patient can set language preferences or profile data before their first clinic visit
+- Patient can proactively grant consent to a doctor before arriving (rather than waiting for D9)
+- Patient can upload their own documents or log symptoms
+
+None of these exist in v1, so deferring patient self-registration is the correct call — not a security concern, but a "no-op for now" decision.
+
+Rule going forward — **PM Agent Product Completeness Checklist:**
+The PM Agent Moment 1 review (pre-flow gate) must now explicitly verify the following before approving any flow for build:
+
+```
+□ Sign-up / onboarding: can a brand-new user of each role actually get into the system?
+□ Account recovery: what happens when a user loses access to their authentication credential?
+□ Account deletion: what is the retention policy? Which law applies? What does the user see?
+□ Re-join: if a user deletes their account and returns later, what is the expected behavior?
+□ First-time empty state: what does a newly created account see before any data exists?
+□ Are test accounts seeded directly into the database? If yes, which of the above journeys does seeding bypass?
+```
+
+This checklist is now a hard gate. If any item is unresolved, the PM Agent must block the flow from proceeding to Builder until a decision is documented in `docs/project-state.md`.
+
+---
+
+**Mistake 16 — Account deletion and data retention never designed**
+
+What happened: No screen, no endpoint, and no policy existed for a user (doctor or patient) deleting their account. The project was declared complete without this being raised by any agent.
+
+Why this matters more in healthcare than in a typical app:
+- **India's DPDP Act (Digital Personal Data Protection, 2023):** Users have the right to request erasure of their personal data. An app that processes health data must honor this, or it is non-compliant.
+- **Clinical data retention requirements:** Medical records must typically be retained for a minimum of 3 years (outpatient) to 7 years (inpatient) after the last visit, per Medical Council of India guidelines and the Clinical Establishments Act. You cannot simply delete clinical records on user request.
+- **The tension:** DPDP says "delete on request." Healthcare regulations say "retain for years." These are not reconcilable with a simple "Delete Account" button. The correct resolution is: delete PII (name, mobile, date of birth, Aadhaar hash) while retaining anonymized clinical records (visit notes, diagnoses, scans) for the legally required retention period. Neither law was violated by the project because no real users existed — but in a real deployment, this gap would be a compliance blocker.
+
+Re-join scenario not designed:
+The system uses mobile number as the primary patient key. If a patient's account is deleted and they attempt to register again with the same mobile number, the system must decide whether to create a fresh account with no history, or reactivate the prior account. Both choices have clinical implications (re-activated history could include records the patient expected were deleted). This decision must be made at PM level before any deletion logic is built.
+
+Why no agent caught this:
+The Security Agent's mandate is to audit code that was written. It is not a product design agent. It correctly flagged authentication gaps, consent violations, PII in logs, and IDOR vulnerabilities — all of which are code-level concerns. "This feature was never designed" is not a code-level finding. The QA Agent tests paths through built screens. Account deletion was never a built screen, so there was no path to test. No agent in the workflow was responsible for asking "what is missing from this product?"
+
+Rule going forward: The PM Agent Moment 1 Checklist (Mistake 15) now includes account deletion as a mandatory item. Any time the project involves health data, the PM Agent must also explicitly state the applicable retention period and confirm whether a deletion UI is in scope for the current version or explicitly deferred with a written reason.
+
+---
+
+**Mistake 17 — Account recovery path never designed or built**
+
+What happened: The app uses mobile OTP authentication — there is no password. This correctly eliminates the "forgot password" problem. But OTP-based auth has equivalent failure modes that were never addressed, and the project was declared complete without them.
+
+The three gaps:
+
+**Gap 1 — Doctor cannot update their mobile number.**
+The doctor side of the app has no profile screen. D1 (Login) is the only doctor-side auth screen. If a doctor loses their phone, changes their mobile number, or gets a new SIM, they are permanently locked out of their account. There is no recovery path and no support escalation path in the app. The patient side has P5 (Patient Profile) with an edit capability — the doctor side has nothing equivalent.
+
+**Gap 2 — Patient mobile-number change is an identity problem.**
+P5 allows editing patient profile fields, but mobile number is the primary patient key. The backend `PATCH /patient/profile` endpoint was never explicitly defined as allowing or blocking mobile number changes. If it allows it, a patient can change their own primary key — this is a serious identity and data integrity risk. If it blocks it, a patient whose mobile number changes has no recovery path. This decision was never made or documented.
+
+**Gap 3 — OTP delivery failure has no fallback.**
+If the SMS OTP does not arrive (carrier failure, ported number, international roaming), there is no resend mechanism, no alternative delivery channel (WhatsApp OTP, voice call), and no support escalation UI. The user is stuck. The resend OTP with cooldown timer is a small Builder task, but it was never included in any QA test plan or scoped into any screen.
+
+Why no agent caught this:
+OTP-based auth made the problem less visible. "Forgot password?" does not apply, so no agent was looking for a recovery path. The absence of a doctor profile screen was noted as a potential issue during D3 persona critique ("staff correct mobile numbers from this screen") but was listed as a SHOULD FIX and never escalated. No agent asked the structural question: "What does this user do when they can no longer log in?"
+
+Rule going forward: The PM Agent Moment 1 Checklist (Mistake 15) now includes account recovery as a mandatory item. For OTP-based auth specifically, the checklist must confirm: (a) resend OTP with cooldown is built into every OTP screen, (b) a mobile number update path exists for each user role, and (c) the decision on whether mobile number is mutable is explicitly documented in `docs/project-state.md` Locked Decisions.
+
+---
+
+---
+
+**Mistake 18 — SESSION COMPLETE declared before end-of-session checklist was finished**
+
+What happened: Twice in this project, the agent declared SESSION COMPLETE and printed the next-step signal without first completing the mandatory end-of-session protocol. In both cases the user had to explicitly ask before the step was done.
+
+- **First occurrence (Mistake 11):** The P1 mockup Builder session wrote `project-state.md` with the wrong next step (skipping Persona Critic) before closing. The file was committed, SESSION COMPLETE was declared, and the violation was only caught when the user questioned why the next session opened as a Builder instead of Persona Critic.
+- **Second occurrence (2026-05-30):** The Builder micro-session wired P3 and P5, committed the code changes, and declared SESSION COMPLETE. The `project-state.md` update was never done. The user had to explicitly ask: "wasn't it a default instruction to store the context?" before it was completed.
+
+Root cause: In both cases the agent treated the last substantive action (committing code, writing the file) as equivalent to completing the checklist. SESSION COMPLETE was used as a finish line rather than as a signal that is only printed *after* the checklist is confirmed done. The checklist is short and explicit — the failure was not that it was hard, but that it was skipped entirely.
+
+The end-of-session checklist (from CLAUDE.md and Section 2.1 above):
+1. Update `docs/project-state.md` — Last Session block, Recommended Next Session Order
+2. Commit all changed files to `dev`
+3. Push to `origin dev`
+4. Print SESSION COMPLETE signal
+
+Steps 2 and 3 are easy to verify (git confirms them). Step 1 is the one that gets skipped — it requires judgment about what to write, which makes it easier to defer and forget.
+
+How it was caught: The user — not any agent — noticed the omission both times. In the second case, the user explicitly quoted the standing instruction back to the agent.
+
+Rule going forward: SESSION COMPLETE must never be printed until all four checklist items above are confirmed done in sequence. If `project-state.md` has not been updated in the current session, the session is not over regardless of what else has been committed. The agent must treat an uncommitted `project-state.md` update as a blocking condition for SESSION COMPLETE — the same way a failing TS build is a blocking condition for a Builder session.
+
+This is a self-discipline failure, not a workflow design failure. The rule already existed. It was not followed.
+
+---
+
+## 4. Why Human Oversight Is Non-Negotiable — What Agents Cannot Do Alone
+
+_This section documents what the human owner of this project identified that no agent caught. It is written as a record for anyone evaluating how far AI-driven development can go on its own — and where it still requires human judgment._
+
+---
+
+### What the agents did well
+
+Over the course of this project, seven specialized agents ran hundreds of sessions without human-written code:
+
+- **Builder Agent** built 14 complete screens in React Native, wired to a live backend, with offline sync, consent gating, SQLite data management, and JWT auth — zero known functional regressions across all device testing sessions.
+- **Security Agent** caught and fixed 2 CRITICAL, 3 HIGH, and multiple MEDIUM security findings, including PII logging, IDOR vulnerabilities, missing auth guards, and consent bypasses. These were real security bugs that would have exposed patient data in production.
+- **QA Agent** produced test plans that surfaced HIGH-severity bugs (infinite spinner on load failure, double-submit race conditions, stale consent from nav params) before any device was touched.
+- **Integration Tester** designed and ran 7 cross-flow scenarios that caught 4 bugs that individual Device Tester sessions — which had each individually passed — had completely missed.
+- **Device Tester** logged 13 device sessions for a single screen (D3) in which the root cause of an iOS sync failure was traced through 8 incorrect hypotheses to a single-line fix. The agent never gave up and never guessed.
+
+This is not a small contribution. An equivalent human engineering team would have taken months.
+
+---
+
+### What no agent caught — and why
+
+Every gap documented in Mistakes 15, 16, and 17 above was identified by the human project owner **after** the project was declared complete by an AI agent that had processed every spec document, every code file, and every session note.
+
+The common thread across all three gaps:
+
+**Agents execute within the scope they are given. They do not question whether the scope itself is complete.**
+
+- The Builder built what was in the spec. Sign-up was not in the spec, so it was not built.
+- The Security Agent audited code that existed. "This feature was never designed" is not a code-level finding.
+- The QA Agent tested paths through built screens. There were no deletion or recovery screens to test.
+- The PM Agent reviewed whether existing flows worked well. It did not ask whether the product was complete as a whole.
+- The Integration Tester tested connected flows between built screens. It could not test flows that had never been built.
+
+None of these is an agent failure. Each agent did its job correctly within its mandate. The gap is structural: **the workflow had no agent whose job was to ask "what is this product missing that a real user would need?"**
+
+That question requires a kind of judgment that was not encoded in any agent's instructions — the judgment of someone who has used real products, interacted with real users, and carries an implicit model of what a complete, shippable application looks like. In this project, that person was the human owner.
+
+---
+
+### The three specific things a human caught that every agent missed
+
+**1. "How does a new user get in?"**
+Every agent assumed users already existed. The test doctor and test patient were seeded directly into the database. Login worked. No agent ever stepped back and asked whether a doctor opening this app for the first time — with no seeded account — could actually use it. The human owner asked this question in a single sentence and identified a gap that 14 screens, 7 agents, and 27 workflow steps had not surfaced.
+
+**2. "What happens when a user wants to leave — or has to?"**
+Healthcare data retention, DPDP compliance, the tension between a user's right to erasure and the legal obligation to retain clinical records, the re-join identity problem — none of this was in any agent's mandate. These questions are not about code quality. They are about the real-world context in which the software operates. An agent that has never been to a clinic, never dealt with a regulatory audit, and never had to explain to a patient why their data cannot be deleted cannot raise these concerns on its own.
+
+**3. "What if the user gets locked out?"**
+The absence of a doctor profile screen was noted in passing during a persona critique. The absence of an OTP resend mechanism was never noted at all. No agent connected these individual observations into the structural question: "What does this person do when they can no longer authenticate?" A human who has ever been locked out of an account — which is every human — asks this question naturally.
+
+---
+
+### What this means for anyone building with AI agents
+
+Agents are exceptionally good at:
+- Executing within a defined scope without making careless mistakes
+- Catching code-level bugs, security vulnerabilities, and edge cases
+- Maintaining consistency across hundreds of files and sessions
+- Following process rules without fatigue or shortcuts
+
+Agents are not good at:
+- Knowing when the scope itself is wrong or incomplete
+- Asking questions the project has never asked before
+- Applying judgment from domains the agent has never been instructed about (regulatory, operational, behavioral)
+- Recognizing what a product *should* have by virtue of understanding how real users live
+
+**The correct mental model is not "AI replaces engineers." It is "AI handles execution; humans handle completeness."** An agent-driven project without active human oversight will produce technically correct software that solves a narrower problem than the real one.
+
+In this project: the agents built a login system. The human asked "but can anyone actually sign up?" Those are not the same question, and only one of them requires a human to ask it.
+
+---
+
+_This section was added 2026-05-30. The gaps documented here were identified by the project owner after the AI declared the project complete. They are documented here not to criticize the AI's performance — which was strong — but to honestly record what kind of judgment remained irreplaceable throughout this project._
+
+---
+
+## 5. Standard Runbook — Building Each Screen
 
 ### Step 1: Read Before Writing
 
