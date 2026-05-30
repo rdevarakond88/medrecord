@@ -4,19 +4,14 @@
  * Spec:    docs/ui-ux-spec.md § P3 (Visit Record Detail)
  * PM:      reviews/P1-P5-pm-review.md
  *
- * MOCKUP — all data is hardcoded. No real API calls.
- *
- * Wire step will:
- *   1. Load visit records from SQLite cache or GET /patient/visits/:id/records.
- *   2. Wire scan thumbnail to real image path / S3 signed URL.
- *   3. Wire "View full document →" to patient-facing full scan viewer.
- *   4. Wire "Something wrong?" to POST /patient/flag (v2 feature — stub for now).
- *
- * States shown: normal (scan + note), scan pending OCR, scan OCR failed, note only.
- * Toggle via DEV demo switcher at bottom.
+ * Live screen — wired to real API.
+ *   GET /patient/visits/:visitId → full visit with all visible records.
+ *   Auth: patient JWT from usePatientAuthStore.
+ *   Header (date, doctor, clinic) comes from nav params — already formatted by P2.
+ *   Records (scans + notes) fetched from server on mount.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,10 +20,13 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { apiFetch } from '../../api/apiClient';
+import { usePatientAuthStore } from '../../store/usePatientAuthStore';
 import { Colors, Spacing } from '../../constants/theme';
 import type { RootStackParamList } from '../../../App';
 
@@ -52,87 +50,36 @@ interface NoteRecord {
 
 type VisitRecord = ScanRecord | NoteRecord;
 
-interface MockVisitDetail {
-  date:       string;
-  doctorName: string;
-  clinicName: string;
-  records:    VisitRecord[];
+// ─── Server response types ────────────────────────────────────────────────────
+
+interface ServerRecord {
+  id:           string;
+  type:         'scan' | 'note';
+  content_text: string | null;
+  ocr_status:   OcrStatus | null;
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+interface ServerVisitDetail {
+  id:          string;
+  visit_date:  string;
+  doctor_name: string;
+  clinic_name: string | null;
+  summary:     string | null;
+  records:     ServerRecord[];
+}
 
-type DemoState = 'normal' | 'scan_pending' | 'scan_failed' | 'note_only';
-
-const MOCK_VISITS: Record<DemoState, MockVisitDetail> = {
-  normal: {
-    date:       '10 May 2026',
-    doctorName: 'Dr. Anand Krishnamurthy',
-    clinicName: 'Krishnamurthy Clinic, Pune',
-    records: [
-      {
-        id:        'r-001a',
-        type:      'scan',
-        label:     'Prescription',
-        ocrStatus: 'success',
-        ocrText:
-          'Tab. Paracetamol 500mg — twice daily × 5 days.\n' +
-          'Tab. Cetirizine 10mg — at night × 3 days.\n' +
-          'Syp. Benadryl 10ml — at night if needed.\n\n' +
-          'Advice: Bed rest. Plenty of fluids. Avoid cold food.',
-      },
-      {
-        id:   'r-001b',
-        type: 'note',
-        text: 'Patient reports fever since 3 days, maximum 101°F. No cough or cold. Throat slightly inflamed. No rash. Advised bed rest and increased fluids. Review after 5 days if fever persists.',
-      },
-    ],
-  },
-  scan_pending: {
-    date:       '22 Nov 2025',
-    doctorName: 'Dr. Meenakshi Iyer',
-    clinicName: 'Iyer Family Clinic, Pune',
-    records: [
-      {
-        id:        'r-003a',
-        type:      'scan',
-        label:     'Lab Report',
-        ocrStatus: 'pending',
-        ocrText:   null,
-      },
-    ],
-  },
-  scan_failed: {
-    date:       '04 Aug 2025',
-    doctorName: 'Dr. Anand Krishnamurthy',
-    clinicName: 'Krishnamurthy Clinic, Pune',
-    records: [
-      {
-        id:        'r-fail-a',
-        type:      'scan',
-        label:     'X-Ray Report',
-        ocrStatus: 'failed',
-        ocrText:   null,
-      },
-      {
-        id:   'r-fail-b',
-        type: 'note',
-        text: 'Mild osteoarthritis Grade I in right knee. Prescribed physiotherapy — 10 sessions over 5 weeks. Avoid climbing stairs for 2 weeks. Review in 6 weeks.',
-      },
-    ],
-  },
-  note_only: {
-    date:       '13 Mar 2024',
-    doctorName: 'Dr. Meenakshi Iyer',
-    clinicName: 'Iyer Family Clinic, Pune',
-    records: [
-      {
-        id:   'r-004a',
-        type: 'note',
-        text: 'Streptococcal pharyngitis confirmed on examination. Tab. Amoxicillin 500mg — thrice daily × 7 days. Gargle with warm salt water 3 times a day. Avoid cold drinks. Review in 3 days if not improving.',
-      },
-    ],
-  },
-};
+function toVisitRecord(r: ServerRecord): VisitRecord {
+  if (r.type === 'note') {
+    return { id: r.id, type: 'note', text: r.content_text ?? '' };
+  }
+  return {
+    id:        r.id,
+    type:      'scan',
+    label:     'Scanned Document',
+    ocrStatus: r.ocr_status ?? 'pending',
+    ocrText:   r.content_text,
+  };
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -213,23 +160,51 @@ function NoteCard({ record }: { record: NoteRecord }) {
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-type NavProp       = NativeStackNavigationProp<RootStackParamList, 'PatientVisitDetail'>;
-type RouteNavProp  = RouteProp<RootStackParamList, 'PatientVisitDetail'>;
+type NavProp      = NativeStackNavigationProp<RootStackParamList, 'PatientVisitDetail'>;
+type RouteNavProp = RouteProp<RootStackParamList, 'PatientVisitDetail'>;
 
 export default function PatientVisitDetailScreen() {
   const navigation = useNavigation<NavProp>();
   const route      = useRoute<RouteNavProp>();
+  const { token }  = usePatientAuthStore();
 
-  // Production: use nav params. DEV mockup: override with mock data per demoState.
-  const { date, doctorName, clinicName } = route.params;
+  const { visitId, date, doctorName, clinicName } = route.params;
 
-  const [demoState, setDemoState] = useState<DemoState>('normal');
+  const [records,    setRecords]    = useState<VisitRecord[]>([]);
+  const [isLoading,  setIsLoading]  = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const mockVisit      = MOCK_VISITS[demoState];
-  const displayDate    = __DEV__ ? mockVisit.date       : date;
-  const displayDoctor  = __DEV__ ? mockVisit.doctorName : doctorName;
-  const displayClinic  = __DEV__ ? mockVisit.clinicName : clinicName;
-  const records        = mockVisit.records;
+  useEffect(() => {
+    if (!token) {
+      navigation.replace('PatientLogin');
+      return;
+    }
+
+    let cancelled = false;
+
+    async function load() {
+      setIsLoading(true);
+      setFetchError(null);
+      try {
+        const data = await apiFetch<{ visit: ServerVisitDetail }>(
+          `/patient/visits/${visitId}`,
+          token!,
+        );
+        if (!cancelled) {
+          setRecords(data.visit.records.map(toVisitRecord));
+        }
+      } catch {
+        if (!cancelled) {
+          setFetchError('Could not load visit details. Please go back and try again.');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    void load();
+    return () => { cancelled = true; };
+  }, [visitId, token]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -248,7 +223,6 @@ export default function PatientVisitDetailScreen() {
         <Text style={styles.navTitle} accessibilityRole="header">
           Visit Details
         </Text>
-        {/* Spacer keeps title centred */}
         <View style={styles.navSpacer} />
       </View>
 
@@ -260,63 +234,53 @@ export default function PatientVisitDetailScreen() {
 
         {/* ── Visit info card ── */}
         <View style={styles.visitInfoCard}>
-          <Text style={styles.visitDate}>{displayDate}</Text>
-          <Text style={styles.visitDoctor}>{displayDoctor}</Text>
-          <Text style={styles.visitClinic}>{displayClinic}</Text>
+          <Text style={styles.visitDate}>{date}</Text>
+          <Text style={styles.visitDoctor}>{doctorName}</Text>
+          <Text style={styles.visitClinic}>{clinicName}</Text>
         </View>
 
         {/* ── Records ── */}
         <Text style={styles.sectionLabel}>RECORDS IN THIS VISIT</Text>
 
-        {records.map((record) =>
-          record.type === 'scan'
-            ? <ScanCard key={record.id} record={record} />
-            : <NoteCard key={record.id} record={record} />,
+        {isLoading ? (
+          <View style={styles.loadingBlock}>
+            <ActivityIndicator size="large" color={Colors.primaryBlue} />
+          </View>
+        ) : fetchError ? (
+          <View style={styles.loadingBlock}>
+            <Text style={styles.errorText}>{fetchError}</Text>
+          </View>
+        ) : records.length === 0 ? (
+          <View style={styles.loadingBlock}>
+            <Text style={styles.errorText}>No records found for this visit.</Text>
+          </View>
+        ) : (
+          records.map((record) =>
+            record.type === 'scan'
+              ? <ScanCard key={record.id} record={record} />
+              : <NoteCard key={record.id} record={record} />,
+          )
         )}
 
         {/* ── "Something wrong?" footer link ── */}
-        <TouchableOpacity
-          style={styles.flagLink}
-          onPress={() =>
-            Alert.alert(
-              'Something wrong?',
-              'You can flag an issue with this record. This feature will be available in an upcoming update.',
-              [{ text: 'OK' }],
-            )
-          }
-          accessibilityRole="button"
-          accessibilityLabel="Report an issue with this visit record"
-        >
-          <Text style={styles.flagLinkText}>⚑  Something wrong? Let us know</Text>
-        </TouchableOpacity>
+        {!isLoading && !fetchError && (
+          <TouchableOpacity
+            style={styles.flagLink}
+            onPress={() =>
+              Alert.alert(
+                'Something wrong?',
+                'You can flag an issue with this record. This feature will be available in an upcoming update.',
+                [{ text: 'OK' }],
+              )
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Report an issue with this visit record"
+          >
+            <Text style={styles.flagLinkText}>⚑  Something wrong? Let us know</Text>
+          </TouchableOpacity>
+        )}
 
       </ScrollView>
-
-      {/* ── DEV demo switcher ── */}
-      {__DEV__ && (
-        <View style={styles.demoBlock}>
-          <Text style={styles.demoTitle}>Demo states — mockup only</Text>
-          <View style={styles.demoRow}>
-            {(
-              [
-                ['normal',       'Normal'],
-                ['scan_pending', 'Scan pending'],
-                ['scan_failed',  'Scan failed'],
-                ['note_only',    'Note only'],
-              ] as [DemoState, string][]
-            ).map(([state, label]) => (
-              <TouchableOpacity
-                key={state}
-                style={[styles.demoBtn, demoState === state && styles.demoBtnActive]}
-                onPress={() => setDemoState(state)}
-                accessibilityLabel={`Demo state: ${label}`}
-              >
-                <Text style={styles.demoBtnText}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
 
     </SafeAreaView>
   );
@@ -410,6 +374,18 @@ const styles = StyleSheet.create({
     marginLeft:    4,
   },
 
+  // ── Loading / error
+  loadingBlock: {
+    paddingVertical: 40,
+    alignItems:      'center',
+  },
+  errorText: {
+    fontSize:   14,
+    color:      Colors.textSecondary,
+    textAlign:  'center',
+    lineHeight: 20,
+  },
+
   // ── Record card (shared base)
   recordCard: {
     backgroundColor:  Colors.surface,
@@ -462,7 +438,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color:      Colors.primaryBlue,
   },
-  // P3-PC-S1: hint text lives OUTSIDE the tappable card
   scanHint: {
     fontSize:     12,
     color:        Colors.textSecondary,
@@ -478,7 +453,6 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     borderColor:     '#E0EAFF',
   },
-  // P3-PC-S2: 11px → 12px
   ocrSectionLabel: {
     fontSize:      12,
     fontWeight:    '700',
@@ -513,52 +487,14 @@ const styles = StyleSheet.create({
 
   // ── "Something wrong?" footer link
   flagLink: {
-    alignItems:     'center',
+    alignItems:      'center',
     paddingVertical: Spacing.xl,
-    minHeight:      48,
-    justifyContent: 'center',
+    minHeight:       48,
+    justifyContent:  'center',
   },
-  // P3-PC-S3: ⚑ icon added in JSX; color lifted to textPrimary at 70% — reads as actionable
   flagLinkText: {
     fontSize:   14,
     color:      'rgba(26, 32, 44, 0.70)',
     fontWeight: '500',
-  },
-
-  // ── DEV demo switcher
-  demoBlock: {
-    padding:         Spacing.md,
-    backgroundColor: '#FFFBEB',
-    borderTopWidth:  1,
-    borderTopColor:  '#FCD34D',
-  },
-  demoTitle: {
-    fontSize:      11,
-    fontWeight:    '700',
-    color:         '#92400E',
-    textAlign:     'center',
-    marginBottom:  6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  demoRow: {
-    flexDirection:  'row',
-    gap:            Spacing.sm,
-    justifyContent: 'center',
-    flexWrap:       'wrap',
-  },
-  demoBtn: {
-    backgroundColor:   '#D97706',
-    paddingVertical:   6,
-    paddingHorizontal: 12,
-    borderRadius:      6,
-  },
-  demoBtnActive: {
-    backgroundColor: '#92400E',
-  },
-  demoBtnText: {
-    color:      '#FFFFFF',
-    fontSize:   12,
-    fontWeight: '600',
   },
 });

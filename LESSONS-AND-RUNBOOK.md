@@ -8,6 +8,7 @@ _Source of truth for environment setup, agent workflows, build mistakes, and the
 
 1. [Environment Setup — Issues and Fixes](#1-environment-setup--issues-and-fixes)
 2. [Agent Workflow Rules](#2-agent-workflow-rules)
+   - [2.6 Session Scope Classification — When to Run the Full Pipeline](#26-session-scope-classification--when-to-run-the-full-pipeline)
 3. [Mistakes and Rules — D2, D3, D6 Builds](#3-mistakes-and-rules--d2-d3-d6-builds)
    - [3.4 Device Testing Mistakes (D2, D3, D6)](#34-device-testing-mistakes-d2-d3-d6)
    - [3.5 Process Mistakes](#35-process-mistakes)
@@ -239,7 +240,42 @@ expo-sqlite, expo-crypto, @tanstack/react-query, @react-navigation/native,
 3. Commit and push to `dev`.
 4. Confirm commit hash.
 
-### 2.6 Session Commit Convention
+### 2.6 Session Scope Classification — When to Run the Full Pipeline
+
+Not every code change requires the full PM → Builder → Persona Critic → Security → QA → Device Test pipeline. Running the full pipeline for a one-line fix wastes sessions and obscures the real purpose of each agent. The rule is: **pipeline depth is proportional to scope and risk.**
+
+**Full pipeline required** (PM → Builder → Persona Critic → Security → QA → Device Test):
+- New screen or new navigation flow
+- New product feature or new user-facing capability
+- Any change to authentication, consent logic, or PII storage
+- Any change to the sync queue, data model, or API contract
+- Any change that introduces new backend endpoints
+
+**Builder + Device verify** (Builder session → quick device confirmation, no other agents):
+- Removing dev scaffolding (demo switchers, `__DEV__` placeholder buttons)
+- Cosmetic cleanup with no data or security implications
+- One-line bug fixes where the fix reduces surface area rather than adding it
+- Fixing broken navigation, wrong label text, or incorrect color/sizing
+- Any fix where a human can visually confirm "it works" in under 5 minutes on device
+
+**Builder only** (no device test needed):
+- Removing dead code, unused imports, or console.log statements
+- Fixing TypeScript errors with no runtime behavior change
+- Documentation and comment updates in code files
+
+**PM micro-session only** (no build required):
+- Documenting a locked decision that was made verbally
+- Defining a policy (e.g. data retention, account deletion) before any build begins
+- Scoping a new flow to determine which agents and steps are needed
+
+**How to document a Builder micro-session in `project-state.md`:**
+Add it to Recommended Next Session Order with a `[micro]` tag and a one-line scope description. Example:
+```
+| next | Builder [micro] — remove __DEV__ demo switchers from patient screens | No security/data implications — device verify only |
+```
+The `[micro]` tag signals to the opening agent that no PM gate, no Persona Critic, and no QA test plan are required. The Builder states this explicitly in its opening declaration.
+
+### 2.7 Session Commit Convention
 
 ```
 [screen/feature] short description
