@@ -2,7 +2,7 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** POST-COMPLETION — PM Moment 3 sign-off complete 2026-05-30. CLEAR TO MERGE dev → main. All pre-pilot requirements done. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch.
+**Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot requirements done and on main. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch.
 **Last Updated:** 2026-05-30
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
@@ -35,11 +35,13 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** PM Agent — Moment 3 Pre-Launch Gate (2026-05-30). CLEAR TO MERGE dev → main. No new adoption or regulatory risks. Functional fixes (P3/P5 real API, integration bugs) make main materially correct. Pre-pilot requirements complete. Standing condition: cert pinning inactive (Expo Go only) — no real patient data until EAS build validates pinnedFetch. Review: `reviews/pre-pilot-pm-review-moment3.md`.
+**Last Session:** Merge — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot fixes now on main: P3/P5 real API, integration bugs (BUG-IT-1 through BUG-IT-4), OTP resend 30s cooldown, mobile immutability guard.
+
+**Previous Session:** PM Agent — Moment 3 Pre-Launch Gate (2026-05-30). CLEAR TO MERGE dev → main. No new adoption or regulatory risks. Functional fixes (P3/P5 real API, integration bugs) make main materially correct. Pre-pilot requirements complete. Standing condition: cert pinning inactive (Expo Go only) — no real patient data until EAS build validates pinnedFetch. Review: `reviews/pre-pilot-pm-review-moment3.md`.
 
 **Previous Session:** Security Agent — Step 28e (2026-05-30). PATCH /patient/profile re-check CLEAR TO MERGE. Re-check: `reviews/step28e-security-recheck.md`.
 
-**Next required session:** Merge PR #6 (dev → main) on GitHub. Then pilot deployment.
+**Next required session:** Pilot deployment — share app with test users via Expo Go (scan QR from `npm start`). No further code changes required unless pilot feedback surfaces bugs.
 
 **Previous Session:** Builder micro-session + Lessons (2026-05-30). Two findings by human owner after project was declared complete:
 
