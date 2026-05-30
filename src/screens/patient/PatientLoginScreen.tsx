@@ -10,6 +10,9 @@
  *   - Refresh token stored in expo-secure-store under PATIENT_REFRESH_TOKEN_KEY
  *   - Access token stored in usePatientAuthStore (in-memory only)
  *
+ * Pre-pilot change (Step 28d):
+ *   RESEND_SECONDS reduced 45 → 30 per PM locked decision (OTP resend cooldown requirement)
+ *
  * Design note (PM review 2026-05-16):
  *   Primary user is a 25-40 year old family member managing records on behalf
  *   of the patient — not the elderly patient navigating directly. Design for
@@ -50,7 +53,7 @@ type SendError = null | 'send_failed' | 'rate_limited' | 'no_connection';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const RESEND_SECONDS = 45;
+const RESEND_SECONDS = 30;
 
 const SEND_ERROR_MESSAGES: Record<NonNullable<SendError>, string> = {
   no_connection: 'No internet connection. Please check and retry.',

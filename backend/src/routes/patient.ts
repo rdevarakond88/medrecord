@@ -74,50 +74,67 @@ const updateProfileSchema = z.object({
   message: 'Provide at least one field to update',
 });
 
-router.patch('/patient/profile', validate(updateProfileSchema), async (req, res) => {
-  const patientId = req.auth!.sub;
-  const body      = req.body as z.infer<typeof updateProfileSchema>;
-
-  try {
-    const patient = await prisma.patient.findFirst({
-      where: { id: patientId, deletedAt: null },
-    });
-    if (!patient) {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Patient not found' } });
+// Mobile number is the patient's immutable primary key (locked decision, Step 28c).
+// Guard runs BEFORE validate() so we see the raw body before Zod strips unknown fields.
+router.patch('/patient/profile',
+  (req, res, next) => {
+    if (req.body && typeof req.body === 'object' && 'mobile_number' in req.body) {
+      res.status(400).json({
+        error: {
+          code:    'MOBILE_IMMUTABLE',
+          message: 'Mobile number cannot be changed. Contact support for account recovery.',
+        },
+      });
       return;
     }
+    next();
+  },
+  validate(updateProfileSchema),
+  async (req, res) => {
+    const patientId = req.auth!.sub;
+    const body      = req.body as z.infer<typeof updateProfileSchema>;
 
-    const updated = await prisma.patient.update({
-      where: { id: patientId },
-      data: {
-        ...(body.name               !== undefined ? { name: body.name }                                       : {}),
-        ...(body.date_of_birth      !== undefined ? { dateOfBirth: new Date(body.date_of_birth) }             : {}),
-        ...(body.preferred_language !== undefined ? { preferredLanguage: body.preferred_language }             : {}),
-      },
-    });
+    try {
+      const patient = await prisma.patient.findFirst({
+        where: { id: patientId, deletedAt: null },
+      });
+      if (!patient) {
+        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Patient not found' } });
+        return;
+      }
 
-    await logAudit({
-      event:     'patient.profile_updated',
-      actorId:   patientId,
-      actorRole: 'patient',
-      patientId,
-      ipAddress: req.ip,
-    });
+      const updated = await prisma.patient.update({
+        where: { id: patientId },
+        data: {
+          ...(body.name               !== undefined ? { name: body.name }                                       : {}),
+          ...(body.date_of_birth      !== undefined ? { dateOfBirth: new Date(body.date_of_birth) }             : {}),
+          ...(body.preferred_language !== undefined ? { preferredLanguage: body.preferred_language }             : {}),
+        },
+      });
 
-    res.json({
-      profile: {
-        id:                 updated.id,
-        name:               updated.name,
-        mobile_number:      updated.mobileNumber,
-        date_of_birth:      updated.dateOfBirth ? updated.dateOfBirth.toISOString().split('T')[0] : null,
-        preferred_language: updated.preferredLanguage ?? 'English',
-      },
-    });
-  } catch (err) {
-    console.error('[PATCH /patient/profile]', err);
-    res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to update profile' } });
-  }
-});
+      await logAudit({
+        event:     'patient.profile_updated',
+        actorId:   patientId,
+        actorRole: 'patient',
+        patientId,
+        ipAddress: req.ip,
+      });
+
+      res.json({
+        profile: {
+          id:                 updated.id,
+          name:               updated.name,
+          mobile_number:      updated.mobileNumber,
+          date_of_birth:      updated.dateOfBirth ? updated.dateOfBirth.toISOString().split('T')[0] : null,
+          preferred_language: updated.preferredLanguage ?? 'English',
+        },
+      });
+    } catch (err) {
+      console.error('[PATCH /patient/profile]', err);
+      res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to update profile' } });
+    }
+  },
+);
 
 // ─── GET /patient/timeline ────────────────────────────────────────────────────
 // All visits for this patient, newest first.

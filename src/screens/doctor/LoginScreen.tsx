@@ -40,6 +40,9 @@
  *   DT-5  Resend countdown uses wall-clock end time (countdownEndRef) instead of
  *          a decrementing counter; catches up immediately after app foreground ✅
  *
+ * Pre-pilot change (Step 28d):
+ *   RESEND_SECONDS reduced 45 → 30 per PM locked decision (OTP resend cooldown requirement)
+ *
  * TODO (Android SMS autofill): Android SMS Retriever API auto-populates OTP.
  *      No Expo managed-workflow module exists as of 2026-03.
  *      iOS OTP autofill handled natively via textContentType="oneTimeCode".
@@ -86,7 +89,7 @@ interface LoginScreenProps {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const RESEND_SECONDS = 45;
+const RESEND_SECONDS = 30;
 
 /** User-visible messages for send-OTP errors — avoids repeated JSX branching. */
 const SEND_ERROR_MESSAGES: Record<NonNullable<SendError>, string> = {
