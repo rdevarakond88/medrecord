@@ -15,6 +15,7 @@ _Source of truth for environment setup, agent workflows, build mistakes, and the
      - [Mistake 15 — Sign-up flow never built; seeding masked the absence](#mistake-15--no-sign-up-flow-built-test-user-seeding-masked-the-absence)
      - [Mistake 16 — Account deletion and data retention never designed](#mistake-16--account-deletion-and-data-retention-never-designed)
      - [Mistake 17 — Account recovery path never designed or built](#mistake-17--account-recovery-path-never-designed-or-built)
+     - [Mistake 18 — SESSION COMPLETE declared before end-of-session checklist was finished](#mistake-18--session-complete-declared-before-end-of-session-checklist-was-finished)
 4. [Why Human Oversight Is Non-Negotiable — What Agents Cannot Do Alone](#4-why-human-oversight-is-non-negotiable--what-agents-cannot-do-alone)
 5. [Standard Runbook — Building Each Screen](#5-standard-runbook--building-each-screen)
 
@@ -656,6 +657,33 @@ Why no agent caught this:
 OTP-based auth made the problem less visible. "Forgot password?" does not apply, so no agent was looking for a recovery path. The absence of a doctor profile screen was noted as a potential issue during D3 persona critique ("staff correct mobile numbers from this screen") but was listed as a SHOULD FIX and never escalated. No agent asked the structural question: "What does this user do when they can no longer log in?"
 
 Rule going forward: The PM Agent Moment 1 Checklist (Mistake 15) now includes account recovery as a mandatory item. For OTP-based auth specifically, the checklist must confirm: (a) resend OTP with cooldown is built into every OTP screen, (b) a mobile number update path exists for each user role, and (c) the decision on whether mobile number is mutable is explicitly documented in `docs/project-state.md` Locked Decisions.
+
+---
+
+---
+
+**Mistake 18 — SESSION COMPLETE declared before end-of-session checklist was finished**
+
+What happened: Twice in this project, the agent declared SESSION COMPLETE and printed the next-step signal without first completing the mandatory end-of-session protocol. In both cases the user had to explicitly ask before the step was done.
+
+- **First occurrence (Mistake 11):** The P1 mockup Builder session wrote `project-state.md` with the wrong next step (skipping Persona Critic) before closing. The file was committed, SESSION COMPLETE was declared, and the violation was only caught when the user questioned why the next session opened as a Builder instead of Persona Critic.
+- **Second occurrence (2026-05-30):** The Builder micro-session wired P3 and P5, committed the code changes, and declared SESSION COMPLETE. The `project-state.md` update was never done. The user had to explicitly ask: "wasn't it a default instruction to store the context?" before it was completed.
+
+Root cause: In both cases the agent treated the last substantive action (committing code, writing the file) as equivalent to completing the checklist. SESSION COMPLETE was used as a finish line rather than as a signal that is only printed *after* the checklist is confirmed done. The checklist is short and explicit — the failure was not that it was hard, but that it was skipped entirely.
+
+The end-of-session checklist (from CLAUDE.md and Section 2.1 above):
+1. Update `docs/project-state.md` — Last Session block, Recommended Next Session Order
+2. Commit all changed files to `dev`
+3. Push to `origin dev`
+4. Print SESSION COMPLETE signal
+
+Steps 2 and 3 are easy to verify (git confirms them). Step 1 is the one that gets skipped — it requires judgment about what to write, which makes it easier to defer and forget.
+
+How it was caught: The user — not any agent — noticed the omission both times. In the second case, the user explicitly quoted the standing instruction back to the agent.
+
+Rule going forward: SESSION COMPLETE must never be printed until all four checklist items above are confirmed done in sequence. If `project-state.md` has not been updated in the current session, the session is not over regardless of what else has been committed. The agent must treat an uncommitted `project-state.md` update as a blocking condition for SESSION COMPLETE — the same way a failing TS build is a blocking condition for a Builder session.
+
+This is a self-discipline failure, not a workflow design failure. The rule already existed. It was not followed.
 
 ---
 
