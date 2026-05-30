@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** COMPLETE — All 14 screens built, tested, and merged to main (PR #5, 2026-05-16). Project is a learning exercise in agent orchestration and workflow automation — not intended for App Store publication.
-**Last Updated:** 2026-05-17
+**Phase:** POST-COMPLETION — P3 and P5 re-wired to real API (2026-05-30). Three product gaps identified by human owner and documented. PM Agent session queued to define sign-up, account deletion, and recovery flows before any new build begins.
+**Last Updated:** 2026-05-30
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
 > Reason: EAS internal distribution requires an Apple Developer Program membership ($99/year). The owner chose not to purchase it because this project's purpose is learning agent orchestration and automation workflows, not shipping a production app.
@@ -35,7 +35,15 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Integration Tester — Step 27f (2026-05-27). Re-ran all 7 scenarios after Step 27e fixes. Pre-flight PASS. 6/7 PASS, 0 FAIL, 1 SKIP. BUG-IT-1 VERIFIED FIXED (patient 7222222222 created by doctor; patient logged in immediately with OTP 000000). BUG-IT-4 VERIFIED FIXED (patient revoked consent in P4; D3 correctly showed no-consent view on re-open). Scenario 5 SKIP (async deny flow not reachable via synchronous D9 OTP path). Observation: P5 shows mobile "+91-88845562434" for account 8888888888 (seed data format discrepancy, no functional impact). Integration testing COMPLETE — no open bugs. Session: `reviews/integration-test-session.md`.
+**Last Session:** Builder micro-session + Lessons (2026-05-30). Two findings by human owner after project was declared complete:
+
+(1) **P3 + P5 never wired to real API** — both screens were still running entirely on mock data. `PatientVisitDetailScreen.tsx`: `records` was always `mockVisit.records` regardless of `__DEV__`; orange demo switcher buttons visible in Expo Go. Fixed: wired to `GET /patient/visits/:id` with patient JWT; loading/error states added; all mock data and demo switcher removed. `PatientProfileScreen.tsx`: profile always showed `MOCK_PROFILE`; demo switcher buttons visible. Fixed: wired to `GET /patient/profile` (useFocusEffect) + `PATCH /patient/profile` on save; logout now properly clears `PATIENT_REFRESH_TOKEN_KEY` + `PATIENT_USER_PROFILE_KEY` from SecureStore before `clearAuth()`; `isSavingRef` tap guard added; all mock data and demo switcher removed. Zero new TS errors. Commits: `62795be` (lessons), `95096b6` (P3/P5 wire).
+
+(2) **Three product gaps documented in LESSONS-AND-RUNBOOK.md** — Mistakes 15 (no sign-up flow; seeding masked the absence), 16 (account deletion + data retention never designed), 17 (account recovery path never built). New Section 4: "Why Human Oversight Is Non-Negotiable" — case study on what agents cannot do alone. New Section 2.6: pipeline scope classification (when full pipeline required vs. Builder micro-session). All three gaps require PM Agent decisions before any build.
+
+**Next required session:** Device verify — P3 and P5 (confirm orange buttons gone, real data loads from API). Then PM Agent — sign-up / account deletion / recovery decisions.
+
+**Previous Session:** Integration Tester — Step 27f (2026-05-27). Re-ran all 7 scenarios after Step 27e fixes. Pre-flight PASS. 6/7 PASS, 0 FAIL, 1 SKIP. BUG-IT-1 VERIFIED FIXED (patient 7222222222 created by doctor; patient logged in immediately with OTP 000000). BUG-IT-4 VERIFIED FIXED (patient revoked consent in P4; D3 correctly showed no-consent view on re-open). Scenario 5 SKIP (async deny flow not reachable via synchronous D9 OTP path). Observation: P5 shows mobile "+91-88845562434" for account 8888888888 (seed data format discrepancy, no functional impact). Integration testing COMPLETE — no open bugs. Session: `reviews/integration-test-session.md`.
 
 **Previous Session:** Integration Tester — Step 27d (2026-05-27). Re-ran all 7 scenarios after Step 27c fixes. Pre-flight PASS. 2/7 PASS, 2 FAIL, 3 BLOCKED. BUG-IT-2 VERIFIED FIXED (visits appear in P2 timeline). BUG-IT-3 VERIFIED FIXED (P4 shows real consent data — Doctor Test Doctor visible with Remove Access). BUG-IT-1 NOT FIXED (HIGH): doctor-created patient 7111111111 not synced to server — D5 uses async sync queue, patient doesn't exist on backend when patient tries to log in. BUG-IT-4 NEW (CRITICAL): patient consent revoke in P4 (DELETE /patient/consents/:id) does not propagate to D3 — D3 still shows "Access Granted" after patient revokes; blocks Scenarios 3–5; Scenario 6 FAIL. Session: `reviews/integration-test-session.md`. Builder session required.
 
@@ -194,6 +202,9 @@ _Update this section whenever backend status changes. Every device testing sessi
 | ~~**27e**~~ | ~~**Builder Agent — fix BUG-IT-1, BUG-IT-4**~~ | ~~DONE 2026-05-27. BUG-IT-1: D5 handleSave() — removed isOnline guard; always attempts createPatient(); blocks navigation on timeout/server error. BUG-IT-4: DELETE /patient/consents/:id now uses updateMany to revoke ALL consents for the doctor-patient pair.~~ |
 | ~~**27f**~~ | ~~**Integration Tester — re-run all 7 scenarios**~~ | ~~DONE 2026-05-27. 6/7 PASS, 0 FAIL, 1 SKIP. BUG-IT-1 + BUG-IT-4 VERIFIED FIXED. Integration testing COMPLETE.~~ |
 | ~~**27**~~ | ~~**Integration Tester — connected doctor-patient scenarios**~~ | ~~BLOCKED 2026-05-17 — 0/7 scenarios. 2 CRITICAL pre-condition bugs. See session: `reviews/integration-test-session.md`.~~ |
+| ~~**28a**~~ | ~~**Builder micro-session — wire P3 + P5 + remove demo UI**~~ | ~~DONE 2026-05-30. P3: wired GET /patient/visits/:id; mock data + demo switcher removed. P5: wired GET/PATCH /patient/profile; SecureStore logout fixed; mock data + demo switcher removed. Commit: 95096b6.~~ |
+| **28b** | **Device verify — P3 and P5** | Confirm orange demo buttons gone on device. Confirm P3 shows real visit records from API. Confirm P5 loads real profile, saves edits via PATCH, logs out cleanly. Builder micro-session only — no full pipeline needed. |
+| **28c** | **PM Agent — sign-up / account deletion / recovery decisions** | Three product gaps identified by human owner (Mistakes 15/16/17 in LESSONS-AND-RUNBOOK.md). PM must define: (1) doctor registration model (self-serve vs admin-provisioned); (2) patient self-registration policy (doctor-initiated only, or self-serve); (3) deletion policy (DPDP + healthcare retention, re-join handling); (4) account recovery model for doctors (mobile number change path). No build begins until all four decisions are documented in Locked Decisions. |
 
 ---
 
