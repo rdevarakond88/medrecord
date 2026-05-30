@@ -39,7 +39,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 
 **Previous Session:** Security Agent — Step 28e (2026-05-30). PATCH /patient/profile re-check CLEAR TO MERGE. Re-check: `reviews/step28e-security-recheck.md`.
 
-**Next required session:** Merge dev → main (PR). Then pilot deployment.
+**Next required session:** Merge PR #6 (dev → main) on GitHub. Then pilot deployment.
 
 **Previous Session:** Builder micro-session + Lessons (2026-05-30). Two findings by human owner after project was declared complete:
 
