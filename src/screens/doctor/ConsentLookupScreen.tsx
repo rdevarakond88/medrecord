@@ -8,13 +8,30 @@
  *          OTP handoff flow triggered after a patient is already open in D3.
  *
  * MOCKUP — no real API calls. Four states:
- *   idle       — numeric input + keypad + "how it works" hint card
- *   loading    — spinner while mock lookup runs (1.2 s delay)
- *   found      — patient card shown with "Request Consent" CTA
- *   not_found  — error card with options to register or retry
  *
- * Realistic test number: 8888888888 → resolves to Meena Krishnaswamy (found)
- * Any other 10-digit number → not_found state
+ *   ┌─────────────────────────────────────────────────────────────────────┐
+ *   │  State        │  Condition                      │  Key UI           │
+ *   ├─────────────────────────────────────────────────────────────────────┤
+ *   │  idle         │  < 10 digits entered, or after  │  Numeric keypad   │
+ *   │               │  backspace clears a result      │  "How it works"   │
+ *   │               │                                 │  hint card        │
+ *   ├─────────────────────────────────────────────────────────────────────┤
+ *   │  loading      │  Doctor taps "Look Up Patient"  │  Spinner card     │
+ *   │               │  while 10 digits are entered    │  Keypad locked    │
+ *   │               │  (mock: 1.2 s delay)            │  Dashed border    │
+ *   ├─────────────────────────────────────────────────────────────────────┤
+ *   │  found        │  10-digit number matches a      │  Patient card     │
+ *   │               │  known patient (test: 8888…)    │  "Request Access" │
+ *   │               │                                 │  button enabled   │
+ *   ├─────────────────────────────────────────────────────────────────────┤
+ *   │  not_found    │  10-digit number has no match   │  Red-border card  │
+ *   │               │  in the system                  │  Register / Retry │
+ *   │               │                                 │  "Request Access" │
+ *   │               │                                 │  button disabled  │
+ *   └─────────────────────────────────────────────────────────────────────┘
+ *
+ * Test number: 8888888888 → found (Meena Krishnaswamy)
+ * Any other 10-digit number → not_found
  */
 
 import React, { useState, useCallback } from 'react';
