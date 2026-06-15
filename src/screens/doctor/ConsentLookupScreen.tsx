@@ -43,6 +43,7 @@ import {
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../App';
@@ -99,7 +100,6 @@ const KEYPAD_ROWS: string[][] = [
 export default function ConsentLookupScreen({ navigation }: Props) {
   const [digits,      setDigits]      = useState('');
   const [lookupState, setLookupState] = useState<LookupState>('idle');
-  const [showTooltip, setShowTooltip] = useState(false);
 
   // Explicit "Look Up" action — shows spinner, then resolves after 1.2 s mock delay
   const handleLookup = useCallback(() => {
@@ -353,7 +353,10 @@ export default function ConsentLookupScreen({ navigation }: Props) {
 
           <TouchableOpacity
             style={styles.infoIconButton}
-            onPress={() => setShowTooltip(prev => !prev)}
+            onPress={() => Alert.alert(
+              'How this works',
+              "Tapping this will send an OTP to the patient's mobile. The patient must approve your request.",
+            )}
             accessibilityLabel="What happens when you request access?"
             accessibilityRole="button"
           >
@@ -363,15 +366,6 @@ export default function ConsentLookupScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-        {showTooltip && (
-          <View style={styles.tooltipCard}>
-            <Text style={styles.tooltipText}>
-              Tapping "Request Access" sends an SMS to the patient's registered
-              mobile number. They enter a 6-digit code to confirm you can view
-              their records from other clinics.
-            </Text>
-          </View>
-        )}
 
         {/* ── Numeric keypad ── */}
         <View style={styles.keypad}>
@@ -761,18 +755,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color:      Colors.primaryBlue,
     lineHeight: 16,
-  },
-  tooltipCard: {
-    backgroundColor: Colors.infoLight,
-    borderRadius:    10,
-    borderWidth:     1,
-    borderColor:     Colors.infoBorder,
-    padding:         12,
-  },
-  tooltipText: {
-    fontSize:   13,
-    color:      Colors.primaryDark,
-    lineHeight: 19,
   },
   requestAccessButtonDisabled: {
     backgroundColor: Colors.border,
