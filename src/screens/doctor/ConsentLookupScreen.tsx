@@ -44,7 +44,7 @@ const MOCK_PATIENT = {
   mobile:      '8888888888',
   maskedMobile:'88•••••789',
   lastClinic:  'Apollo Clinic, Hyderabad',
-  lastVisit:   '14/03/2026',
+  lastVisit:   '28 Feb 2026',
   initials:    'MK',
 };
 
@@ -256,6 +256,9 @@ export default function ConsentLookupScreen({ navigation }: Props) {
                 <Text style={styles.patientName}>{MOCK_PATIENT.name}</Text>
                 <Text style={styles.patientMeta}>
                   {MOCK_PATIENT.age} years · {MOCK_PATIENT.maskedMobile}
+                </Text>
+                <Text style={styles.patientLastVisit}>
+                  Last visit: {MOCK_PATIENT.lastVisit}
                 </Text>
               </View>
             </View>
@@ -637,6 +640,11 @@ const styles = StyleSheet.create({
     fontSize:  14,
     color:     Colors.textSecondary,
     marginTop: 3,
+  },
+  patientLastVisit: {
+    fontSize:  13,
+    color:     Colors.textSecondary,
+    marginTop: 4,
   },
   foundDivider: {
     height:          1,
