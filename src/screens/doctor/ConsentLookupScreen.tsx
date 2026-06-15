@@ -627,6 +627,13 @@ const styles = StyleSheet.create({
     borderColor:     Colors.border,
     padding:         16,
     gap:             12,
+    // iOS shadow
+    shadowColor:   '#000',
+    shadowOffset:  { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius:  6,
+    // Android shadow
+    elevation:     3,
   },
   foundBadgeRow: {
     flexDirection: 'row',
