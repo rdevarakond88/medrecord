@@ -36,7 +36,6 @@ import DocumentScannerScreen from './src/screens/doctor/DocumentScannerScreen';
 import NewPatientFormScreen from './src/screens/doctor/NewPatientFormScreen';
 import VisitDetailScreen from './src/screens/doctor/VisitDetailScreen';
 import ConsentRequestScreen from './src/screens/doctor/ConsentRequestScreen';
-import ConsentLookupScreen from './src/screens/doctor/ConsentLookupScreen';
 import FullScanViewScreen from './src/screens/doctor/FullScanViewScreen';
 import PatientLoginScreen from './src/screens/patient/PatientLoginScreen';
 import PatientTimelineScreen from './src/screens/patient/PatientTimelineScreen';
@@ -99,8 +98,6 @@ export type RootStackParamList = {
     visitDate:     string;       // ISO 8601
     patientName:   string;
   };
-  // New flows
-  ConsentLookup: undefined;
   // Patient App routes
   PatientLogin:         undefined;
   PatientTimeline:      undefined;
@@ -224,7 +221,6 @@ function App() {
             <Stack.Screen name="ConsentRequest"    component={ConsentRequestScreen}
                           options={{ gestureEnabled: false }} />
             <Stack.Screen name="FullScanView"      component={FullScanViewScreen} />
-            <Stack.Screen name="ConsentLookup"    component={ConsentLookupScreen} />
             {/* Patient App — mockup/stub routes */}
             <Stack.Screen name="PatientLogin"         component={PatientLoginScreen} />
             <Stack.Screen name="PatientTimeline"      component={PatientTimelineScreen} />
