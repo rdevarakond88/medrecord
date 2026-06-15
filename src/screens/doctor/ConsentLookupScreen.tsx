@@ -7,8 +7,9 @@
  *          This is distinct from D9 (ConsentRequestScreen), which is the in-clinic
  *          OTP handoff flow triggered after a patient is already open in D3.
  *
- * MOCKUP — no real API calls. Three states:
+ * MOCKUP — no real API calls. Four states:
  *   idle       — numeric input + keypad + "how it works" hint card
+ *   loading    — spinner while mock lookup runs (1.2 s delay)
  *   found      — patient card shown with "Request Consent" CTA
  *   not_found  — error card with options to register or retry
  *
@@ -24,6 +25,7 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../App';
@@ -32,7 +34,7 @@ import type { RootStackParamList } from '../../../App';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ConsentLookup'>;
 
-type LookupState = 'idle' | 'found' | 'not_found';
+type LookupState = 'idle' | 'loading' | 'found' | 'not_found';
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -80,10 +82,14 @@ export default function ConsentLookupScreen({ navigation }: Props) {
   const [digits,      setDigits]      = useState('');
   const [lookupState, setLookupState] = useState<LookupState>('idle');
 
-  // Mock lookup — called when the 10th digit is pressed
-  function mockLookup(mobile: string) {
-    setLookupState(mobile === MOCK_PATIENT.mobile ? 'found' : 'not_found');
-  }
+  // Explicit "Look Up" action — shows spinner, then resolves after 1.2 s mock delay
+  const handleLookup = useCallback(() => {
+    if (digits.length !== 10) return;
+    setLookupState('loading');
+    setTimeout(() => {
+      setLookupState(digits === MOCK_PATIENT.mobile ? 'found' : 'not_found');
+    }, 1200);
+  }, [digits]);
 
   const handleKeyPress = useCallback((key: string) => {
     if (key === '⌫') {
@@ -95,15 +101,9 @@ export default function ConsentLookupScreen({ navigation }: Props) {
       return;
     }
     if (key === '' || digits.length >= 10) return;
-
-    const next = digits + key;
-    setDigits(next);
-    if (next.length === 10) {
-      mockLookup(next);
-    } else {
-      setLookupState('idle');
-    }
-  }, [digits]);
+    setDigits(prev => prev + key);
+    setLookupState('idle');
+  }, [digits.length]);
 
   const handleClear = useCallback(() => {
     setDigits('');
@@ -116,7 +116,8 @@ export default function ConsentLookupScreen({ navigation }: Props) {
     return d.length > 5 ? `${d.slice(0, 5)} ${d.slice(5)}` : d;
   }
 
-  const isAtMax = digits.length === 10;
+  // Keypad locks at 10 digits and while loading
+  const isAtMax = digits.length === 10 || lookupState === 'loading';
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -160,6 +161,7 @@ export default function ConsentLookupScreen({ navigation }: Props) {
           <Text style={styles.inputLabel}>Patient Mobile Number</Text>
           <View style={[
             styles.inputDisplay,
+            lookupState === 'loading'   && styles.inputDisplayLoading,
             lookupState === 'found'     && styles.inputDisplaySuccess,
             lookupState === 'not_found' && styles.inputDisplayError,
           ]}>
@@ -183,6 +185,28 @@ export default function ConsentLookupScreen({ navigation }: Props) {
           </View>
           <Text style={styles.digitCounter}>{digits.length}/10</Text>
         </View>
+
+        {/* ── Look Up button — enabled only when 10 digits entered and not yet loading ── */}
+        {(lookupState === 'idle' || lookupState === 'loading') && digits.length === 10 && (
+          <TouchableOpacity
+            style={[styles.lookupButton, lookupState === 'loading' && styles.lookupButtonDisabled]}
+            onPress={handleLookup}
+            disabled={lookupState === 'loading'}
+            accessibilityLabel="Look up patient"
+            accessibilityRole="button"
+          >
+            <Text style={styles.lookupButtonText}>Look Up Patient</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* ── State: Loading ── */}
+        {lookupState === 'loading' && (
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={Colors.primaryBlue} />
+            <Text style={styles.loadingTitle}>Checking patient records…</Text>
+            <Text style={styles.loadingSubtext}>This usually takes a moment</Text>
+          </View>
+        )}
 
         {/* ── State: Idle — how it works hint ── */}
         {lookupState === 'idle' && digits.length === 0 && (
@@ -433,6 +457,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: Colors.background,
   },
+  inputDisplayLoading: {
+    borderColor:     Colors.primaryBlue,
+    borderStyle:     'dashed' as const,
+  },
   inputDisplaySuccess: {
     borderColor:     Colors.success,
     backgroundColor: Colors.successLight,
@@ -471,6 +499,46 @@ const styles = StyleSheet.create({
     fontSize:  12,
     color:     Colors.textSecondary,
     textAlign: 'right',
+  },
+
+  // ── Look Up button ────────────────────────────────────────────────────────
+
+  lookupButton: {
+    backgroundColor: Colors.primaryBlue,
+    borderRadius:    12,
+    paddingVertical: 16,
+    alignItems:      'center',
+  },
+  lookupButtonDisabled: {
+    backgroundColor: Colors.textDisabled,
+  },
+  lookupButtonText: {
+    fontSize:   16,
+    fontWeight: '700',
+    color:      Colors.surface,
+  },
+
+  // ── Loading card ──────────────────────────────────────────────────────────
+
+  loadingCard: {
+    backgroundColor: Colors.surface,
+    borderRadius:    12,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    padding:         32,
+    alignItems:      'center',
+    gap:             14,
+  },
+  loadingTitle: {
+    fontSize:   16,
+    fontWeight: '600',
+    color:      Colors.textPrimary,
+    textAlign:  'center',
+  },
+  loadingSubtext: {
+    fontSize:  13,
+    color:     Colors.textSecondary,
+    textAlign: 'center',
   },
 
   // ── Hint card (idle + empty) ──────────────────────────────────────────────
