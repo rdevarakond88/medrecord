@@ -99,6 +99,7 @@ const KEYPAD_ROWS: string[][] = [
 export default function ConsentLookupScreen({ navigation }: Props) {
   const [digits,      setDigits]      = useState('');
   const [lookupState, setLookupState] = useState<LookupState>('idle');
+  const [showTooltip, setShowTooltip] = useState(false);
 
   // Explicit "Look Up" action — shows spinner, then resolves after 1.2 s mock delay
   const handleLookup = useCallback(() => {
@@ -330,29 +331,46 @@ export default function ConsentLookupScreen({ navigation }: Props) {
           </View>
         )}
 
-        {/* ── Persistent Request Access CTA ── */}
-        <TouchableOpacity
-          style={[
-            styles.requestAccessButton,
-            lookupState !== 'found' && styles.requestAccessButtonDisabled,
-          ]}
-          onPress={() => { /* mockup — D9 ConsentRequest would launch here */ }}
-          disabled={lookupState !== 'found'}
-          accessibilityLabel="Request access to patient records"
-          accessibilityRole="button"
-        >
-          <Text style={[
-            styles.requestAccessButtonText,
-            lookupState !== 'found' && styles.requestAccessButtonTextDisabled,
-          ]}>
-            Request Access
-          </Text>
-        </TouchableOpacity>
+        {/* ── Persistent Request Access CTA + info icon ── */}
+        <View style={styles.requestAccessRow}>
+          <TouchableOpacity
+            style={[
+              styles.requestAccessButton,
+              lookupState !== 'found' && styles.requestAccessButtonDisabled,
+            ]}
+            onPress={() => { /* mockup — D9 ConsentRequest would launch here */ }}
+            disabled={lookupState !== 'found'}
+            accessibilityLabel="Request access to patient records"
+            accessibilityRole="button"
+          >
+            <Text style={[
+              styles.requestAccessButtonText,
+              lookupState !== 'found' && styles.requestAccessButtonTextDisabled,
+            ]}>
+              Request Access
+            </Text>
+          </TouchableOpacity>
 
-        {lookupState === 'found' && (
-          <Text style={styles.requestAccessHint}>
-            An SMS will be sent to the patient's registered number for verification.
-          </Text>
+          <TouchableOpacity
+            style={styles.infoIconButton}
+            onPress={() => setShowTooltip(prev => !prev)}
+            accessibilityLabel="What happens when you request access?"
+            accessibilityRole="button"
+          >
+            <View style={styles.infoIconCircle}>
+              <Text style={styles.infoIconText}>i</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {showTooltip && (
+          <View style={styles.tooltipCard}>
+            <Text style={styles.tooltipText}>
+              Tapping "Request Access" sends an SMS to the patient's registered
+              mobile number. They enter a 6-digit code to confirm you can view
+              their records from other clinics.
+            </Text>
+          </View>
         )}
 
         {/* ── Numeric keypad ── */}
@@ -711,11 +729,50 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color:    Colors.textSecondary,
   },
+  requestAccessRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           10,
+  },
   requestAccessButton: {
+    flex:            1,
     backgroundColor: Colors.primaryBlue,
     borderRadius:    12,
     paddingVertical: 16,
     alignItems:      'center',
+  },
+  infoIconButton: {
+    width:          44,
+    height:         44,
+    justifyContent: 'center',
+    alignItems:     'center',
+  },
+  infoIconCircle: {
+    width:           28,
+    height:          28,
+    borderRadius:    14,
+    borderWidth:     1.5,
+    borderColor:     Colors.primaryBlue,
+    justifyContent: 'center',
+    alignItems:     'center',
+  },
+  infoIconText: {
+    fontSize:   13,
+    fontWeight: '700',
+    color:      Colors.primaryBlue,
+    lineHeight: 16,
+  },
+  tooltipCard: {
+    backgroundColor: Colors.infoLight,
+    borderRadius:    10,
+    borderWidth:     1,
+    borderColor:     Colors.infoBorder,
+    padding:         12,
+  },
+  tooltipText: {
+    fontSize:   13,
+    color:      Colors.primaryDark,
+    lineHeight: 19,
   },
   requestAccessButtonDisabled: {
     backgroundColor: Colors.border,
