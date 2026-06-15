@@ -482,8 +482,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.successLight,
   },
   inputDisplayError: {
-    borderColor:     Colors.error,
-    backgroundColor: Colors.errorLight,
+    borderColor: Colors.error,
   },
   inputDisplayText: {
     flex:        1,
@@ -709,10 +708,10 @@ const styles = StyleSheet.create({
   // ── Not-found card ────────────────────────────────────────────────────────
 
   notFoundCard: {
-    backgroundColor: Colors.errorLight,
+    backgroundColor: Colors.surface,
     borderRadius:    12,
-    borderWidth:     1,
-    borderColor:     '#FECACA',
+    borderWidth:     1.5,
+    borderColor:     Colors.error,
     padding:         20,
     alignItems:      'center',
     gap:             12,
@@ -721,14 +720,16 @@ const styles = StyleSheet.create({
     width:           56,
     height:          56,
     borderRadius:    28,
-    backgroundColor: Colors.error,
+    backgroundColor: Colors.surface,
+    borderWidth:     2,
+    borderColor:     Colors.error,
     justifyContent: 'center',
     alignItems:     'center',
   },
   notFoundIconText: {
     fontSize:   26,
     fontWeight: '700',
-    color:      Colors.surface,
+    color:      Colors.error,
   },
   notFoundTitle: {
     fontSize:   18,
