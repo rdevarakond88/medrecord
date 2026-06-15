@@ -337,6 +337,17 @@ export default function PatientSearchScreen() {
           </View>
         )}
 
+        {/* ── DEV only: shortcut to D7 ConsentLookup mockup ── */}
+        {__DEV__ && (
+          <TouchableOpacity
+            style={styles.devLink}
+            onPress={() => navigation.navigate('ConsentLookup')}
+            accessibilityLabel="Dev: open Consent Lookup mockup"
+          >
+            <Text style={styles.devLinkText}>DEV › D7 Consent Lookup →</Text>
+          </TouchableOpacity>
+        )}
+
         {/* ── Numeric keypad — replaces system keyboard ── */}
         <NumericKeypad onKeyPress={handleKeyPress} />
       </View>
@@ -1301,6 +1312,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 12,
     letterSpacing: 0.3,
+  },
+
+  // ── DEV shortcut ──────────────────────────────────────────
+  devLink: {
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  devLinkText: {
+    fontSize: 11,
+    color: Colors.textDisabled,
+    fontStyle: 'italic',
   },
 
   // ── Bottom tab bar ────────────────────────────────────────
