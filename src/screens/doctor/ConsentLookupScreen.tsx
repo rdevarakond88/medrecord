@@ -183,7 +183,12 @@ export default function ConsentLookupScreen({ navigation }: Props) {
               </TouchableOpacity>
             )}
           </View>
-          <Text style={styles.digitCounter}>{digits.length}/10</Text>
+          <Text style={[
+            styles.digitCounter,
+            digits.length === 10 && styles.digitCounterComplete,
+          ]}>
+            {digits.length}/10
+          </Text>
         </View>
 
         {/* ── Look Up button — enabled only when 10 digits entered and not yet loading ── */}
@@ -514,6 +519,10 @@ const styles = StyleSheet.create({
     fontSize:  12,
     color:     Colors.textSecondary,
     textAlign: 'right',
+  },
+  digitCounterComplete: {
+    color:      Colors.primaryBlue,
+    fontWeight: '600',
   },
 
   // ── Look Up button ────────────────────────────────────────────────────────
