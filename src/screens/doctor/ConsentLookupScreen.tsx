@@ -273,18 +273,6 @@ export default function ConsentLookupScreen({ navigation }: Props) {
               <Text style={styles.lastSeenDate}>{MOCK_PATIENT.lastVisit}</Text>
             </View>
 
-            <TouchableOpacity
-              style={styles.ctaButton}
-              onPress={() => { /* mockup — D9 ConsentRequest would launch here */ }}
-              accessibilityLabel="Request consent to access patient records"
-              accessibilityRole="button"
-            >
-              <Text style={styles.ctaButtonText}>Request Consent</Text>
-            </TouchableOpacity>
-
-            <Text style={styles.ctaHint}>
-              An SMS will be sent to the patient's registered number for verification.
-            </Text>
           </View>
         )}
 
@@ -319,6 +307,31 @@ export default function ConsentLookupScreen({ navigation }: Props) {
               <Text style={styles.retryButtonText}>Try a Different Number</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* ── Persistent Request Access CTA ── */}
+        <TouchableOpacity
+          style={[
+            styles.requestAccessButton,
+            lookupState !== 'found' && styles.requestAccessButtonDisabled,
+          ]}
+          onPress={() => { /* mockup — D9 ConsentRequest would launch here */ }}
+          disabled={lookupState !== 'found'}
+          accessibilityLabel="Request access to patient records"
+          accessibilityRole="button"
+        >
+          <Text style={[
+            styles.requestAccessButtonText,
+            lookupState !== 'found' && styles.requestAccessButtonTextDisabled,
+          ]}>
+            Request Access
+          </Text>
+        </TouchableOpacity>
+
+        {lookupState === 'found' && (
+          <Text style={styles.requestAccessHint}>
+            An SMS will be sent to the patient's registered number for verification.
+          </Text>
         )}
 
         {/* ── Numeric keypad ── */}
@@ -669,19 +682,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color:    Colors.textSecondary,
   },
-  ctaButton: {
+  requestAccessButton: {
     backgroundColor: Colors.primaryBlue,
     borderRadius:    12,
     paddingVertical: 16,
     alignItems:      'center',
-    marginTop:        4,
   },
-  ctaButtonText: {
+  requestAccessButtonDisabled: {
+    backgroundColor: Colors.border,
+  },
+  requestAccessButtonText: {
     fontSize:   16,
     fontWeight: '700',
     color:      Colors.surface,
   },
-  ctaHint: {
+  requestAccessButtonTextDisabled: {
+    color: Colors.textDisabled,
+  },
+  requestAccessHint: {
     fontSize:  13,
     color:     Colors.textSecondary,
     textAlign: 'center',
