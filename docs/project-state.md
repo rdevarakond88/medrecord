@@ -43,7 +43,7 @@ _Update this section whenever backend status changes. Every device testing sessi
 
 **Last Session:** Builder Agent — Step 2: D7 Consent Lookup mockup (2026-06-14). New screen `src/screens/doctor/ConsentLookupScreen.tsx` created — doctor-initiated cross-provider consent request entry point. Three states: idle (numeric input + keypad + how-it-works hint), found (patient card + "Request Consent" CTA), not_found (error card + register / retry options). Distinct from D9 (ConsentRequestScreen), which is the in-clinic OTP handoff flow triggered from D3. `App.tsx`: `ConsentLookup` route type + import + Stack.Screen added. Dev `__DEV__` entry point added to PatientSearchScreen (D2). Registered test number: 8888888888 → Meena Krishnaswamy (found). Zero TS errors. Pushed to dev.
 
-**Next required session:** Persona Critic — D7 Consent Lookup mockup. Read `agents/agent-persona-critic.md` + `ConsentLookupScreen.tsx`. Evaluate all three states against Shantabai + Dr. Mehta personas.
+**Next required session:** Security Agent — D7 Consent Lookup. Read `agents/agent-security.md` + `ConsentLookupScreen.tsx`. Persona Critic waived by product owner (2026-06-14). Known pre-audit flag: mobile number passed as GET query param (`?mobile=`) — risk rating TBD by Security Agent.
 
 **Previous Session:** Builder micro-session + Lessons (2026-05-30). Two findings by human owner after project was declared complete:
 
@@ -296,7 +296,7 @@ _Carry these into every build/mockup session for these screens._
 
 | Screen | File | Session | Status |
 |---|---|---|---|
-| Consent Lookup (new D7) | `src/screens/doctor/ConsentLookupScreen.tsx` | 2026-06-14 | **MOCKUP COMPLETE** — idle / found / not_found states. Test number 8888888888 → Meena Krishnaswamy. Dev entry point on D2. Next: Persona Critic. |
+| Consent Lookup (new D7) | `src/screens/doctor/ConsentLookupScreen.tsx` | 2026-06-14 | **MOCKUP COMPLETE** — idle / loading / found / not_found states. Priya Sharma / Dr. Suresh Mehta mock data. Request Access button + ⓘ Alert. Dev entry point on D2. **Persona Critic WAIVED — product owner decision 2026-06-14.** Next: Security Agent. |
 
 ---
 
