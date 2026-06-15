@@ -56,13 +56,14 @@ type LookupState = 'idle' | 'loading' | 'found' | 'not_found';
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
 const MOCK_PATIENT = {
-  name:        'Meena Krishnaswamy',
-  age:         52,
+  name:        'Priya Sharma',
+  age:         34,
   mobile:      '8888888888',
   maskedMobile:'88•••••789',
+  lastDoctor:  'Dr. Suresh Mehta',
   lastClinic:  'Apollo Clinic, Hyderabad',
   lastVisit:   '28 Feb 2026',
-  initials:    'MK',
+  initials:    'PS',
 };
 
 // ─── Design tokens (ui-ux-spec.md) ───────────────────────────────────────────
@@ -288,9 +289,8 @@ export default function ConsentLookupScreen({ navigation }: Props) {
 
             <View style={styles.lastSeenRow}>
               <Text style={styles.lastSeenLabel}>Last seen at</Text>
-              <Text style={styles.lastSeenValue}>
-                {MOCK_PATIENT.lastClinic}
-              </Text>
+              <Text style={styles.lastSeenValue}>{MOCK_PATIENT.lastDoctor}</Text>
+              <Text style={styles.lastSeenClinic}>{MOCK_PATIENT.lastClinic}</Text>
               <Text style={styles.lastSeenDate}>{MOCK_PATIENT.lastVisit}</Text>
             </View>
 
@@ -702,6 +702,10 @@ const styles = StyleSheet.create({
     fontSize:   14,
     fontWeight: '600',
     color:      Colors.textPrimary,
+  },
+  lastSeenClinic: {
+    fontSize: 13,
+    color:    Colors.textSecondary,
   },
   lastSeenDate: {
     fontSize: 13,
