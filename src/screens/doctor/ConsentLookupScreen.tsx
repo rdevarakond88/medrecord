@@ -225,8 +225,7 @@ export default function ConsentLookupScreen({ navigation }: Props) {
         {lookupState === 'loading' && (
           <View style={styles.loadingCard}>
             <ActivityIndicator size="large" color={Colors.primaryBlue} />
-            <Text style={styles.loadingTitle}>Checking patient records…</Text>
-            <Text style={styles.loadingSubtext}>This usually takes a moment</Text>
+            <Text style={styles.loadingTitle}>Searching…</Text>
           </View>
         )}
 
@@ -576,12 +575,6 @@ const styles = StyleSheet.create({
     color:      Colors.textPrimary,
     textAlign:  'center',
   },
-  loadingSubtext: {
-    fontSize:  13,
-    color:     Colors.textSecondary,
-    textAlign: 'center',
-  },
-
   // ── Hint card (idle + empty) ──────────────────────────────────────────────
 
   hintCard: {
