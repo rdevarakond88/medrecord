@@ -42,6 +42,7 @@ import PatientTimelineScreen from './src/screens/patient/PatientTimelineScreen';
 import PatientVisitDetailScreen from './src/screens/patient/PatientVisitDetailScreen';
 import PatientDoctorsAccessScreen from './src/screens/patient/PatientDoctorsAccessScreen';
 import PatientProfileScreen from './src/screens/patient/PatientProfileScreen';
+import PatientAppointmentsScreen from './src/screens/patient/PatientAppointmentsScreen';
 import { useSyncWorker } from './src/sync/useSyncWorker';
 import { refreshAccessToken } from './src/api/auth';
 import { ApiError } from './src/api/apiClient';
@@ -107,8 +108,9 @@ export type RootStackParamList = {
     doctorName: string;
     clinicName: string;
   };
-  PatientDoctorsAccess: undefined;
-  PatientProfile:       undefined;
+  PatientDoctorsAccess:   undefined;
+  PatientProfile:         undefined;
+  PatientAppointments:    undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -226,7 +228,8 @@ function App() {
             <Stack.Screen name="PatientTimeline"      component={PatientTimelineScreen} />
             <Stack.Screen name="PatientVisitDetail"   component={PatientVisitDetailScreen} />
             <Stack.Screen name="PatientDoctorsAccess" component={PatientDoctorsAccessScreen} />
-            <Stack.Screen name="PatientProfile"       component={PatientProfileScreen} />
+            <Stack.Screen name="PatientProfile"         component={PatientProfileScreen} />
+            <Stack.Screen name="PatientAppointments"   component={PatientAppointmentsScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </QueryClientProvider>
