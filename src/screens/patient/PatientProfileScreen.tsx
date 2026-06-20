@@ -547,15 +547,6 @@ export default function PatientProfileScreen() {
           </>
         ) : null}
 
-        {__DEV__ && (
-          <TouchableOpacity
-            style={styles.devNavBtn}
-            onPress={() => navigation.navigate('PatientAppointments')}
-          >
-            <Text style={styles.devNavBtnText}>DEV → P9: Upcoming Appointments</Text>
-          </TouchableOpacity>
-        )}
-
       </ScrollView>
 
       {/* ── Bottom tab bar (patient app) ── */}
@@ -880,26 +871,6 @@ const styles = StyleSheet.create({
     fontSize:   15,
     fontWeight: '600',
     color:      Colors.error,
-  },
-
-  // ── Dev nav (mockup only — __DEV__)
-  devNavBtn: {
-    marginHorizontal: Spacing.xxl,
-    marginTop:        Spacing.xxl,
-    marginBottom:     Spacing.xl,
-    paddingVertical:  Spacing.md,
-    borderRadius:     8,
-    backgroundColor:  '#FFF7ED',
-    borderWidth:      1,
-    borderColor:      '#FED7AA',
-    alignItems:       'center',
-    minHeight:        48,
-    justifyContent:   'center',
-  },
-  devNavBtnText: {
-    fontSize:   13,
-    fontWeight: '600',
-    color:      '#92400E',
   },
 
   // ── Bottom tab bar
