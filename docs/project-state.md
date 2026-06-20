@@ -2,8 +2,8 @@
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
 ## Current Status
-**Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot requirements done and on main. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch.
-**Last Updated:** 2026-05-30
+**Phase:** POST-COMPLETION + new extension screen — P9 Upcoming Appointments mockup on dev (2026-06-20). Original pre-pilot requirements on main (PR #6, cb66d392). Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch.
+**Last Updated:** 2026-06-20
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
 > Reason: EAS internal distribution requires an Apple Developer Program membership ($99/year). The owner chose not to purchase it because this project's purpose is learning agent orchestration and automation workflows, not shipping a production app.
@@ -35,13 +35,11 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Merge — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot fixes now on main: P3/P5 real API, integration bugs (BUG-IT-1 through BUG-IT-4), OTP resend 30s cooldown, mobile immutability guard.
+**Last Session:** Builder Agent — P9 Upcoming Appointments static mockup (2026-06-20). New fictional screen `src/screens/patient/PatientAppointmentsScreen.tsx`. Three states: has_data (3 realistic appointment cards), empty, offline_error. __DEV__ state switcher. Route `PatientAppointments` registered in App.tsx. __DEV__ entry point button added to PatientProfileScreen. Zero TS errors in changed files. Commit: `1e5c941`. Pushed to dev.
 
-**Previous Session:** PM Agent — Moment 3 Pre-Launch Gate (2026-05-30). CLEAR TO MERGE dev → main. No new adoption or regulatory risks. Functional fixes (P3/P5 real API, integration bugs) make main materially correct. Pre-pilot requirements complete. Standing condition: cert pinning inactive (Expo Go only) — no real patient data until EAS build validates pinnedFetch. Review: `reviews/pre-pilot-pm-review-moment3.md`.
+**Next required session:** Persona Critic — P9 Upcoming Appointments.
 
-**Previous Session:** Security Agent — Step 28e (2026-05-30). PATCH /patient/profile re-check CLEAR TO MERGE. Re-check: `reviews/step28e-security-recheck.md`.
-
-**Next required session:** Pilot deployment — share app with test users via Expo Go (scan QR from `npm start`). No further code changes required unless pilot feedback surfaces bugs.
+**Previous Session:** Merge — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot fixes now on main: P3/P5 real API, integration bugs (BUG-IT-1 through BUG-IT-4), OTP resend 30s cooldown, mobile immutability guard.
 
 **Previous Session:** Builder micro-session + Lessons (2026-05-30). Two findings by human owner after project was declared complete:
 
