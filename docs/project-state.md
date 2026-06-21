@@ -3,7 +3,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## Current Status
 **Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot requirements done and on main. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch.
-**Last Updated:** 2026-06-20
+**Last Updated:** 2026-05-30
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
 > Reason: EAS internal distribution requires an Apple Developer Program membership ($99/year). The owner chose not to purchase it because this project's purpose is learning agent orchestration and automation workflows, not shipping a production app.
@@ -35,15 +35,13 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 _Update this section whenever backend status changes. Every device testing session must check this first._
 
 ---
-**Last Session:** Builder Agent — Step 2 (mockup) — P9 Upcoming Appointments (2026-06-20). Static mockup built: `src/screens/patient/UpcomingAppointmentsScreen.tsx`. Three UI states: data (3 appointment cards), empty, error/offline. Route registered in App.tsx as `UpcomingAppointments`. No API calls — all hardcoded mock data.
-
-**Previous Session:** Merge — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot fixes now on main: P3/P5 real API, integration bugs (BUG-IT-1 through BUG-IT-4), OTP resend 30s cooldown, mobile immutability guard.
+**Last Session:** Merge — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot fixes now on main: P3/P5 real API, integration bugs (BUG-IT-1 through BUG-IT-4), OTP resend 30s cooldown, mobile immutability guard.
 
 **Previous Session:** PM Agent — Moment 3 Pre-Launch Gate (2026-05-30). CLEAR TO MERGE dev → main. No new adoption or regulatory risks. Functional fixes (P3/P5 real API, integration bugs) make main materially correct. Pre-pilot requirements complete. Standing condition: cert pinning inactive (Expo Go only) — no real patient data until EAS build validates pinnedFetch. Review: `reviews/pre-pilot-pm-review-moment3.md`.
 
 **Previous Session:** Security Agent — Step 28e (2026-05-30). PATCH /patient/profile re-check CLEAR TO MERGE. Re-check: `reviews/step28e-security-recheck.md`.
 
-**Next required session:** Persona Critic — Step 3 — P9 Upcoming Appointments
+**Next required session:** Pilot deployment — share app with test users via Expo Go (scan QR from `npm start`). No further code changes required unless pilot feedback surfaces bugs.
 
 **Previous Session:** Builder micro-session + Lessons (2026-05-30). Two findings by human owner after project was declared complete:
 
@@ -308,7 +306,6 @@ _Carry these into every build/mockup session for these screens._
 | P3 — Visit Record Detail | **DEVICE TESTING COMPLETE (2026-05-16, session 22c). Full pipeline complete: mockup → Persona Critic (3.8/5, ship as-is, 3 SHOULD FIX applied) → wire (real GET /patient/visits/:id) → Security audit → QA → device tested. Merged to main PR #5 (2026-05-16).** Live screen: `src/screens/patient/PatientVisitDetailScreen.tsx`. | Tier 4. MERGED. |
 | P4 — Doctors Who Have Access | **DEVICE TESTING COMPLETE (2026-05-16, session 22c). Full pipeline complete: mockup → Persona Critic v1 (3.0/5, revise) → Builder revisions → Persona Critic v2 (3.8/5, ship as-is) → wire (real GET/DELETE /patient/consents, POST /patient/consent-requests/:id/respond) → Security audit → QA (P4-M1, P4-M2 fixed) → device tested. Merged to main PR #5 (2026-05-16).** Live screen: `src/screens/patient/PatientDoctorsAccessScreen.tsx`. | Tier 4. MERGED. |
 | P5 — Patient Profile | **DEVICE TESTING COMPLETE (2026-05-16, session 22c). Full pipeline complete: mockup → Persona Critic v1 (3.2/5, revise) → Builder revisions → Persona Critic v2 (3.64/5, ship as-is) → wire (real GET/PATCH /patient/profile) → Security audit → QA (P5-M1 fixed) → device tested. Merged to main PR #5 (2026-05-16).** Live screen: `src/screens/patient/PatientProfileScreen.tsx`. | Tier 4. MERGED. |
-| P9 — Upcoming Appointments | **MOCKUP COMPLETE (2026-06-20). Static mockup built: `src/screens/patient/UpcomingAppointmentsScreen.tsx`. Three UI states: data (3 appointment cards — doctor name, clinic name, date, time), empty, error/offline with Retry button. Route registered in App.tsx. Next: Persona Critic.** | Tier 4. IN PROGRESS — awaiting Persona Critic review. |
 
 ---
 
