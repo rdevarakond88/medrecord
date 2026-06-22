@@ -8,19 +8,21 @@
 
 ## Mandatory Opening Declaration
 
-Before taking any action — including reading code, reading project-state.md, searching files, or using any tool — state:
+**Every session follows this exact sequence — no exceptions:**
 
-> "Operating as: [Agent Name]
-> Step: [step number and name from AGENT_ORCHESTRATION.md]
-> Spec files I will read before starting: [list]"
+1. **Read `CLAUDE.md` and `docs/project-state.md`** to determine the correct agent and step.
+   The hook allows these reads before declaration. All other tool calls are blocked until you declare.
 
-Reading project-state.md or any file before this declaration is an MP1 violation. The declaration must be the first output of every session, no exceptions.
+2. **State the opening declaration** in your response:
+   > "Operating as: [Agent Name]
+   > Step: [step number and name from AGENT_ORCHESTRATION.md]
+   > Spec files I will read before starting: [list]"
 
-**After stating the declaration text, your very first tool action must be:**
-```
-Write "Agent Name" to /tmp/.medrecord_agent
-```
-A pre-tool-use hook enforces this. Every tool call — Read, Bash, Edit, Write — is blocked until this file exists. There is no way to proceed without it.
+3. **Write the agent name to `/tmp/.medrecord_agent`** (this unblocks all subsequent tool calls).
+
+**You must never ask the user which agent to use.** The correct agent is always determinable from `docs/project-state.md` and the routing table in this file. If you ask the user, you have failed to read the files.
+
+Reading any file other than `CLAUDE.md`, `docs/project-state.md`, `AGENT_ORCHESTRATION.md`, and `agents/*.md` before completing step 3 is an MP1 violation.
 
 **At session end, as the final action before exit:**
 ```
@@ -28,13 +30,7 @@ Bash: rm -f /tmp/.medrecord_agent
 ```
 This resets the gate for the next session.
 
-If you cannot identify which agent and which step applies:
-- State what you do know
-- Ask ONE specific question to resolve the ambiguity
-- **Do nothing else until the user answers**
-- "Unclear" is a hard stop, not a declaration that lets you proceed
-
-**Routing trigger rule:** Any message that describes completed work and asks what comes next — "X is done, what's next?", "what do we do now?", "keep going" — is a session-start trigger. Your response must BEGIN with the canonical declaration block from the table below. Not a sentence naming the next agent. Not a paragraph describing what that agent would do. The literal "Operating as / Step / Spec files" block must be the first thing in your output. A routing summary is not a declaration. If you catch yourself writing "The next step is..." or "You should invoke...", stop — that is the wrong format.
+**Routing trigger rule:** Any message that describes completed work or asks what comes next — "X is done, what's next?", "what do we do now?", "keep going", "continue from where we left off" — requires you to read `docs/project-state.md` and declare the correct agent. Do not summarize options. Do not ask the user. Read the file, identify the next step, declare it.
 
 ### Canonical Opening Declarations
 
