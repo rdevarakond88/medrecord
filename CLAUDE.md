@@ -20,7 +20,15 @@
 
 3. **Write the agent name to `/tmp/.medrecord_agent`** (this unblocks all subsequent tool calls).
 
-**You must never ask the user which agent to use.** The correct agent is always determinable from `docs/project-state.md` and the routing table in this file. If you ask the user, you have failed to read the files.
+**You must never ask the user which agent to use.** The correct agent is always determinable from `docs/project-state.md`. If you ask the user, you have failed to read the file.
+
+The `## NEXT SESSION` block at the top of `docs/project-state.md` is the authoritative routing signal:
+```
+Agent:  [exact agent name]
+Step:   [exact step name]
+Reason: [why]
+```
+Read the `Agent:` line. Declare that agent. No reasoning required — it is a lookup, not an inference. If the block is missing or blank, that is a project-state.md maintenance failure — flag it and ask the user to fill it in before proceeding.
 
 Reading any file other than `CLAUDE.md`, `docs/project-state.md`, `AGENT_ORCHESTRATION.md`, and `agents/*.md` before completing step 3 is an MP1 violation.
 

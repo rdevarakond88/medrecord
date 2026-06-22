@@ -1,6 +1,20 @@
 # Project State — MedRecord
 _This file is updated at the end of every Claude Code session. Pass this file as context at the start of every new session._
 
+---
+
+## NEXT SESSION
+```
+Agent:  Backend Agent
+Step:   Step 11 — Backend Build & Deploy
+Reason: Render.com free tier deletes the PostgreSQL DB every 90 days.
+        Last confirmed UP: 2026-05-16. Verify health check, redeploy if
+        down, confirm test credentials still valid before pilot deployment.
+```
+_This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
+
+---
+
 ## Current Status
 **Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot requirements done and on main. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch.
 **Last Updated:** 2026-05-30
