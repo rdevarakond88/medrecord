@@ -1,36 +1,58 @@
-# Starting the Dev Server — iPhone via Expo Go
+# MedRecord — How to Run the App
 
-Run this from the project root in WSL:
+## Command
 
 ```
 npm start
 ```
 
-That is the only command. Nothing else.
+Run this from the project root in WSL. That is the only command.
 
 ---
 
-## What happens
+## What to do with the URL
 
-1. Any leftover process on port 8082 is killed automatically
-2. Metro bundler starts on port 8082
-3. An ngrok tunnel opens — this is what makes it work on WSL Windows,
-   where the WSL network interface is not reachable from your iPhone
-
-## Connecting your iPhone
-
-After startup the terminal prints a URL like:
+After ~15 seconds the terminal prints a URL like:
 
 ```
 exp://xxxx-anonymous-8082.exp.direct
 ```
 
-Open **Expo Go** on iPhone → tap **Enter URL manually** → paste that URL.
+1. Open **Expo Go** on iPhone
+2. Tap **Enter URL manually**
+3. Paste the URL
+4. App loads
 
-Your iPhone does not need to be on the same WiFi network as your laptop.
-The tunnel works over the internet.
+---
 
-## If the URL changes between sessions
+## Login credentials
 
-The URL is printed clearly at the top of the terminal every session.
-Copy it from there — no need to scroll through Metro output.
+| Role | Mobile number | OTP code |
+|---|---|---|
+| Doctor | `9999999999` | `000000` |
+| Patient (test) | `8888888888` | `000000` |
+
+OTP bypass is already active — type `000000` for any OTP prompt.
+
+---
+
+## If the URL doesn't print
+
+Run this to check the tunnel:
+
+```
+curl localhost:4040/api/tunnels
+```
+
+Or scroll up in Metro output to find the URL manually.
+
+---
+
+## Note on the backend
+
+The backend currently runs on Render (`medrecord-api.onrender.com`).
+First request after idle may take 20–30 seconds (cold start) — this is normal.
+
+A local backend setup is planned — see `plans/local-backend-demo-setup.md`.
+After that setup is complete, the command will change to `npm run demo`
+and this file will be updated.

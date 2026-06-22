@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/rdeva/medrecord/.claude/hooks/check-agent-declared.sh",
+            "statusMessage": "Checking agent declaration..."
+          }
+        ]
+      }
+    ]
+  }
+}
