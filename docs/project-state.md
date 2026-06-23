@@ -6,10 +6,14 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 ## NEXT SESSION
 ```
 Agent:  Backend Agent
-Step:   No mandatory next step — project complete as a learning exercise.
-Reason: PM Moment 3 v2 (2026-06-22) complete. Demo-ready with local backend.
-        Next action depends on user direction: move backend to always-on cloud for
-        independent pilot use, or close the project here.
+Step:   Diagnose and fix app-to-backend connectivity (OTP login failing on device)
+Reason: 2026-06-23 session: backend verified working via curl, DB seeded, cloudflared
+        tunnel healthy. App on device never reaches backend (zero DB hits from phone).
+        Root suspect: EXPO_PUBLIC_API_URL not being inlined into Metro bundle correctly
+        despite being set in shell env. Metro cache wipe + --clear added to start-demo.sh
+        but did not resolve in session. Next session: try .env.local injection instead
+        of shell env var export — Expo's @expo/env reads .env files differently and
+        may correctly trigger cache invalidation.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
@@ -17,7 +21,7 @@ _This block is the authoritative routing signal. Update it at the end of every s
 
 ## Current Status
 **Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot requirements done and on main. Backend migrated to local WSL2 (npm run demo) — no Render dependency. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch. Backend is local-only — reachable only while developer's machine is running.
-**Last Updated:** 2026-06-22
+**Last Updated:** 2026-06-23
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
 > Reason: EAS internal distribution requires an Apple Developer Program membership ($99/year). The owner chose not to purchase it because this project's purpose is learning agent orchestration and automation workflows, not shipping a production app.
@@ -47,6 +51,8 @@ _This block is the authoritative routing signal. Update it at the end of every s
 _2026-06-22: Switched backend tunnel from ngrok to cloudflared. ngrok free tier serves safebrowse interstitial as plain HTTP on port 443, breaking TLS for all API calls. cloudflared provides proper HTTPS, no interstitial. URL is dynamic (trycloudflare.com) — changes each session._
 
 ---
+**Last Session:** Backend Agent (2026-06-23). Diagnosed OTP login failure on device. Fixed: DB schema missing (prisma db push), seed data absent (npm run seed), Metro cache stale (rm -rf /tmp/metro-cache added to start-demo.sh, --clear added to start.sh). Backend verified working via curl through cloudflared tunnel. App still not reaching backend on device — EXPO_PUBLIC_API_URL shell env var not reliably inlined by Metro. Unresolved. Next: try .env.local injection approach.
+
 **Last Session:** PM Agent — Moment 3 Pre-Launch Gate v2 (2026-06-22). DEMO-READY with conditions: cert pinning inactive (Expo Go only; unchanged), backend local-only (WSL2 — must run `npm run demo` before use). For independent pilot use, backend must move to always-on cloud. No new regulatory risk. Review: `reviews/pre-pilot-pm-review-moment3-v2.md`.
 
 **Previous Session:** Merge — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot fixes now on main: P3/P5 real API, integration bugs (BUG-IT-1 through BUG-IT-4), OTP resend 30s cooldown, mobile immutability guard.

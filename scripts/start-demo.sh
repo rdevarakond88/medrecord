@@ -68,6 +68,9 @@ echo "  API URL baked into Metro bundle: $EXPO_PUBLIC_API_URL"
 echo "[4/4] Starting Expo..."
 cd "$ROOT_DIR"
 fuser -k 8082/tcp 2>/dev/null || true
+# Wipe Metro's transform cache — its cache key does not include EXPO_PUBLIC_* values,
+# so a stale cache from a prior session will bake in the old cloudflared URL.
+rm -rf /tmp/metro-cache
 bash scripts/start.sh
 
 # Cleanup backend + tunnel on Ctrl-C / Expo exit

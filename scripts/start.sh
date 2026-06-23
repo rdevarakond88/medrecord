@@ -5,4 +5,4 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  Expo Go URL will appear in Metro output"
 echo "  (look for the QR code or exp:// line)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-expo start --tunnel --port 8082 "$@"
+expo start --tunnel --port 8082 --clear "$@"
