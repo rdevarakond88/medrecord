@@ -5,7 +5,7 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## NEXT SESSION
 ```
-Agent:  (user decides)
+Agent:  Backend Agent
 Step:   No mandatory next step — project complete as a learning exercise.
 Reason: PM Moment 3 v2 (2026-06-22) complete. Demo-ready with local backend.
         Next action depends on user direction: move backend to always-on cloud for
@@ -32,8 +32,8 @@ _This block is the authoritative routing signal. Update it at the end of every s
 ## Backend Status
 | Field | Value |
 |---|---|
-| API base URL | `https://lunchbox-saddled-relock.ngrok-free.dev/v1` (static ngrok — never expires) |
-| API base URL (frontend hardcoded) | `https://lunchbox-saddled-relock.ngrok-free.dev/v1` ✅ — updated 2026-06-22 |
+| API base URL | Dynamic — cloudflared assigns a `*.trycloudflare.com` URL at startup. Printed in `npm run demo` output as "Tunnel URL". |
+| API base URL (frontend) | Read from `EXPO_PUBLIC_API_URL` env var set by start-demo.sh before Metro starts. Falls back to old ngrok domain if absent. |
 | Deployment status | **LOCAL** — running on WSL2 PostgreSQL. Start with `npm run demo`. No cold-start. No 90-day expiry. |
 | Hosting provider | Local WSL2 — PostgreSQL 16 on port 5432. DB: `medrecord`, user: `medrecord_user`. |
 | Test doctor name | Dr. Test Doctor |
@@ -44,7 +44,7 @@ _This block is the authoritative routing signal. Update it at the end of every s
 | Patient endpoints | POST /auth/send-otp (role:"patient") + POST /auth/verify-otp → patient JWT. GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond. |
 | Consent endpoints | POST /consent/request, POST /consent/verify, POST /consent/pending-request |
 
-_Local demo setup complete 2026-06-22. URL confirmed. ngrok static domain active._
+_2026-06-22: Switched backend tunnel from ngrok to cloudflared. ngrok free tier serves safebrowse interstitial as plain HTTP on port 443, breaking TLS for all API calls. cloudflared provides proper HTTPS, no interstitial. URL is dynamic (trycloudflare.com) — changes each session._
 
 ---
 **Last Session:** PM Agent — Moment 3 Pre-Launch Gate v2 (2026-06-22). DEMO-READY with conditions: cert pinning inactive (Expo Go only; unchanged), backend local-only (WSL2 — must run `npm run demo` before use). For independent pilot use, backend must move to always-on cloud. No new regulatory risk. Review: `reviews/pre-pilot-pm-review-moment3-v2.md`.
