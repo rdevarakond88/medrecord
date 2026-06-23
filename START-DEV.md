@@ -1,27 +1,57 @@
 # MedRecord — How to Run the App
 
-## Command
+## Demo command (primary — use this for demos)
+
+```
+npm run demo
+```
+
+Run this from the project root in WSL. Starts everything: PostgreSQL, backend server, backend ngrok tunnel, Expo tunnel.
+
+After ~15 seconds the terminal prints an Expo URL. Paste it into Expo Go.
+
+---
+
+## Dev command (Expo only — no backend)
 
 ```
 npm start
 ```
 
-Run this from the project root in WSL. That is the only command.
+Use this for frontend-only work. Backend calls will fail.
 
 ---
 
-## What to do with the URL
+## One-time setup (do this once before first `npm run demo`)
 
-After ~15 seconds the terminal prints a URL like:
+1. Run the database setup commands (only needed once):
+   ```
+   sudo -u postgres psql -c "CREATE DATABASE medrecord; CREATE USER medrecord_user WITH PASSWORD 'medrecord_local_2026'; GRANT ALL PRIVILEGES ON DATABASE medrecord TO medrecord_user;"
+   sudo -u postgres psql medrecord -c "GRANT ALL ON SCHEMA public TO medrecord_user;"
+   ```
 
-```
-exp://xxxx-anonymous-8082.exp.direct
-```
+2. Run migrations to create the schema:
+   ```
+   cd backend && npx prisma migrate deploy
+   ```
 
-1. Open **Expo Go** on iPhone
-2. Tap **Enter URL manually**
-3. Paste the URL
-4. App loads
+3. Seed demo data:
+   ```
+   cd backend && npm run seed
+   ```
+
+4. Claim your free ngrok static domain at ngrok.com → Domains → New Domain.
+   Then set it in `backend/.env`:
+   ```
+   NGROK_DOMAIN=your-domain.ngrok-free.app
+   ```
+
+5. Update `src/api/apiClient.ts` line 15 with your static domain:
+   ```
+   export const API_BASE_URL = 'https://your-domain.ngrok-free.app/v1';
+   ```
+
+After that, `npm run demo` is the only command you ever need.
 
 ---
 
@@ -32,27 +62,24 @@ exp://xxxx-anonymous-8082.exp.direct
 | Doctor | `9999999999` | `000000` |
 | Patient (test) | `8888888888` | `000000` |
 
-OTP bypass is already active — type `000000` for any OTP prompt.
+OTP bypass is active — type `000000` for any OTP prompt.
 
 ---
 
-## If the URL doesn't print
-
-Run this to check the tunnel:
+## If the Expo URL doesn't print
 
 ```
 curl localhost:4040/api/tunnels
 ```
 
-Or scroll up in Metro output to find the URL manually.
-
 ---
 
-## Note on the backend
+## What `npm run demo` starts
 
-The backend currently runs on Render (`medrecord-api.onrender.com`).
-First request after idle may take 20–30 seconds (cold start) — this is normal.
-
-A local backend setup is planned — see `plans/local-backend-demo-setup.md`.
-After that setup is complete, the command will change to `npm run demo`
-and this file will be updated.
+| Service | Where | Port |
+|---|---|---|
+| PostgreSQL | Local WSL2 | 5432 |
+| Backend server | Local WSL2 | 3000 |
+| Backend ngrok tunnel | Static domain (never changes) | → 3000 |
+| Expo + Metro | Local WSL2 | 8082 |
+| Expo ngrok tunnel | Dynamic URL each session | → 8082 |

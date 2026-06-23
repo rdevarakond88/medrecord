@@ -184,9 +184,6 @@ BALANCER VERDICT: [Ship as-is / Revise / Redesign]
 RATIONALE: [2–3 sentences]
 ```
 
-**Backend Agent — Session-End Protocol**
-The curl health check (`curl --max-time 30 https://medrecord-api.onrender.com/v1/health`) is mandatory at every session end — regardless of whether code changes were made this session. A deployment confirmed only by assertion ("it should be working") is not a confirmed deployment. Run curl, show the output, then update `docs/project-state.md` Backend Status table and commit. If curl fails, declare BLOCKED. Do not skip this step because "nothing changed."
-
 **Integration Tester — Bug Continuation Rule**
 Immediately after every bug log entry, state: `Bug logged. Moving to Scenario [N+1].` then describe the next scenario setup. Do not ask questions. Do not wait for user input. Logging a bug is not a session pause point.
 

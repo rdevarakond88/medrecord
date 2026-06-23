@@ -5,11 +5,11 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## NEXT SESSION
 ```
-Agent:  Backend Agent
-Step:   Step 11 — Backend Build & Deploy
-Reason: Render.com free tier deletes the PostgreSQL DB every 90 days.
-        Last confirmed UP: 2026-05-16. Verify health check, redeploy if
-        down, confirm test credentials still valid before pilot deployment.
+Agent:  Builder Agent
+Step:   Local backend demo setup
+Reason: Moving off Render permanently. Implement local PostgreSQL + static
+        ngrok domain + npm run demo script so demos never depend on Render again.
+        Plan: plans/local-backend-demo-setup.md
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
@@ -32,21 +32,19 @@ _This block is the authoritative routing signal. Update it at the end of every s
 ## Backend Status
 | Field | Value |
 |---|---|
-| API base URL (live) | `https://medrecord-api.onrender.com/v1` |
-| API base URL (frontend hardcoded) | `https://medrecord-api.onrender.com/v1` ✅ — updated 2026-03-18 |
-| Deployment status | **UP** — HTTP 200 confirmed 2026-05-16 21:27 UTC. Patient-facing endpoints LIVE (GET /patient/profile → HTTP 401 confirmed). Render cold-starts on first request (~20-30s); use 60s curl timeout for pre-flight. |
-| Hosting provider | Render.com — service: `medrecord-api`, DB: `medrecord-db` |
-| Health check | `curl --max-time 60 https://medrecord-api.onrender.com/v1/health` → HTTP 200 ✅ (2026-05-16) |
+| API base URL (target) | Local backend via static ngrok domain — pending local demo setup (see plans/local-backend-demo-setup.md) |
+| API base URL (frontend hardcoded) | `https://medrecord-api.onrender.com/v1` — **TO BE UPDATED** when local demo setup completes |
+| Deployment status | **MIGRATING** — moving off Render.com to local WSL2 PostgreSQL + static ngrok. Render instance may still be up but is no longer maintained. |
+| Hosting provider | Local WSL2 (target) — Render.com no longer maintained |
 | Test doctor name | Dr. Test Doctor |
 | Test doctor mobile | `9999999999` |
 | Test patient name | Priya Sharma |
 | Test patient mobile | `8888888888` |
-| OTP bypass | Set `TEST_OTP_BYPASS=true` (already set) — use code `000000` |
+| OTP bypass | `TEST_OTP_BYPASS=true` (already set in backend .env) — use code `000000` |
 | Patient endpoints | POST /auth/send-otp (role:"patient") + POST /auth/verify-otp → patient JWT. GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond. |
-| Consent endpoints | POST /consent/request → HTTP 401 ✅. POST /consent/verify → HTTP 401 ✅. POST /consent/pending-request → async patient-app flow. |
-| Next action | Step 26: EAS build (delete empty ascAppId/appleTeamId from eas.json → eas init → eas build → validate cert pinning). |
+| Consent endpoints | POST /consent/request, POST /consent/verify, POST /consent/pending-request |
 
-_Update this section whenever backend status changes. Every device testing session must check this first._
+_Update this section when local demo setup is complete (local URL + ngrok static domain confirmed)._
 
 ---
 **Last Session:** Merge — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot fixes now on main: P3/P5 real API, integration bugs (BUG-IT-1 through BUG-IT-4), OTP resend 30s cooldown, mobile immutability guard.
