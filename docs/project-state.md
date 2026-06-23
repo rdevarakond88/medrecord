@@ -5,15 +5,15 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## NEXT SESSION
 ```
-Agent:  Backend Agent
-Step:   Diagnose and fix app-to-backend connectivity (OTP login failing on device)
-Reason: 2026-06-23 session: backend verified working via curl, DB seeded, cloudflared
-        tunnel healthy. App on device never reaches backend (zero DB hits from phone).
-        Root suspect: EXPO_PUBLIC_API_URL not being inlined into Metro bundle correctly
-        despite being set in shell env. Metro cache wipe + --clear added to start-demo.sh
-        but did not resolve in session. Next session: try .env.local injection instead
-        of shell env var export — Expo's @expo/env reads .env files differently and
-        may correctly trigger cache invalidation.
+Agent:  Builder Agent
+Step:   Fix hardcoded Render URL in src/api/auth.ts
+Reason: 2026-06-22 Backend Agent diagnosis: root cause of zero DB hits from phone is
+        src/api/auth.ts line 21 — hardcoded `const BASE_URL = 'https://medrecord-api.onrender.com/v1'`.
+        All OTP calls (sendOtp, verifyOtp, verifyPatientOtp, refreshAccessToken) hit the
+        dead Render.com server instead of the local cloudflared backend. auth.ts never
+        reads EXPO_PUBLIC_API_URL — it ignores apiClient.ts entirely. Fix: import
+        API_BASE_URL from './apiClient', remove hardcoded constant, use API_BASE_URL in
+        all four functions. After fix, run npm run demo and test OTP login on device.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
@@ -51,7 +51,9 @@ _This block is the authoritative routing signal. Update it at the end of every s
 _2026-06-22: Switched backend tunnel from ngrok to cloudflared. ngrok free tier serves safebrowse interstitial as plain HTTP on port 443, breaking TLS for all API calls. cloudflared provides proper HTTPS, no interstitial. URL is dynamic (trycloudflare.com) — changes each session._
 
 ---
-**Last Session:** Backend Agent (2026-06-23). Diagnosed OTP login failure on device. Fixed: DB schema missing (prisma db push), seed data absent (npm run seed), Metro cache stale (rm -rf /tmp/metro-cache added to start-demo.sh, --clear added to start.sh). Backend verified working via curl through cloudflared tunnel. App still not reaching backend on device — EXPO_PUBLIC_API_URL shell env var not reliably inlined by Metro. Unresolved. Next: try .env.local injection approach.
+**Last Session:** Backend Agent (2026-06-22). Root cause of zero DB hits from device identified: src/api/auth.ts line 21 has hardcoded `const BASE_URL = 'https://medrecord-api.onrender.com/v1'` — the dead Render.com server. All OTP calls never reached the local backend. auth.ts ignores EXPO_PUBLIC_API_URL and apiClient.ts entirely. EXPO_PUBLIC_API_URL inlining was a red herring. Fix: import API_BASE_URL from './apiClient' and remove hardcoded constant. Routed to Builder Agent.
+
+**Previous Session:** Backend Agent (2026-06-23). Diagnosed OTP login failure on device. Fixed: DB schema missing (prisma db push), seed data absent (npm run seed), Metro cache stale (rm -rf /tmp/metro-cache added to start-demo.sh, --clear added to start.sh). Backend verified working via curl through cloudflared tunnel. App still not reaching backend on device — EXPO_PUBLIC_API_URL shell env var not reliably inlined by Metro. Unresolved. Next: try .env.local injection approach.
 
 **Last Session:** PM Agent — Moment 3 Pre-Launch Gate v2 (2026-06-22). DEMO-READY with conditions: cert pinning inactive (Expo Go only; unchanged), backend local-only (WSL2 — must run `npm run demo` before use). For independent pilot use, backend must move to always-on cloud. No new regulatory risk. Review: `reviews/pre-pilot-pm-review-moment3-v2.md`.
 
