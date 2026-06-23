@@ -5,18 +5,19 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## NEXT SESSION
 ```
-Agent:  PM Agent
-Step:   PM Moment 3 — Pre-Launch Gate (or whatever the user decides next)
-Reason: Local demo setup complete as of 2026-06-22. Render dependency removed.
-        npm run demo starts everything. No urgent next step — user to decide direction.
+Agent:  (user decides)
+Step:   No mandatory next step — project complete as a learning exercise.
+Reason: PM Moment 3 v2 (2026-06-22) complete. Demo-ready with local backend.
+        Next action depends on user direction: move backend to always-on cloud for
+        independent pilot use, or close the project here.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
 ---
 
 ## Current Status
-**Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot requirements done and on main. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch.
-**Last Updated:** 2026-05-30
+**Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot requirements done and on main. Backend migrated to local WSL2 (npm run demo) — no Render dependency. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch. Backend is local-only — reachable only while developer's machine is running.
+**Last Updated:** 2026-06-22
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
 > Reason: EAS internal distribution requires an Apple Developer Program membership ($99/year). The owner chose not to purchase it because this project's purpose is learning agent orchestration and automation workflows, not shipping a production app.
@@ -43,16 +44,18 @@ _This block is the authoritative routing signal. Update it at the end of every s
 | Patient endpoints | POST /auth/send-otp (role:"patient") + POST /auth/verify-otp → patient JWT. GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond. |
 | Consent endpoints | POST /consent/request, POST /consent/verify, POST /consent/pending-request |
 
-_Update this section when local demo setup is complete (local URL + ngrok static domain confirmed)._
+_Local demo setup complete 2026-06-22. URL confirmed. ngrok static domain active._
 
 ---
-**Last Session:** Merge — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot fixes now on main: P3/P5 real API, integration bugs (BUG-IT-1 through BUG-IT-4), OTP resend 30s cooldown, mobile immutability guard.
+**Last Session:** PM Agent — Moment 3 Pre-Launch Gate v2 (2026-06-22). DEMO-READY with conditions: cert pinning inactive (Expo Go only; unchanged), backend local-only (WSL2 — must run `npm run demo` before use). For independent pilot use, backend must move to always-on cloud. No new regulatory risk. Review: `reviews/pre-pilot-pm-review-moment3-v2.md`.
 
-**Previous Session:** PM Agent — Moment 3 Pre-Launch Gate (2026-05-30). CLEAR TO MERGE dev → main. No new adoption or regulatory risks. Functional fixes (P3/P5 real API, integration bugs) make main materially correct. Pre-pilot requirements complete. Standing condition: cert pinning inactive (Expo Go only) — no real patient data until EAS build validates pinnedFetch. Review: `reviews/pre-pilot-pm-review-moment3.md`.
+**Previous Session:** Merge — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot fixes now on main: P3/P5 real API, integration bugs (BUG-IT-1 through BUG-IT-4), OTP resend 30s cooldown, mobile immutability guard.
+
+**Previous Session:** PM Agent — Moment 3 Pre-Launch Gate v1 (2026-05-30). CLEAR TO MERGE dev → main. Review: `reviews/pre-pilot-pm-review-moment3.md`.
 
 **Previous Session:** Security Agent — Step 28e (2026-05-30). PATCH /patient/profile re-check CLEAR TO MERGE. Re-check: `reviews/step28e-security-recheck.md`.
 
-**Next required session:** Pilot deployment — share app with test users via Expo Go (scan QR from `npm start`). No further code changes required unless pilot feedback surfaces bugs.
+**Next required session:** User decides direction — move backend to always-on cloud for independent pilot, or close project here.
 
 **Previous Session:** Builder micro-session + Lessons (2026-05-30). Two findings by human owner after project was declared complete:
 
