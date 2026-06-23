@@ -5,11 +5,10 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## NEXT SESSION
 ```
-Agent:  Builder Agent
-Step:   Local backend demo setup
-Reason: Moving off Render permanently. Implement local PostgreSQL + static
-        ngrok domain + npm run demo script so demos never depend on Render again.
-        Plan: plans/local-backend-demo-setup.md
+Agent:  PM Agent
+Step:   PM Moment 3 — Pre-Launch Gate (or whatever the user decides next)
+Reason: Local demo setup complete as of 2026-06-22. Render dependency removed.
+        npm run demo starts everything. No urgent next step — user to decide direction.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
@@ -32,10 +31,10 @@ _This block is the authoritative routing signal. Update it at the end of every s
 ## Backend Status
 | Field | Value |
 |---|---|
-| API base URL (target) | Local backend via static ngrok domain — pending local demo setup (see plans/local-backend-demo-setup.md) |
-| API base URL (frontend hardcoded) | `https://medrecord-api.onrender.com/v1` — **TO BE UPDATED** when local demo setup completes |
-| Deployment status | **MIGRATING** — moving off Render.com to local WSL2 PostgreSQL + static ngrok. Render instance may still be up but is no longer maintained. |
-| Hosting provider | Local WSL2 (target) — Render.com no longer maintained |
+| API base URL | `https://lunchbox-saddled-relock.ngrok-free.dev/v1` (static ngrok — never expires) |
+| API base URL (frontend hardcoded) | `https://lunchbox-saddled-relock.ngrok-free.dev/v1` ✅ — updated 2026-06-22 |
+| Deployment status | **LOCAL** — running on WSL2 PostgreSQL. Start with `npm run demo`. No cold-start. No 90-day expiry. |
+| Hosting provider | Local WSL2 — PostgreSQL 16 on port 5432. DB: `medrecord`, user: `medrecord_user`. |
 | Test doctor name | Dr. Test Doctor |
 | Test doctor mobile | `9999999999` |
 | Test patient name | Priya Sharma |

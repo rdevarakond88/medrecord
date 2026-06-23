@@ -14,7 +14,7 @@ import { pinnedFetch } from './pinnedFetch';
 
 // Update this URL after claiming your ngrok static domain in backend/.env
 // Format: https://your-domain.ngrok-free.app/v1
-export const API_BASE_URL = 'https://PLACEHOLDER.ngrok-free.app/v1';
+export const API_BASE_URL = 'https://lunchbox-saddled-relock.ngrok-free.dev/v1';
 const BASE_URL = API_BASE_URL;
 
 export class ApiError extends Error {

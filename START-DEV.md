@@ -40,18 +40,7 @@ Use this for frontend-only work. Backend calls will fail.
    cd backend && npm run seed
    ```
 
-4. Claim your free ngrok static domain at ngrok.com → Domains → New Domain.
-   Then set it in `backend/.env`:
-   ```
-   NGROK_DOMAIN=your-domain.ngrok-free.app
-   ```
-
-5. Update `src/api/apiClient.ts` line 15 with your static domain:
-   ```
-   export const API_BASE_URL = 'https://your-domain.ngrok-free.app/v1';
-   ```
-
-After that, `npm run demo` is the only command you ever need.
+After steps 1–3, `npm run demo` is the only command you ever need.
 
 ---
 
