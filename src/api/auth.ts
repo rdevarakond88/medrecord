@@ -16,9 +16,7 @@
  */
 
 import { pinnedFetch } from './pinnedFetch';
-import { ApiError } from './apiClient';
-
-const BASE_URL = 'https://medrecord-api.onrender.com/v1';
+import { API_BASE_URL, ApiError } from './apiClient';
 
 // ─── Channel ─────────────────────────────────────────────────────────────────
 
@@ -91,7 +89,7 @@ export async function sendOtp(
   channel: OtpChannel = 'sms',
   role: 'doctor' | 'patient' = 'doctor',
 ): Promise<SendOtpResponse> {
-  const response = await pinnedFetch(`${BASE_URL}/auth/send-otp`, {
+  const response = await pinnedFetch(`${API_BASE_URL}/auth/send-otp`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     // F-10: mobileNumber is not logged; it goes only in the request body
@@ -121,7 +119,7 @@ export async function verifyOtp(
   otpToken: string,
   otp: string,
 ): Promise<VerifyOtpResponse> {
-  const response = await pinnedFetch(`${BASE_URL}/auth/verify-otp`, {
+  const response = await pinnedFetch(`${API_BASE_URL}/auth/verify-otp`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     // F-10: otpToken and otp are NOT logged — they go only in the request body
@@ -143,7 +141,7 @@ export async function verifyPatientOtp(
   otpToken: string,
   otp: string,
 ): Promise<PatientVerifyOtpResponse> {
-  const response = await pinnedFetch(`${BASE_URL}/auth/verify-otp`, {
+  const response = await pinnedFetch(`${API_BASE_URL}/auth/verify-otp`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ otp_token: otpToken, otp }),
@@ -179,7 +177,7 @@ export async function verifyPatientOtp(
 export async function refreshAccessToken(
   refreshToken: string,
 ): Promise<RefreshTokenResponse> {
-  const response = await pinnedFetch(`${BASE_URL}/auth/refresh`, {
+  const response = await pinnedFetch(`${API_BASE_URL}/auth/refresh`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     // F-10: refresh token not logged

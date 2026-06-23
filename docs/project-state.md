@@ -5,15 +5,15 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## NEXT SESSION
 ```
-Agent:  Builder Agent
-Step:   Fix hardcoded Render URL in src/api/auth.ts
-Reason: 2026-06-22 Backend Agent diagnosis: root cause of zero DB hits from phone is
-        src/api/auth.ts line 21 — hardcoded `const BASE_URL = 'https://medrecord-api.onrender.com/v1'`.
-        All OTP calls (sendOtp, verifyOtp, verifyPatientOtp, refreshAccessToken) hit the
-        dead Render.com server instead of the local cloudflared backend. auth.ts never
-        reads EXPO_PUBLIC_API_URL — it ignores apiClient.ts entirely. Fix: import
-        API_BASE_URL from './apiClient', remove hardcoded constant, use API_BASE_URL in
-        all four functions. After fix, run npm run demo and test OTP login on device.
+Agent:  Device Tester
+Step:   Step 8 — Infrastructure Pre-flight + Device Testing (OTP login verify)
+Reason: 2026-06-22 Builder Agent fixed src/api/auth.ts — removed hardcoded Render.com
+        BASE_URL, now imports API_BASE_URL from apiClient.ts so all OTP calls
+        (sendOtp, verifyOtp, verifyPatientOtp, refreshAccessToken) route through
+        EXPO_PUBLIC_API_URL set by start-demo.sh (cloudflared tunnel). Verify fix:
+        run npm run demo, confirm tunnel URL printed in output, then test OTP login
+        on device with test doctor 9999999999 and bypass code 000000. Expect to reach
+        D2 Patient Search after OTP verify. QA test plan: reviews/D1-qa-test-plan-v2.md.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
@@ -21,7 +21,7 @@ _This block is the authoritative routing signal. Update it at the end of every s
 
 ## Current Status
 **Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot requirements done and on main. Backend migrated to local WSL2 (npm run demo) — no Render dependency. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch. Backend is local-only — reachable only while developer's machine is running.
-**Last Updated:** 2026-06-23
+**Last Updated:** 2026-06-22
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
 > Reason: EAS internal distribution requires an Apple Developer Program membership ($99/year). The owner chose not to purchase it because this project's purpose is learning agent orchestration and automation workflows, not shipping a production app.
@@ -51,7 +51,9 @@ _This block is the authoritative routing signal. Update it at the end of every s
 _2026-06-22: Switched backend tunnel from ngrok to cloudflared. ngrok free tier serves safebrowse interstitial as plain HTTP on port 443, breaking TLS for all API calls. cloudflared provides proper HTTPS, no interstitial. URL is dynamic (trycloudflare.com) — changes each session._
 
 ---
-**Last Session:** Backend Agent (2026-06-22). Root cause of zero DB hits from device identified: src/api/auth.ts line 21 has hardcoded `const BASE_URL = 'https://medrecord-api.onrender.com/v1'` — the dead Render.com server. All OTP calls never reached the local backend. auth.ts ignores EXPO_PUBLIC_API_URL and apiClient.ts entirely. EXPO_PUBLIC_API_URL inlining was a red herring. Fix: import API_BASE_URL from './apiClient' and remove hardcoded constant. Routed to Builder Agent.
+**Last Session:** Builder Agent (2026-06-22). Fixed root cause of zero DB hits from device: `src/api/auth.ts` imported `API_BASE_URL` from `apiClient.ts`, removed hardcoded `const BASE_URL = 'https://medrecord-api.onrender.com/v1'`, all four functions (sendOtp, verifyOtp, verifyPatientOtp, refreshAccessToken) now use `API_BASE_URL`. One-line change; zero new TS errors.
+
+**Previous Session:** Backend Agent (2026-06-22). Root cause of zero DB hits from device identified: src/api/auth.ts line 21 has hardcoded `const BASE_URL = 'https://medrecord-api.onrender.com/v1'` — the dead Render.com server. All OTP calls never reached the local backend. auth.ts ignores EXPO_PUBLIC_API_URL and apiClient.ts entirely. EXPO_PUBLIC_API_URL inlining was a red herring. Fix: import API_BASE_URL from './apiClient' and remove hardcoded constant. Routed to Builder Agent.
 
 **Previous Session:** Backend Agent (2026-06-23). Diagnosed OTP login failure on device. Fixed: DB schema missing (prisma db push), seed data absent (npm run seed), Metro cache stale (rm -rf /tmp/metro-cache added to start-demo.sh, --clear added to start.sh). Backend verified working via curl through cloudflared tunnel. App still not reaching backend on device — EXPO_PUBLIC_API_URL shell env var not reliably inlined by Metro. Unresolved. Next: try .env.local injection approach.
 
