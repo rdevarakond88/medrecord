@@ -6,19 +6,22 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 ## NEXT SESSION
 ```
 Agent:  PM Agent
-Step:   PM Moment 2 — Post-Flow Review
-Reason: D1 OTP login device test complete (2026-06-22). auth.ts Render.com URL fix verified —
-        OTP login reaches PatientSearch via cloudflared tunnel. All D1 runnable tests PASS.
-        Full flow (D1→D2→D3→D5→D6) device testing complete. PM Moment 2 post-flow review
-        is the next workflow step before any further work is planned.
+Step:   PM Moment 3 — Pre-Launch Gate (v3 update) — OR — declare project closed
+Reason: PM Moment 2 Post-Flow Review complete (2026-06-22). Full flow PASS via cloudflared.
+        auth.ts fix verified. Two options:
+        (A) PM Moment 3 v3 — update infrastructure checklist (ngrok→cloudflared, dynamic URL);
+            formally supersede Moment 3 v2; archive project.
+        (B) Declare project closed — learning exercise complete; no further agent sessions.
+        User decides. If cloud backend for independent pilot is desired, that is a Backend
+        Agent + Infra session first (Option C in PM Moment 2 review), not a PM session.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
 ---
 
 ## Current Status
-**Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot requirements done and on main. Backend migrated to local WSL2 (npm run demo) — no Render dependency. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch. Backend is local-only — reachable only while developer's machine is running.
-**Last Updated:** 2026-06-22 (Device Tester — D1 auth.ts fix verified; OTP login PASS via cloudflared tunnel)
+**Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All 14 screens built, QA-reviewed, security-audited, device-tested. Backend migrated to local WSL2 (npm run demo) + cloudflared tunnel (dynamic URL, changes each session). auth.ts hardcoded Render.com URL fixed (2026-06-22). Full flow D1→D2→D3→D5→D6 PASS on device. Standing conditions: cert pinning inactive (Expo Go only); backend local-only — unreachable without `npm run demo` running; cloudflared URL dynamic — Metro restart required each session.
+**Last Updated:** 2026-06-22 (PM Agent — Moment 2 Post-Flow Review complete; review: `reviews/full-flow-pm-review-moment2-post-cloudflared.md`)
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
 > Reason: EAS internal distribution requires an Apple Developer Program membership ($99/year). The owner chose not to purchase it because this project's purpose is learning agent orchestration and automation workflows, not shipping a production app.
@@ -48,7 +51,9 @@ _This block is the authoritative routing signal. Update it at the end of every s
 _2026-06-22: Switched backend tunnel from ngrok to cloudflared. ngrok free tier serves safebrowse interstitial as plain HTTP on port 443, breaking TLS for all API calls. cloudflared provides proper HTTPS, no interstitial. URL is dynamic (trycloudflare.com) — changes each session._
 
 ---
-**Last Session:** Builder Agent (2026-06-22). Fixed root cause of zero DB hits from device: `src/api/auth.ts` imported `API_BASE_URL` from `apiClient.ts`, removed hardcoded `const BASE_URL = 'https://medrecord-api.onrender.com/v1'`, all four functions (sendOtp, verifyOtp, verifyPatientOtp, refreshAccessToken) now use `API_BASE_URL`. One-line change; zero new TS errors.
+**Last Session:** PM Agent — Moment 2 Post-Flow Review (2026-06-22). OVERALL: Strong — demo-ready. Full flow D1→D2→D3→D5→D6 verified PASS on device via cloudflared. auth.ts fix confirmed clean. One material infrastructure gap: cloudflared dynamic URL requires manual `npm run demo` + Metro restart each session; no independent clinic use possible until always-on backend. Moment 3 v2 infrastructure section (ngrok URL) is now stale — superseded by this review. Next: user decides Option A/B/C. Review: `reviews/full-flow-pm-review-moment2-post-cloudflared.md`.
+
+**Previous Session:** Builder Agent (2026-06-22). Fixed root cause of zero DB hits from device: `src/api/auth.ts` imported `API_BASE_URL` from `apiClient.ts`, removed hardcoded `const BASE_URL = 'https://medrecord-api.onrender.com/v1'`, all four functions (sendOtp, verifyOtp, verifyPatientOtp, refreshAccessToken) now use `API_BASE_URL`. One-line change; zero new TS errors.
 
 **Previous Session:** Backend Agent (2026-06-22). Root cause of zero DB hits from device identified: src/api/auth.ts line 21 has hardcoded `const BASE_URL = 'https://medrecord-api.onrender.com/v1'` — the dead Render.com server. All OTP calls never reached the local backend. auth.ts ignores EXPO_PUBLIC_API_URL and apiClient.ts entirely. EXPO_PUBLIC_API_URL inlining was a red herring. Fix: import API_BASE_URL from './apiClient' and remove hardcoded constant. Routed to Builder Agent.
 
