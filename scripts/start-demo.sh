@@ -5,21 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="$ROOT_DIR/backend"
 
-# Load backend env to get NGROK_DOMAIN
+# Load backend env (for DB credentials etc — NGROK_DOMAIN no longer needed)
 if [ -f "$BACKEND_DIR/.env" ]; then
   export $(grep -v '^#' "$BACKEND_DIR/.env" | xargs)
 fi
 
-if [ -z "$NGROK_DOMAIN" ] || [ "$NGROK_DOMAIN" = "PLACEHOLDER" ]; then
-  echo "ERROR: Set NGROK_DOMAIN in backend/.env before running demo."
-  echo "  1. Go to ngrok.com → Domains → New Domain (free, one per account)"
-  echo "  2. Set NGROK_DOMAIN=your-domain.ngrok-free.app in backend/.env"
-  exit 1
-fi
-
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  MedRecord Demo — starting all services"
-echo "  Backend: https://$NGROK_DOMAIN"
+echo "  Backend tunnel: cloudflared (URL assigned at startup)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # 1 — Start PostgreSQL (already running on WSL2; no-op if already up)
@@ -37,28 +30,45 @@ echo "[2/4] Starting backend server..."
 node dist/src/index.js &
 BACKEND_PID=$!
 
-# 4 — Open ngrok tunnel for backend (static domain, no expiry)
-echo "[3/4] Opening backend ngrok tunnel (https://$NGROK_DOMAIN)..."
-ngrok http --domain="$NGROK_DOMAIN" 3000 > /tmp/ngrok-backend.log 2>&1 &
-NGROK_PID=$!
+# 4 — Open cloudflared tunnel for backend (no interstitial, proper HTTPS)
+echo "[3/4] Opening backend tunnel (cloudflared)..."
+"$SCRIPT_DIR/cloudflared" tunnel --url http://localhost:3000 --no-autoupdate \
+  > /tmp/cloudflared-backend.log 2>&1 &
+TUNNEL_PID=$!
 
-# Wait for backend to be reachable
-printf "Waiting for backend"
-for i in $(seq 1 15); do
+# Wait for backend to be reachable locally and for cloudflared URL
+printf "Waiting for backend + tunnel"
+TUNNEL_URL=""
+for i in $(seq 1 20); do
   sleep 2
-  if curl -s --max-time 3 "http://localhost:3000/v1/health" > /dev/null 2>&1; then
+  if [ -z "$TUNNEL_URL" ]; then
+    TUNNEL_URL=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/cloudflared-backend.log 2>/dev/null | head -1)
+  fi
+  if curl -s --max-time 3 "http://localhost:3000/v1/health" > /dev/null 2>&1 && [ -n "$TUNNEL_URL" ]; then
     printf "\n"
     echo "  Backend ready at http://localhost:3000"
+    echo "  Tunnel URL: $TUNNEL_URL"
     break
   fi
   printf "."
 done
 
-# 5 — Start Expo (existing start.sh behaviour: kills 8082, opens Expo tunnel)
+if [ -z "$TUNNEL_URL" ]; then
+  printf "\n"
+  echo "ERROR: Could not get cloudflared tunnel URL."
+  echo "  Check log: cat /tmp/cloudflared-backend.log"
+  kill $BACKEND_PID $TUNNEL_PID 2>/dev/null || true
+  exit 1
+fi
+
+export EXPO_PUBLIC_API_URL="$TUNNEL_URL/v1"
+echo "  API URL baked into Metro bundle: $EXPO_PUBLIC_API_URL"
+
+# 5 — Start Expo (kills 8082, opens Expo tunnel, Metro picks up EXPO_PUBLIC_API_URL)
 echo "[4/4] Starting Expo..."
 cd "$ROOT_DIR"
 fuser -k 8082/tcp 2>/dev/null || true
 bash scripts/start.sh
 
-# Cleanup backend + ngrok on Ctrl-C / Expo exit
-kill $BACKEND_PID $NGROK_PID 2>/dev/null || true
+# Cleanup backend + tunnel on Ctrl-C / Expo exit
+kill $BACKEND_PID $TUNNEL_PID 2>/dev/null || true

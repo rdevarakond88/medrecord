@@ -46,3 +46,6 @@ coverage/
 
 # Build
 build/
+
+# Local tunnel binary (platform-specific, downloaded by start-demo.sh)
+scripts/cloudflared
