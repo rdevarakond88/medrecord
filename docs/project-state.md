@@ -5,15 +5,12 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## NEXT SESSION
 ```
-Agent:  Device Tester
-Step:   Step 8 — Infrastructure Pre-flight + Device Testing (OTP login verify)
-Reason: 2026-06-22 Builder Agent fixed src/api/auth.ts — removed hardcoded Render.com
-        BASE_URL, now imports API_BASE_URL from apiClient.ts so all OTP calls
-        (sendOtp, verifyOtp, verifyPatientOtp, refreshAccessToken) route through
-        EXPO_PUBLIC_API_URL set by start-demo.sh (cloudflared tunnel). Verify fix:
-        run npm run demo, confirm tunnel URL printed in output, then test OTP login
-        on device with test doctor 9999999999 and bypass code 000000. Expect to reach
-        D2 Patient Search after OTP verify. QA test plan: reviews/D1-qa-test-plan-v2.md.
+Agent:  PM Agent
+Step:   PM Moment 2 — Post-Flow Review
+Reason: D1 OTP login device test complete (2026-06-22). auth.ts Render.com URL fix verified —
+        OTP login reaches PatientSearch via cloudflared tunnel. All D1 runnable tests PASS.
+        Full flow (D1→D2→D3→D5→D6) device testing complete. PM Moment 2 post-flow review
+        is the next workflow step before any further work is planned.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
@@ -21,7 +18,7 @@ _This block is the authoritative routing signal. Update it at the end of every s
 
 ## Current Status
 **Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All pre-pilot requirements done and on main. Backend migrated to local WSL2 (npm run demo) — no Render dependency. Standing condition: cert pinning inactive (Expo Go only); no real patient data until EAS build validates pinnedFetch. Backend is local-only — reachable only while developer's machine is running.
-**Last Updated:** 2026-06-22
+**Last Updated:** 2026-06-22 (Device Tester — D1 auth.ts fix verified; OTP login PASS via cloudflared tunnel)
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
 > Reason: EAS internal distribution requires an Apple Developer Program membership ($99/year). The owner chose not to purchase it because this project's purpose is learning agent orchestration and automation workflows, not shipping a production app.

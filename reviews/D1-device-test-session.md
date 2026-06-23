@@ -117,3 +117,10 @@ updated when `apiClient.ts` was fixed on 2026-03-18. All OTP tests blocked until
 14, 17–20 re-run. 11 tests now PASS. BUG-D1-DT-3 found (generic error on TOO_MANY_ATTEMPTS).
 BUG-D1-DT-4 noted (NetInfo intermittent false-negative after Airplane Mode toggle). Tests 18
 and 19 could not run due to rate limiting on `9999999999` — deferred to next session.
+
+**2026-06-22 — Targeted re-test after auth.ts Render.com URL fix.** Builder Agent removed
+hardcoded `BASE_URL = 'https://medrecord-api.onrender.com/v1'` from `src/api/auth.ts` and
+replaced it with `API_BASE_URL` imported from `apiClient.ts`, so all OTP calls now route
+through `EXPO_PUBLIC_API_URL` set by `start-demo.sh` (cloudflared tunnel). Re-ran test 1:
+entered `9999999999` → green "OTP sent" banner → entered `000000` → landed on PatientSearch.
+PASS. Backend: `https://foto-gbp-treasurer-trip.trycloudflare.com` (local WSL2 + cloudflared).
