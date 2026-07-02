@@ -1,0 +1,33 @@
+{
+  "_schema": "1.0",
+  "_comment": "File ownership registry. Each file entry names the agent that owns it and which agents may edit it. The hook registers new files automatically. Unregistered = new file, registered to the creating agent on first write. Registry unreadable = deny all writes (fail-closed).",
+  "defaults": {
+    "unregistered_file": "register_to_current_agent",
+    "registry_unreadable": "deny",
+    "no_agent_declared": "deny"
+  },
+  "files": {
+    "docs/project-state.md":        { "owner": "shared",         "allowed_editors": ["PM Agent", "Builder Agent", "Persona Critic", "Security Agent", "QA Agent", "Device Tester", "Backend Agent", "Integration Tester"] },
+    "docs/product-vision.md":       { "owner": "PM Agent",       "allowed_editors": ["PM Agent"] },
+    "docs/ui-ux-spec.md":           { "owner": "PM Agent",       "allowed_editors": ["PM Agent"] },
+    "docs/api-contracts.md":        { "owner": "PM Agent",       "allowed_editors": ["PM Agent", "Backend Agent"] },
+    "docs/security-spec.md":        { "owner": "Security Agent", "allowed_editors": ["Security Agent"] },
+    "docs/consent-layer-spec.md":   { "owner": "Security Agent", "allowed_editors": ["Security Agent"] },
+    "docs/offline-sync-spec.md":    { "owner": "PM Agent",       "allowed_editors": ["PM Agent"] },
+    "docs/data-models.md":          { "owner": "PM Agent",       "allowed_editors": ["PM Agent", "Backend Agent"] },
+    "agents/agent-pm.md":           { "owner": "PM Agent",       "allowed_editors": ["PM Agent"] },
+    "agents/agent-builder.md":      { "owner": "PM Agent",       "allowed_editors": ["PM Agent"] },
+    "agents/agent-persona-critic.md": { "owner": "PM Agent",     "allowed_editors": ["PM Agent"] },
+    "agents/agent-security.md":     { "owner": "PM Agent",       "allowed_editors": ["PM Agent"] },
+    "agents/agent-qa.md":           { "owner": "PM Agent",       "allowed_editors": ["PM Agent"] },
+    "agents/agent-backend.md":      { "owner": "PM Agent",       "allowed_editors": ["PM Agent"] },
+    "agents/agent-integration-tester.md": { "owner": "PM Agent", "allowed_editors": ["PM Agent"] },
+    "mockups/screen-inventory.md":  { "owner": "Builder Agent",  "allowed_editors": ["Builder Agent"] },
+    "App.tsx":                      { "owner": "Builder Agent",  "allowed_editors": ["Builder Agent"] },
+    "package.json":                 { "owner": "Builder Agent",  "allowed_editors": ["Builder Agent"] },
+    "src/":                         { "owner": "Builder Agent",  "allowed_editors": ["Builder Agent"] },
+    "backend/":                     { "owner": "Backend Agent",  "allowed_editors": ["Backend Agent"] },
+    "reviews/":                     { "owner": "QA Agent",       "allowed_editors": ["QA Agent", "Device Tester", "Integration Tester"] },
+    ".claude/":                     { "owner": "system-only",    "allowed_editors": [] }
+  }
+}

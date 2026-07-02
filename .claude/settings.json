@@ -6,8 +6,66 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /home/rdeva/medrecord/.claude/hooks/check-agent-declared.sh",
+            "command": "bash /home/rdeva/medrecord/.claude/hooks/infra-session-gate.sh",
+            "statusMessage": "Checking infra session scope..."
+          },
+          {
+            "type": "command",
+            "command": "bash /home/rdeva/medrecord/.claude/hooks/agent-gate.sh",
             "statusMessage": "Checking agent declaration..."
+          },
+          {
+            "type": "command",
+            "command": "bash /home/rdeva/medrecord/.claude/hooks/file-ownership-gate.sh",
+            "statusMessage": "Checking file ownership..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/rdeva/medrecord/.claude/hooks/workflow-report-hook.sh",
+            "statusMessage": "Processing testing report..."
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/rdeva/medrecord/.claude/hooks/testing-agent-stop-hook.sh",
+            "statusMessage": "Verifying testing report before stop..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/rdeva/medrecord/.claude/hooks/session-start-hook.sh",
+            "statusMessage": "Loading workflow state..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/rdeva/medrecord/.claude/hooks/user-prompt-submit-hook.sh",
+            "statusMessage": "Injecting agent reminder..."
           }
         ]
       }

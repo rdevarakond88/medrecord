@@ -1,0 +1,13 @@
+{
+  "_comment": "Canonical agent registry. Any agent name not in this list is unknown and will be denied by the agent gate hook.",
+  "agents": [
+    "PM Agent",
+    "Builder Agent",
+    "Persona Critic",
+    "Security Agent",
+    "QA Agent",
+    "Device Tester",
+    "Backend Agent",
+    "Integration Tester"
+  ]
+}

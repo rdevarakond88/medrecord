@@ -1,0 +1,39 @@
+{"timestamp":"2026-07-02T19:00:23Z","violation_type":"no_agent_declared","tool":"Read","detail":"tool=Read path=/home/rdeva/medrecord/.claude/hooks/agent-gate.sh"}
+{"timestamp":"2026-07-02T19:00:43Z","violation_type":"no_agent_declared","tool":"Edit","detail":"tool=Edit path=/home/rdeva/medrecord/.claude/hooks/agent-gate.sh"}
+{"timestamp":"2026-07-02T19:03:23Z","violation_type":"no_agent_declared","tool":"Write","detail":"tool=Write path=/home/rdeva/medrecord/.claude/test-unlock.txt"}
+{"timestamp":"2026-07-02T19:13:26Z","event":"ownership_violation","file":"/home/rdeva/medrecord/App.tsx","detail":"agent=QAAgent owner=Builder Agent file=App.tsx"}
+{"timestamp":"2026-07-02T19:13:54Z","event":"ownership_allow","file":"/home/rdeva/medrecord/App.tsx","detail":"agent=Builder Agent owner=Builder Agent file=App.tsx"}
+{"timestamp":"2026-07-02T19:13:54Z","event":"ownership_violation","file":"/home/rdeva/medrecord/App.tsx","detail":"agent=QA Agent owner=Builder Agent file=App.tsx"}
+{"timestamp":"2026-07-02T19:13:55Z","event":"ownership_allow","file":"/home/rdeva/medrecord/reviews/d1.md","detail":"agent=QA Agent owner=QA Agent file=reviews/d1.md"}
+{"timestamp":"2026-07-02T19:13:55Z","event":"ownership_violation","file":"/home/rdeva/medrecord/reviews/d1.md","detail":"agent=Builder Agent owner=QA Agent file=reviews/d1.md"}
+{"timestamp":"2026-07-02T19:13:55Z","event":"ownership_allow","file":"/home/rdeva/medrecord/docs/project-state.md","detail":"agent=PM Agent owner=PM Agent file=docs/project-state.md"}
+{"timestamp":"2026-07-02T19:13:55Z","event":"ownership_violation","file":"/home/rdeva/medrecord/docs/project-state.md","detail":"agent=Builder Agent owner=PM Agent file=docs/project-state.md"}
+{"timestamp":"2026-07-02T19:14:13Z","event":"ownership_deny","file":"/home/rdeva/medrecord/App.tsx","detail":"reason=registry_parse_error agent=Builder Agent"}
+{"timestamp":"2026-07-02T19:19:00Z","event":"ownership_violation","file":"/home/rdeva/medrecord/.claude/hooks/agent-gate.sh","detail":"agent=Builder Agent owner=system-only file=.claude/hooks/agent-gate.sh"}
+{"timestamp": "2026-07-02T19:23:40Z", "event": "workflow_state_updated", "detail": "status=fail defects_open=True required_next=Builder Agent"}
+{"timestamp":"2026-07-02T19:23:40Z","violation_type":"sequencing_violation","tool":"Write","detail":"declared=PM Agent required=Builder Agent defect_count=1"}
+{"timestamp":"2026-07-02T19:23:48Z","violation_type":"wrong_agent","tool":"Write","detail":"declared=Builder Agent expected=PM Agent"}
+{"timestamp":"2026-07-02T19:26:05Z","event":"allow","sub":"sequencing_override","detail":"agent=Builder Agent is required rework agent defect_count=1"}
+{"timestamp":"2026-07-02T19:26:05Z","event":"allow","sub":"agent_declared","detail":"agent=Builder Agent"}
+{"timestamp":"2026-07-02T19:26:05Z","violation_type":"sequencing_violation","tool":"Write","detail":"declared=PM Agent required=Builder Agent defect_count=1"}
+{"timestamp":"2026-07-02T19:26:05Z","violation_type":"sequencing_violation","tool":"Write","detail":"declared=QA Agent required=Builder Agent defect_count=1"}
+{"timestamp": "2026-07-02T19:26:05Z", "event": "workflow_state_updated", "detail": "status=pass defects_open=False required_next=None"}
+{"timestamp":"2026-07-02T19:26:05Z","event":"allow","sub":"agent_declared","detail":"agent=PM Agent"}
+{"timestamp": "2026-07-02T19:30:03Z", "event": "session_start_state_corrupt", "detail": "error=Expecting value: line 1 column 1 (char 0)"}
+{"timestamp": "2026-07-02T19:30:03Z", "event": "session_start_context_injected", "detail": "state_ok=False defects_open=False"}
+{"timestamp":"2026-07-02T19:30:03Z","violation_type":"state_corrupted_block","tool":"Write","detail":"declared=PM Agent reason=corrupt"}
+{"timestamp": "2026-07-02T19:30:56Z", "event": "session_start_context_injected", "detail": "state_ok=True defects_open=False"}
+{"timestamp":"2026-07-02T19:37:43Z","violation_type":"no_agent_declared","tool":"Bash","detail":"tool=Bash path="}
+{"timestamp":"2026-07-02T19:37:43Z","violation_type":"bash_agent_file_overwrite","tool":"Bash","detail":"cmd=echo "Builder Agent" > /tmp/.medrecord_agent"}
+{"timestamp":"2026-07-02T19:37:43Z","event":"allow","sub":"bash_file_modify_allowed","detail":"cmd=rm -f /tmp/.medrecord_agent"}
+{"timestamp":"2026-07-02T19:37:43Z","event":"allow","sub":"agent_declared","detail":"agent=PM Agent"}
+{"timestamp": "2026-07-02T19:43:06Z", "trace_id": "tr-ab7b2b87", "event": "agent_declared", "agent": null, "tool": "Write", "file": "/tmp/.medrecord_agent", "detail": "agent=PM Agent"}
+{"timestamp": "2026-07-02T19:43:06Z", "trace_id": "tr-ab7b2b87", "event": "wrong_agent", "agent": null, "tool": "Write", "file": null, "detail": "declared=Builder Agent expected=PM Agent"}
+{"timestamp": "2026-07-02T19:43:06Z", "trace_id": "tr-ab7b2b87", "event": "wrong_agent", "agent": null, "tool": "Write", "file": null, "detail": "declared=QA Agent expected=PM Agent"}
+{"timestamp": "2026-07-02T19:43:06Z", "trace_id": "tr-ab7b2b87", "event": "workflow_state_updated", "agent": "QA Agent", "tool": "Write", "file": "/home/rdeva/medrecord/.claude/state/testing-report.json", "detail": "status=fail defects_open=True required_next=Builder Agent"}
+{"timestamp": "2026-07-02T19:43:07Z", "trace_id": "tr-ab7b2b87", "event": "sequencing_override", "agent": null, "tool": null, "file": null, "detail": "agent=Builder Agent is required rework agent defect_count=1"}
+{"timestamp": "2026-07-02T19:43:07Z", "trace_id": "tr-ab7b2b87", "event": "agent_declared", "agent": null, "tool": "Write", "file": "/tmp/.medrecord_agent", "detail": "agent=Builder Agent"}
+{"timestamp": "2026-07-02T19:43:07Z", "trace_id": "tr-ab7b2b87", "event": "sequencing_violation", "agent": null, "tool": "Write", "file": null, "detail": "declared=QA Agent required=Builder Agent defect_count=1"}
+{"timestamp": "2026-07-02T19:43:07Z", "trace_id": "tr-ab7b2b87", "event": "workflow_state_updated", "agent": "QA Agent", "tool": "Write", "file": "/home/rdeva/medrecord/.claude/state/testing-report.json", "detail": "status=pass defects_open=False required_next=None"}
+{"timestamp": "2026-07-02T19:54:38Z", "trace_id": "no-trace", "event": "no_agent_declared", "agent": null, "tool": "Bash", "file": null, "detail": "tool=Bash path="}
+{"timestamp": "2026-07-02T20:00:56Z", "trace_id": "no-trace", "event": "session_start_context_injected", "agent": null, "tool": "SessionStart", "file": null, "detail": "state_ok=True defects_open=False"}
