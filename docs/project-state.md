@@ -6,22 +6,35 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 ## NEXT SESSION
 ```
 Agent:  Device Tester
-Step:   Step 8 — Infrastructure Pre-flight + Device Testing (verify tunnel fix, not a new screen)
-Reason: Full ngrok-static-domain fix now code-complete (2026-07-04):
+Step:   Step 8 — Device Testing IN PROGRESS (resume, do not restart pre-flight)
+Reason: Full ngrok-static-domain fix code-complete (2026-07-04):
         - scripts/start-demo.sh tunnels via lunchbox-saddled-relock.ngrok-free.dev
           instead of cloudflared (Backend Agent, commit 6a19a8f)
-        - src/api/pinnedFetch.ts now sends `ngrok-skip-browser-warning: true` on
-          every request (Builder Agent, single choke point — covers apiClient.ts,
-          auth.ts, consent.ts, all current and future call sites)
-        Verified so far: curl end-to-end (with spoofed mobile User-Agent, header
-        present → clean JSON; header absent → ERR_NGROK_6024 interstitial
-        reproduced), plus a Node fetch() smoke test matching pinnedFetch's Expo Go
-        fallback path. Zero new TS errors (12 pre-existing, unrelated to this
-        change, confirmed via git stash comparison).
-        NOT YET verified: real device via Expo Go. This is a transport-layer
-        change — needs on-device confirmation before trusting it, per Device
-        Testing Rules. Test: run `npm run demo`, confirm OTP login + patient
-        search work on the phone exactly as they did under cloudflared.
+        - src/api/pinnedFetch.ts sends `ngrok-skip-browser-warning: true` on every
+          request (Builder Agent, commit 5572d95 — single choke point, covers
+          apiClient.ts, auth.ts, consent.ts)
+        Pre-verified: curl end-to-end (header present → clean JSON; header absent
+        + browser UA → ERR_NGROK_6024 reproduced), Node fetch() smoke test, zero
+        new TS errors.
+
+        DEVICE TEST SESSION STATUS (as of 2026-07-04, prior session):
+        Infra pre-flight ALL 4 CHECKS PASSED:
+          1. Backend Status confirmed LOCAL/ngrok fixed domain
+          2. Live curl through tunnel → 200 OK
+          3. Test creds confirmed: doctor 9999999999, patient 8888888888
+          4. OTP bypass confirmed with user: code is 000000
+        `npm run demo` IS RUNNING (detached/nohup — process persists independent
+        of any Claude session; check with `ps aux | grep -E "node dist|ngrok|expo"`
+        before restarting it — do not start a second instance on the same ports).
+        Expo Go URL given to user: exp://qold9hm-rdevarakonda88-8082.exp.direct
+        (may need a fresh one if Metro was restarted — check /tmp/npm-demo.log or
+        re-curl http://localhost:4041/api/tunnels).
+        User was told to: open Expo Go, load that URL, log in with doctor mobile
+        9999999999 + OTP 000000, and report what they observe.
+
+        WAITING ON: user's report of what happened on the login screen. This is
+        the very first thing the next session must ask for — do not re-run
+        pre-flight, do not re-explain the fix, just ask for the device result.
         After PASS: resume the deferred PM Moment 3 v3 / project-closure decision.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
@@ -60,7 +73,9 @@ _This block is the authoritative routing signal. Update it at the end of every s
 _2026-07-04: Switched backend tunnel from cloudflared (dynamic URL) back to the ngrok free static domain (fixed URL), to avoid the cost of a Cloudflare named tunnel (requires a paid domain). Root cause of the original 2026-06-22 ngrok abandonment re-diagnosed: it was ngrok's free-tier browser-warning interstitial (`ERR_NGROK_6024`), triggered by browser-like User-Agent strings — not a TLS failure as previously logged. Fix confirmed via curl (with vs. without a spoofed mobile User-Agent): add header `ngrok-skip-browser-warning: true` to all API requests. `scripts/start-demo.sh` updated and verified end-to-end (backend + tunnel + curl through the fixed domain, 200 OK). Frontend header change still needed in `src/api/apiClient.ts` — queued as next session (Builder Agent)._
 
 ---
-**Last Session:** Builder Agent (2026-07-04). Added `ngrok-skip-browser-warning: true` header inside `src/api/pinnedFetch.ts` (single choke point — every API call in the app funnels through this function, so one change covers `apiClient.ts`, `auth.ts`, and `consent.ts` without touching each file). Verified via curl + a Node fetch() smoke test matching the Expo Go fallback path: header present → clean JSON; header absent + browser-like User-Agent → reproduces `ERR_NGROK_6024`. Zero new TS errors (confirmed 12 pre-existing errors unchanged via git stash). Not yet device-tested — routed to Device Tester next.
+**Last Session:** Device Tester (2026-07-04) — IN PROGRESS, session ended mid-test at user's request (switching to a fresh session for context-length reasons, not because of any blocker). Infra pre-flight passed all 4 checks. `npm run demo` started and left running (detached). User was given the Expo Go URL and instructed to log in as test doctor; session ended before their result came back. See NEXT SESSION block for exact resume point — next session must ask for the device result first, not restart pre-flight.
+
+**Previous Session:** Builder Agent (2026-07-04). Added `ngrok-skip-browser-warning: true` header inside `src/api/pinnedFetch.ts` (single choke point — every API call in the app funnels through this function, so one change covers `apiClient.ts`, `auth.ts`, and `consent.ts` without touching each file). Verified via curl + a Node fetch() smoke test matching the Expo Go fallback path: header present → clean JSON; header absent + browser-like User-Agent → reproduces `ERR_NGROK_6024`. Zero new TS errors (confirmed 12 pre-existing errors unchanged via git stash). Not yet device-tested — routed to Device Tester next.
 
 **Previous Session:** Backend Agent (2026-07-04). User rejected the Cloudflare named-tunnel path (requires buying a domain) and asked to retry the free ngrok static domain instead. Re-diagnosed the 2026-06-22 "ngrok breaks TLS" note: reproduced it with a browser-like User-Agent (`ERR_NGROK_6024`), confirmed the fix is the `ngrok-skip-browser-warning: true` header (verified via curl with/without the header — clean JSON both ways once the header is present). Updated `scripts/start-demo.sh` to tunnel via the ngrok static domain (`lunchbox-saddled-relock.ngrok-free.dev`) instead of cloudflared; verified backend + tunnel + curl end-to-end. Frontend still needs the header added to `src/api/apiClient.ts` — that's a Builder Agent task (code change), not Backend Agent; routed per NEXT SESSION block.
 
