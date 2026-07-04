@@ -5,14 +5,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="$ROOT_DIR/backend"
 
-# Load backend env (for DB credentials etc — NGROK_DOMAIN no longer needed)
+# Load backend env (for DB credentials + NGROK_DOMAIN)
 if [ -f "$BACKEND_DIR/.env" ]; then
   export $(grep -v '^#' "$BACKEND_DIR/.env" | xargs)
 fi
 
+if [ -z "$NGROK_DOMAIN" ]; then
+  echo "ERROR: NGROK_DOMAIN not set in backend/.env"
+  exit 1
+fi
+
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  MedRecord Demo — starting all services"
-echo "  Backend tunnel: cloudflared (URL assigned at startup)"
+echo "  Backend tunnel: ngrok static domain ($NGROK_DOMAIN)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # 1 — Start PostgreSQL (already running on WSL2; no-op if already up)
@@ -30,21 +35,26 @@ echo "[2/4] Starting backend server..."
 node dist/src/index.js &
 BACKEND_PID=$!
 
-# 4 — Open cloudflared tunnel for backend (no interstitial, proper HTTPS)
-echo "[3/4] Opening backend tunnel (cloudflared)..."
-"$SCRIPT_DIR/cloudflared" tunnel --url http://localhost:3000 --no-autoupdate \
-  > /tmp/cloudflared-backend.log 2>&1 &
+# 4 — Open ngrok tunnel for backend on the free static domain (fixed hostname,
+# same URL every session — requires the ngrok-skip-browser-warning header on
+# every API request to bypass the free-tier interstitial; see src/api/apiClient.ts)
+echo "[3/4] Opening backend tunnel (ngrok static domain)..."
+NGROK_BIN="$ROOT_DIR/node_modules/@expo/ngrok-bin-linux-x64/ngrok"
+"$NGROK_BIN" http --url="$NGROK_DOMAIN" 3000 --log=stdout \
+  > /tmp/ngrok-backend.log 2>&1 &
 TUNNEL_PID=$!
 
-# Wait for backend to be reachable locally and for cloudflared URL
+TUNNEL_URL="https://$NGROK_DOMAIN"
+
+# Wait for backend to be reachable locally and for the tunnel to come up
 printf "Waiting for backend + tunnel"
-TUNNEL_URL=""
+TUNNEL_UP=""
 for i in $(seq 1 20); do
   sleep 2
-  if [ -z "$TUNNEL_URL" ]; then
-    TUNNEL_URL=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/cloudflared-backend.log 2>/dev/null | head -1)
+  if [ -z "$TUNNEL_UP" ] && grep -q "started tunnel" /tmp/ngrok-backend.log 2>/dev/null; then
+    TUNNEL_UP=1
   fi
-  if curl -s --max-time 3 "http://localhost:3000/v1/health" > /dev/null 2>&1 && [ -n "$TUNNEL_URL" ]; then
+  if curl -s --max-time 3 "http://localhost:3000/v1/health" > /dev/null 2>&1 && [ -n "$TUNNEL_UP" ]; then
     printf "\n"
     echo "  Backend ready at http://localhost:3000"
     echo "  Tunnel URL: $TUNNEL_URL"
@@ -53,10 +63,10 @@ for i in $(seq 1 20); do
   printf "."
 done
 
-if [ -z "$TUNNEL_URL" ]; then
+if [ -z "$TUNNEL_UP" ]; then
   printf "\n"
-  echo "ERROR: Could not get cloudflared tunnel URL."
-  echo "  Check log: cat /tmp/cloudflared-backend.log"
+  echo "ERROR: ngrok tunnel did not come up."
+  echo "  Check log: cat /tmp/ngrok-backend.log"
   kill $BACKEND_PID $TUNNEL_PID 2>/dev/null || true
   exit 1
 fi

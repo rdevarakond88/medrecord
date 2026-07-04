@@ -5,18 +5,23 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## NEXT SESSION
 ```
-Agent:  Backend Agent
-Step:   Step 11 — Backend Build & Deploy (Infra sub-task: cloudflared named tunnel)
-Reason: User decided (2026-07-04) on Option C from PM Moment 2/3 reviews — set up a
-        cloudflared named tunnel so the local WSL2 backend has a fixed hostname instead
-        of a dynamic *.trycloudflare.com URL per session. Laptop-must-be-on dependency
-        is accepted; goal is only to remove the per-session URL churn and the fragile
-        URL-scrape + forced Metro cache-clear in start-demo.sh.
-        Open blocker: named tunnels require a domain added to Cloudflare as a DNS zone —
-        quick tunnels (current setup) do not. User has not yet confirmed whether they
-        own a domain to use, or need to register one. Resolve this first.
-        PM Moment 3 v3 / project-closure decision (previously queued here) is deferred
-        until this infra work lands.
+Agent:  Builder Agent
+Step:   Step 9 — device-testing bug fixes (small infra-adjacent fix, not a screen)
+Reason: User rejected the Cloudflare named-tunnel path (requires a paid domain).
+        Switched approach to the free ngrok static domain instead (already claimed:
+        lunchbox-saddled-relock.ngrok-free.dev in backend/.env), which was abandoned
+        back on 2026-06-22 due to a "safebrowse interstitial breaking TLS" — Backend
+        Agent re-tested this (2026-07-04) and confirmed the real cause is ngrok's
+        free-tier browser-warning interstitial (ERR_NGROK_6024), triggered by
+        browser-like User-Agent strings, NOT a TLS failure. Confirmed fix: send the
+        `ngrok-skip-browser-warning: true` header on every API request.
+        scripts/start-demo.sh already switched back to the ngrok static domain
+        (verified working end-to-end via curl with the header, 2026-07-04).
+        Remaining work: add the `ngrok-skip-browser-warning: true` header to the
+        fetch call(s) in src/api/apiClient.ts. This is a Builder Agent task (frontend
+        code change), not Backend Agent, per the project's agent-ownership rules.
+        After this fix: re-verify on device, then resume the deferred PM Moment 3 v3 /
+        project-closure decision.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
@@ -39,9 +44,9 @@ _This block is the authoritative routing signal. Update it at the end of every s
 ## Backend Status
 | Field | Value |
 |---|---|
-| API base URL | Dynamic — cloudflared assigns a `*.trycloudflare.com` URL at startup. Printed in `npm run demo` output as "Tunnel URL". |
-| API base URL (frontend) | Read from `EXPO_PUBLIC_API_URL` env var set by start-demo.sh before Metro starts. Falls back to old ngrok domain if absent. |
-| Deployment status | **LOCAL** — running on WSL2 PostgreSQL. Start with `npm run demo`. No cold-start. No 90-day expiry. |
+| API base URL | **Fixed** — `https://lunchbox-saddled-relock.ngrok-free.dev` (ngrok free static domain, permanent, never changes). Requires `ngrok-skip-browser-warning: true` header on every request — see note below. |
+| API base URL (frontend) | Read from `EXPO_PUBLIC_API_URL` env var set by start-demo.sh before Metro starts (now a fixed value, not scraped from a log). |
+| Deployment status | **LOCAL** — running on WSL2 PostgreSQL. Start with `npm run demo`. No cold-start. No 90-day expiry. Laptop must be on. |
 | Hosting provider | Local WSL2 — PostgreSQL 16 on port 5432. DB: `medrecord`, user: `medrecord_user`. |
 | Test doctor name | Dr. Test Doctor |
 | Test doctor mobile | `9999999999` |
@@ -51,10 +56,12 @@ _This block is the authoritative routing signal. Update it at the end of every s
 | Patient endpoints | POST /auth/send-otp (role:"patient") + POST /auth/verify-otp → patient JWT. GET/PATCH /patient/profile, GET /patient/timeline, GET /patient/visits/:id, GET /patient/consents, DELETE /patient/consents/:id, POST /patient/consent-requests/:id/respond. |
 | Consent endpoints | POST /consent/request, POST /consent/verify, POST /consent/pending-request |
 
-_2026-06-22: Switched backend tunnel from ngrok to cloudflared. ngrok free tier serves safebrowse interstitial as plain HTTP on port 443, breaking TLS for all API calls. cloudflared provides proper HTTPS, no interstitial. URL is dynamic (trycloudflare.com) — changes each session._
+_2026-07-04: Switched backend tunnel from cloudflared (dynamic URL) back to the ngrok free static domain (fixed URL), to avoid the cost of a Cloudflare named tunnel (requires a paid domain). Root cause of the original 2026-06-22 ngrok abandonment re-diagnosed: it was ngrok's free-tier browser-warning interstitial (`ERR_NGROK_6024`), triggered by browser-like User-Agent strings — not a TLS failure as previously logged. Fix confirmed via curl (with vs. without a spoofed mobile User-Agent): add header `ngrok-skip-browser-warning: true` to all API requests. `scripts/start-demo.sh` updated and verified end-to-end (backend + tunnel + curl through the fixed domain, 200 OK). Frontend header change still needed in `src/api/apiClient.ts` — queued as next session (Builder Agent)._
 
 ---
-**Last Session:** PM Agent (2026-07-04). No formal Moment 3 review produced — session consisted of routing Q&A on backend infra options (Render offboarding status, quick tunnel vs. named tunnel tradeoffs, token/effort estimate). User decided to proceed with a cloudflared named tunnel (Option C) to remove per-session URL churn, accepting the laptop-must-be-on dependency. Routed to Backend Agent per workflow — see NEXT SESSION block. PM Moment 3 v3 / closure decision deferred until infra lands.
+**Last Session:** Backend Agent (2026-07-04). User rejected the Cloudflare named-tunnel path (requires buying a domain) and asked to retry the free ngrok static domain instead. Re-diagnosed the 2026-06-22 "ngrok breaks TLS" note: reproduced it with a browser-like User-Agent (`ERR_NGROK_6024`), confirmed the fix is the `ngrok-skip-browser-warning: true` header (verified via curl with/without the header — clean JSON both ways once the header is present). Updated `scripts/start-demo.sh` to tunnel via the ngrok static domain (`lunchbox-saddled-relock.ngrok-free.dev`) instead of cloudflared; verified backend + tunnel + curl end-to-end. Frontend still needs the header added to `src/api/apiClient.ts` — that's a Builder Agent task (code change), not Backend Agent; routed per NEXT SESSION block.
+
+**Previous Session:** PM Agent (2026-07-04). No formal Moment 3 review produced — session consisted of routing Q&A on backend infra options (Render offboarding status, quick tunnel vs. named tunnel tradeoffs, token/effort estimate). User decided to proceed with a cloudflared named tunnel (Option C) to remove per-session URL churn, accepting the laptop-must-be-on dependency. Routed to Backend Agent per workflow — see NEXT SESSION block. PM Moment 3 v3 / closure decision deferred until infra lands.
 
 **Previous Session:** PM Agent — Moment 2 Post-Flow Review (2026-06-22). OVERALL: Strong — demo-ready. Full flow D1→D2→D3→D5→D6 verified PASS on device via cloudflared. auth.ts fix confirmed clean. One material infrastructure gap: cloudflared dynamic URL requires manual `npm run demo` + Metro restart each session; no independent clinic use possible until always-on backend. Moment 3 v2 infrastructure section (ngrok URL) is now stale — superseded by this review. Next: user decides Option A/B/C. Review: `reviews/full-flow-pm-review-moment2-post-cloudflared.md`.
 

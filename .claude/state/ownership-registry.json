@@ -168,6 +168,13 @@
         "PM Agent"
       ],
       "registered_at": ""
+    },
+    "scripts/start-demo.sh": {
+      "owner": "Backend Agent",
+      "allowed_editors": [
+        "Backend Agent"
+      ],
+      "registered_at": ""
     }
   }
 }
