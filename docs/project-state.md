@@ -5,15 +5,18 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## NEXT SESSION
 ```
-Agent:  PM Agent
-Step:   PM Moment 3 — Pre-Launch Gate (v3 update) — OR — declare project closed
-Reason: PM Moment 2 Post-Flow Review complete (2026-06-22). Full flow PASS via cloudflared.
-        auth.ts fix verified. Two options:
-        (A) PM Moment 3 v3 — update infrastructure checklist (ngrok→cloudflared, dynamic URL);
-            formally supersede Moment 3 v2; archive project.
-        (B) Declare project closed — learning exercise complete; no further agent sessions.
-        User decides. If cloud backend for independent pilot is desired, that is a Backend
-        Agent + Infra session first (Option C in PM Moment 2 review), not a PM session.
+Agent:  Backend Agent
+Step:   Step 11 — Backend Build & Deploy (Infra sub-task: cloudflared named tunnel)
+Reason: User decided (2026-07-04) on Option C from PM Moment 2/3 reviews — set up a
+        cloudflared named tunnel so the local WSL2 backend has a fixed hostname instead
+        of a dynamic *.trycloudflare.com URL per session. Laptop-must-be-on dependency
+        is accepted; goal is only to remove the per-session URL churn and the fragile
+        URL-scrape + forced Metro cache-clear in start-demo.sh.
+        Open blocker: named tunnels require a domain added to Cloudflare as a DNS zone —
+        quick tunnels (current setup) do not. User has not yet confirmed whether they
+        own a domain to use, or need to register one. Resolve this first.
+        PM Moment 3 v3 / project-closure decision (previously queued here) is deferred
+        until this infra work lands.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
@@ -51,7 +54,9 @@ _This block is the authoritative routing signal. Update it at the end of every s
 _2026-06-22: Switched backend tunnel from ngrok to cloudflared. ngrok free tier serves safebrowse interstitial as plain HTTP on port 443, breaking TLS for all API calls. cloudflared provides proper HTTPS, no interstitial. URL is dynamic (trycloudflare.com) — changes each session._
 
 ---
-**Last Session:** PM Agent — Moment 2 Post-Flow Review (2026-06-22). OVERALL: Strong — demo-ready. Full flow D1→D2→D3→D5→D6 verified PASS on device via cloudflared. auth.ts fix confirmed clean. One material infrastructure gap: cloudflared dynamic URL requires manual `npm run demo` + Metro restart each session; no independent clinic use possible until always-on backend. Moment 3 v2 infrastructure section (ngrok URL) is now stale — superseded by this review. Next: user decides Option A/B/C. Review: `reviews/full-flow-pm-review-moment2-post-cloudflared.md`.
+**Last Session:** PM Agent (2026-07-04). No formal Moment 3 review produced — session consisted of routing Q&A on backend infra options (Render offboarding status, quick tunnel vs. named tunnel tradeoffs, token/effort estimate). User decided to proceed with a cloudflared named tunnel (Option C) to remove per-session URL churn, accepting the laptop-must-be-on dependency. Routed to Backend Agent per workflow — see NEXT SESSION block. PM Moment 3 v3 / closure decision deferred until infra lands.
+
+**Previous Session:** PM Agent — Moment 2 Post-Flow Review (2026-06-22). OVERALL: Strong — demo-ready. Full flow D1→D2→D3→D5→D6 verified PASS on device via cloudflared. auth.ts fix confirmed clean. One material infrastructure gap: cloudflared dynamic URL requires manual `npm run demo` + Metro restart each session; no independent clinic use possible until always-on backend. Moment 3 v2 infrastructure section (ngrok URL) is now stale — superseded by this review. Next: user decides Option A/B/C. Review: `reviews/full-flow-pm-review-moment2-post-cloudflared.md`.
 
 **Previous Session:** Builder Agent (2026-06-22). Fixed root cause of zero DB hits from device: `src/api/auth.ts` imported `API_BASE_URL` from `apiClient.ts`, removed hardcoded `const BASE_URL = 'https://medrecord-api.onrender.com/v1'`, all four functions (sendOtp, verifyOtp, verifyPatientOtp, refreshAccessToken) now use `API_BASE_URL`. One-line change; zero new TS errors.
 
