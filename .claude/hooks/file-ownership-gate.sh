@@ -38,6 +38,16 @@ log_event() {
   python3 "$LOG_HELPER" "$type" "$detail" "$TOOL_NAME" "$FILE_PATH" 2>/dev/null
 }
 
+# Bootstrap exemption — the declaration write is already fully validated by
+# agent-gate.sh (name checked against the registry + NEXT SESSION block).
+# Ownership rules don't apply to this file: it has no "owner", it's the
+# switch that turns ownership-checking on in the first place. Without this,
+# no session can ever declare an agent (deadlock: this gate requires an
+# agent to already be declared before allowing the write that declares one).
+if [ "$TOOL_NAME" = "Write" ] && [ "$FILE_PATH" = "/tmp/.medrecord_agent" ]; then
+  exit 0
+fi
+
 # No agent declared
 if [ ! -f "$AGENT_FILE" ] || [ ! -s "$AGENT_FILE" ]; then
   log_event "ownership_deny" "reason=no_agent_declared"
