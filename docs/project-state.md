@@ -5,23 +5,24 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## NEXT SESSION
 ```
-Agent:  Builder Agent
-Step:   Step 9 — device-testing bug fixes (small infra-adjacent fix, not a screen)
-Reason: User rejected the Cloudflare named-tunnel path (requires a paid domain).
-        Switched approach to the free ngrok static domain instead (already claimed:
-        lunchbox-saddled-relock.ngrok-free.dev in backend/.env), which was abandoned
-        back on 2026-06-22 due to a "safebrowse interstitial breaking TLS" — Backend
-        Agent re-tested this (2026-07-04) and confirmed the real cause is ngrok's
-        free-tier browser-warning interstitial (ERR_NGROK_6024), triggered by
-        browser-like User-Agent strings, NOT a TLS failure. Confirmed fix: send the
-        `ngrok-skip-browser-warning: true` header on every API request.
-        scripts/start-demo.sh already switched back to the ngrok static domain
-        (verified working end-to-end via curl with the header, 2026-07-04).
-        Remaining work: add the `ngrok-skip-browser-warning: true` header to the
-        fetch call(s) in src/api/apiClient.ts. This is a Builder Agent task (frontend
-        code change), not Backend Agent, per the project's agent-ownership rules.
-        After this fix: re-verify on device, then resume the deferred PM Moment 3 v3 /
-        project-closure decision.
+Agent:  Device Tester
+Step:   Step 8 — Infrastructure Pre-flight + Device Testing (verify tunnel fix, not a new screen)
+Reason: Full ngrok-static-domain fix now code-complete (2026-07-04):
+        - scripts/start-demo.sh tunnels via lunchbox-saddled-relock.ngrok-free.dev
+          instead of cloudflared (Backend Agent, commit 6a19a8f)
+        - src/api/pinnedFetch.ts now sends `ngrok-skip-browser-warning: true` on
+          every request (Builder Agent, single choke point — covers apiClient.ts,
+          auth.ts, consent.ts, all current and future call sites)
+        Verified so far: curl end-to-end (with spoofed mobile User-Agent, header
+        present → clean JSON; header absent → ERR_NGROK_6024 interstitial
+        reproduced), plus a Node fetch() smoke test matching pinnedFetch's Expo Go
+        fallback path. Zero new TS errors (12 pre-existing, unrelated to this
+        change, confirmed via git stash comparison).
+        NOT YET verified: real device via Expo Go. This is a transport-layer
+        change — needs on-device confirmation before trusting it, per Device
+        Testing Rules. Test: run `npm run demo`, confirm OTP login + patient
+        search work on the phone exactly as they did under cloudflared.
+        After PASS: resume the deferred PM Moment 3 v3 / project-closure decision.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
@@ -59,7 +60,9 @@ _This block is the authoritative routing signal. Update it at the end of every s
 _2026-07-04: Switched backend tunnel from cloudflared (dynamic URL) back to the ngrok free static domain (fixed URL), to avoid the cost of a Cloudflare named tunnel (requires a paid domain). Root cause of the original 2026-06-22 ngrok abandonment re-diagnosed: it was ngrok's free-tier browser-warning interstitial (`ERR_NGROK_6024`), triggered by browser-like User-Agent strings — not a TLS failure as previously logged. Fix confirmed via curl (with vs. without a spoofed mobile User-Agent): add header `ngrok-skip-browser-warning: true` to all API requests. `scripts/start-demo.sh` updated and verified end-to-end (backend + tunnel + curl through the fixed domain, 200 OK). Frontend header change still needed in `src/api/apiClient.ts` — queued as next session (Builder Agent)._
 
 ---
-**Last Session:** Backend Agent (2026-07-04). User rejected the Cloudflare named-tunnel path (requires buying a domain) and asked to retry the free ngrok static domain instead. Re-diagnosed the 2026-06-22 "ngrok breaks TLS" note: reproduced it with a browser-like User-Agent (`ERR_NGROK_6024`), confirmed the fix is the `ngrok-skip-browser-warning: true` header (verified via curl with/without the header — clean JSON both ways once the header is present). Updated `scripts/start-demo.sh` to tunnel via the ngrok static domain (`lunchbox-saddled-relock.ngrok-free.dev`) instead of cloudflared; verified backend + tunnel + curl end-to-end. Frontend still needs the header added to `src/api/apiClient.ts` — that's a Builder Agent task (code change), not Backend Agent; routed per NEXT SESSION block.
+**Last Session:** Builder Agent (2026-07-04). Added `ngrok-skip-browser-warning: true` header inside `src/api/pinnedFetch.ts` (single choke point — every API call in the app funnels through this function, so one change covers `apiClient.ts`, `auth.ts`, and `consent.ts` without touching each file). Verified via curl + a Node fetch() smoke test matching the Expo Go fallback path: header present → clean JSON; header absent + browser-like User-Agent → reproduces `ERR_NGROK_6024`. Zero new TS errors (confirmed 12 pre-existing errors unchanged via git stash). Not yet device-tested — routed to Device Tester next.
+
+**Previous Session:** Backend Agent (2026-07-04). User rejected the Cloudflare named-tunnel path (requires buying a domain) and asked to retry the free ngrok static domain instead. Re-diagnosed the 2026-06-22 "ngrok breaks TLS" note: reproduced it with a browser-like User-Agent (`ERR_NGROK_6024`), confirmed the fix is the `ngrok-skip-browser-warning: true` header (verified via curl with/without the header — clean JSON both ways once the header is present). Updated `scripts/start-demo.sh` to tunnel via the ngrok static domain (`lunchbox-saddled-relock.ngrok-free.dev`) instead of cloudflared; verified backend + tunnel + curl end-to-end. Frontend still needs the header added to `src/api/apiClient.ts` — that's a Builder Agent task (code change), not Backend Agent; routed per NEXT SESSION block.
 
 **Previous Session:** PM Agent (2026-07-04). No formal Moment 3 review produced — session consisted of routing Q&A on backend infra options (Render offboarding status, quick tunnel vs. named tunnel tradeoffs, token/effort estimate). User decided to proceed with a cloudflared named tunnel (Option C) to remove per-session URL churn, accepting the laptop-must-be-on dependency. Routed to Backend Agent per workflow — see NEXT SESSION block. PM Moment 3 v3 / closure decision deferred until infra lands.
 
