@@ -140,6 +140,7 @@
       "owner": "shared",
       "allowed_editors": [
         "PM Agent",
+        "Builder Agent",
         "Persona Critic",
         "Security Agent",
         "QA Agent",
@@ -215,6 +216,13 @@
       "registered_at": ""
     },
     "CLAUDE.md": {
+      "owner": "PM Agent",
+      "allowed_editors": [
+        "PM Agent"
+      ],
+      "registered_at": ""
+    },
+    "docs/governance-decisions.md": {
       "owner": "PM Agent",
       "allowed_editors": [
         "PM Agent"

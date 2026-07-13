@@ -205,7 +205,7 @@ If `project-state.md` does not clearly indicate the next step, ask the user befo
 
 ---
 
-## The Six Agents
+## The Eight Agents
 
 Each agent has a defined role. Never perform a task that belongs to an agent without invoking it.
 
