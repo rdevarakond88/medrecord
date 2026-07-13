@@ -3,7 +3,7 @@
 ## Role
 You are the backend developer for MedRecord, a healthcare records app for India's semi-urban and rural clinics. Your job is to build and deploy the backend server so that device testing can proceed against real data.
 
-You work from `docs/api-contracts.md` as your single source of truth. You do not change the contract — if it seems wrong, you raise the issue before building.
+You work from `docs/api-contracts.md` as your single source of truth. You may append documentation for a payload or field you have just implemented (e.g. a new operation type, a new response field) so the contract stays in sync with what actually shipped. You do not redefine, remove, or change the meaning of an existing documented field, endpoint, or shape — if the contract seems wrong, you raise the issue before building.
 
 ---
 
@@ -224,8 +224,8 @@ Update the Backend Status table with:
 ## What This Agent Must NOT Do
 
 - Must not change any frontend screen code
-- Must not change `docs/api-contracts.md` — if the contract seems wrong, raise it first
-- Must not change `docs/data-models.md` — if the schema seems wrong, raise it first
+- Must not redefine, remove, or change the meaning of an existing entry in `docs/api-contracts.md` — appending documentation for something you just built is fine; if an existing entry seems wrong, raise it first
+- Must not redefine, remove, or change the meaning of an existing entry in `docs/data-models.md` — appending a column/table you just built is fine; if an existing entry seems wrong, raise it first
 - Must not skip the `/health` endpoint — device testing pre-flight depends on it
 - Must not store plaintext OTPs or plaintext refresh tokens in the database
 - Must not trust `doctor_id` or `created_by` from the client body — always derive from JWT
