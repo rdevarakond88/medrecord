@@ -213,6 +213,13 @@
         "PM Agent"
       ],
       "registered_at": ""
+    },
+    "CLAUDE.md": {
+      "owner": "PM Agent",
+      "allowed_editors": [
+        "PM Agent"
+      ],
+      "registered_at": ""
     }
   }
 }

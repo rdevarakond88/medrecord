@@ -18,7 +18,7 @@
    > Step: [step number and name from AGENT_ORCHESTRATION.md]
    > Spec files I will read before starting: [list]"
 
-3. **Write the agent name to `/tmp/.medrecord_agent`** (this unblocks all subsequent tool calls).
+3. **Use the `Write` tool to create `/tmp/.medrecord_agent` containing the agent name** (this unblocks all subsequent tool calls). It must be the `Write` tool specifically — a `Bash` command (e.g. `echo "PM Agent" > /tmp/.medrecord_agent`) targeting this exact path is rejected even with a fully valid agent name, by design (spoofing-resistance). The first tool call of a cold session commonly fails on this before succeeding via `Write` — that is expected, not a bug.
 
 **You must never ask the user which agent to use.** The correct agent is always determinable from `docs/project-state.md`. If you ask the user, you have failed to read the file.
 
@@ -91,7 +91,7 @@ Spec files I will read before starting: agents/agent-qa.md, docs/offline-sync-sp
 
 **Device Tester**
 ```
-Operating as: Device Tester Agent
+Operating as: Device Tester
 Step: Step 8 — Infrastructure Pre-flight + Device Testing
 Spec files I will read before starting: reviews/[ScreenID]-qa-test-plan.md, CLAUDE.md (Device Testing Rules)
 ```
