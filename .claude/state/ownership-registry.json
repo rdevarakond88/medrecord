@@ -228,6 +228,13 @@
         "PM Agent"
       ],
       "registered_at": ""
+    },
+    "/home/rdeva/.claude/projects/-home-rdeva-medrecord/memory/feedback_verify_claims_against_git_history.md": {
+      "owner": "PM Agent",
+      "allowed_editors": [
+        "PM Agent"
+      ],
+      "registered_at": ""
     }
   }
 }
