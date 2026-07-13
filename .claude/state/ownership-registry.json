@@ -137,8 +137,11 @@
       ]
     },
     "reviews/": {
-      "owner": "QA Agent",
+      "owner": "shared",
       "allowed_editors": [
+        "PM Agent",
+        "Persona Critic",
+        "Security Agent",
         "QA Agent",
         "Device Tester",
         "Integration Tester"
@@ -155,19 +158,19 @@
       ],
       "registered_at": ""
     },
-      "/home/rdeva/agent-failure-patterns.md": {
-        "owner": "shared",
-        "allowed_editors": [
-          "PM Agent",
-          "Builder Agent",
-          "Persona Critic",
-          "Security Agent",
-          "QA Agent",
-          "Device Tester",
-          "Backend Agent",
-          "Integration Tester"
-        ],
-        "registered_at": ""
+    "/home/rdeva/agent-failure-patterns.md": {
+      "owner": "shared",
+      "allowed_editors": [
+        "PM Agent",
+        "Builder Agent",
+        "Persona Critic",
+        "Security Agent",
+        "QA Agent",
+        "Device Tester",
+        "Backend Agent",
+        "Integration Tester"
+      ],
+      "registered_at": ""
     },
     "/tmp/.medrecord_infra": {
       "owner": "PM Agent",
@@ -180,6 +183,34 @@
       "owner": "Backend Agent",
       "allowed_editors": [
         "Backend Agent"
+      ],
+      "registered_at": ""
+    },
+    "/home/rdeva/CLAUDE.md": {
+      "owner": "PM Agent",
+      "allowed_editors": [
+        "PM Agent"
+      ],
+      "registered_at": ""
+    },
+    "/home/rdeva/.claude/projects/-home-rdeva-medrecord/memory/MEMORY.md": {
+      "owner": "PM Agent",
+      "allowed_editors": [
+        "PM Agent"
+      ],
+      "registered_at": ""
+    },
+    "/home/rdeva/.claude/projects/-home-rdeva-medrecord/memory/project_hosting_decision_pending.md": {
+      "owner": "PM Agent",
+      "allowed_editors": [
+        "PM Agent"
+      ],
+      "registered_at": ""
+    },
+    "/home/rdeva/.claude/projects/-home-rdeva-medrecord/memory/project_hook_governance_live.md": {
+      "owner": "PM Agent",
+      "allowed_editors": [
+        "PM Agent"
       ],
       "registered_at": ""
     }

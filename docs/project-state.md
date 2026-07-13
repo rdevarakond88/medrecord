@@ -6,22 +6,25 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 ## NEXT SESSION
 ```
 Agent:  PM Agent
-Step:   PM Moment 3 — Pre-Launch Gate (v3) / project-closure decision
-Reason: ngrok free static domain fix fully verified end-to-end on device
-        (2026-07-04). Doctor login via Expo Go over the fixed tunnel domain
-        (ngrok-skip-browser-warning header) PASSED — no ERR_NGROK_6024, landed
-        on Patient Search (D2) cleanly. Session doc:
-        reviews/ngrok-fix-device-test-session.md. No bugs found, no Builder
-        session required. This was the last open item blocking the deferred
-        PM Moment 3 v3 / project-closure decision — resume that now.
+Step:   Governance hardening audit (infra session)
+Reason: PM Moment 3 v3 / project-closure review is COMPLETE
+        (reviews/pre-pilot-pm-review-moment3-v3.md, 2026-07-13). Recommendation
+        was to close; user chose to keep the project open — two threads are
+        still active (see below), neither of which is a closure blocker.
+        Declare PM Agent (it is the only agent authorized to open an infra
+        session — see /tmp/.medrecord_infra ownership in
+        .claude/state/ownership-registry.json), then enter an infra session
+        to work through the "Governance Hardening — Backlog" section below.
+        This is NOT a product/screen review — it's using PM Agent's
+        infra-session privilege to fix the hook/registry system itself.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
 ---
 
 ## Current Status
-**Phase:** POST-COMPLETION — PR #6 merged dev → main (2026-05-30). Merge commit: cb66d392. All 14 screens built, QA-reviewed, security-audited, device-tested. Backend migrated to local WSL2 (npm run demo) + cloudflared tunnel (dynamic URL, changes each session). auth.ts hardcoded Render.com URL fixed (2026-06-22). Full flow D1→D2→D3→D5→D6 PASS on device. Standing conditions: cert pinning inactive (Expo Go only); backend local-only — unreachable without `npm run demo` running; cloudflared URL dynamic — Metro restart required each session.
-**Last Updated:** 2026-06-22 (PM Agent — Moment 2 Post-Flow Review complete; review: `reviews/full-flow-pm-review-moment2-post-cloudflared.md`)
+**Phase:** POST-COMPLETION, PROJECT KEPT OPEN BY CHOICE — PR #6 merged dev → main (2026-05-30). All 14 screens built, QA-reviewed, security-audited, device-tested. Backend on local WSL2 (`npm run demo`) + ngrok free static domain (fixed URL, verified end-to-end on device 2026-07-04). PM Moment 3 v3 / project-closure review (2026-07-13) recommended closing — zero open CRITICAL/HIGH findings anywhere, every remaining gap is documented accepted debt or a deliberate cost decision. User chose to keep the project open. Two active threads, neither a closure blocker: (1) user is separately weighing an always-on hosting model to remove the local-laptop/`npm run demo` dependency — no decision yet, will resume in its own conversation; (2) next session hardens the hook governance system itself (see Governance Hardening — Backlog below), triggered by a live false-positive block this session (PM Agent blocked from writing its own mandated review output to `reviews/`, since fixed).
+**Last Updated:** 2026-07-13 (PM Agent — Moment 3 v3 / project-closure review complete; kept open per user decision; review: `reviews/pre-pilot-pm-review-moment3-v3.md`)
 
 > ℹ️ **Step 26 (EAS build + cert pinning) — PERMANENTLY SKIPPED**
 > Reason: EAS internal distribution requires an Apple Developer Program membership ($99/year). The owner chose not to purchase it because this project's purpose is learning agent orchestration and automation workflows, not shipping a production app.
@@ -51,7 +54,23 @@ _This block is the authoritative routing signal. Update it at the end of every s
 _2026-07-04: Switched backend tunnel from cloudflared (dynamic URL) back to the ngrok free static domain (fixed URL), to avoid the cost of a Cloudflare named tunnel (requires a paid domain). Root cause of the original 2026-06-22 ngrok abandonment re-diagnosed: it was ngrok's free-tier browser-warning interstitial (`ERR_NGROK_6024`), triggered by browser-like User-Agent strings — not a TLS failure as previously logged. Fix confirmed via curl (with vs. without a spoofed mobile User-Agent): add header `ngrok-skip-browser-warning: true` to all API requests. `scripts/start-demo.sh` updated and verified end-to-end (backend + tunnel + curl through the fixed domain, 200 OK). Frontend header change still needed in `src/api/apiClient.ts` — queued as next session (Builder Agent)._
 
 ---
-**Last Session:** Device Tester (2026-07-04) — RESUMED and COMPLETE. Confirmed `npm run demo` (backend + ngrok tunnel + Metro) still running from prior session — no restart needed. User logged in via Expo Go over the ngrok fixed domain (doctor `9999999999` + OTP `000000`) and landed cleanly on Patient Search (D2) — no `ERR_NGROK_6024`. 1/1 PASS, 0 bugs. Session: `reviews/ngrok-fix-device-test-session.md`. No Builder session required. Routed to PM Agent per NEXT SESSION block for the deferred Moment 3 v3 / project-closure decision.
+
+## Governance Hardening — Backlog (opened 2026-07-13)
+
+Found while auditing the hook governance system (`.claude/hooks/`, live since 2026-07-02) live, during this PM Agent session, after hitting a real false-positive block. Not hypothetical — every item below is backed by an entry in `.claude/state/violation-log.jsonl`. Goal is not zero-error enforcement; goal is that mistakes don't propagate and everything stays traceable/auditable. Work this list inside an infra session (`/tmp/.medrecord_infra`, PM Agent only).
+
+| # | Finding | Evidence | Status |
+|---|---|---|---|
+| 1 | `reviews/` ownership registry excluded PM Agent, Security Agent, Persona Critic — despite `agents/agent-pm.md` mandating PM reviews be saved there, and v1/v2 PM reviews already living there. | `ownership_violation \| agent=PM Agent owner=QA Agent file=reviews/pre-pilot-pm-review-moment3-v3.md` (2026-07-04T20:12:23Z) | **CLOSED 2026-07-13** — registry entry changed to `owner: shared`, all 8 agents added as allowed editors. |
+| 2 | `Device Tester` vs `Device Tester Agent` — `CLAUDE.md`'s own canonical opening declaration text says `"Operating as: Device Tester Agent"`, but `.claude/state/agent-registry.json` only recognizes `"Device Tester"`. A session following `CLAUDE.md` literally gets rejected. | `unknown_agent \| declared=Device Tester Agent` (2026-07-04T16:28:25Z) | **OPEN** — pick one canonical string and fix the other doc. |
+| 3 | Two independent, disagreeing sources of truth for "which agent runs next": the automated rework-loop `defect_count` state vs. the manually-edited `NEXT SESSION` block in this file. Code comment in `agent-gate.sh` admits "the two can disagree; sequencing gate wins" — but the disagreement itself still surfaces as a confusing, contradictory block to whoever hits it. | `sequencing_violation \| required=Builder Agent` and `wrong_agent \| expected=PM Agent` logged ~20 min apart, same session (2026-07-02T19:23–19:43Z) | **OPEN** — either derive one from the other, or make the rework state authoritative and stop hand-editing `NEXT SESSION` during active rework loops. |
+| 4 | `CLAUDE.md` instructs "Write the agent name to `/tmp/.medrecord_agent`" without naming a tool. Bash `echo >` to that exact path is (correctly, for spoofing-resistance) still blocked even with a fully valid agent name — only the `Write` tool has the bootstrap exemption. Every cold session's first attempt fails on this before succeeding on retry. | 22 of 123 log entries are `no_agent_declared`; includes 2 `bash_agent_file_overwrite` entries this session alone with a *valid* agent name (`"PM Agent"`) rejected purely for using Bash instead of Write | **OPEN** — cheapest fix: name the `Write` tool explicitly in `CLAUDE.md`'s declaration instructions. |
+| 5 | Fail-closed on state corruption blocks a correctly-declared agent entirely with no recovery path other than manual repair — reasonable as a safety default, but worth documenting as a known single point of failure. | `session_start_state_corrupt` + `state_corrupted_block \| declared=PM Agent reason=corrupt` (2026-07-02T19:30:03Z) | **OPEN — document only**, not necessarily a fix. Consider whether a corrupt *workflow-state* file should block *declaration* at all, vs. only blocking the rework-sequencing check that actually depends on it. |
+
+---
+**Last Session:** PM Agent — Moment 3 v3 / project-closure review (2026-07-13). LAUNCH READY: Yes with conditions; zero open CRITICAL/HIGH findings anywhere; recommendation was to close the project. User chose to keep it open, with the hosting-model decision (see Backend Status) deferred to a separate conversation. Session then pivoted to a governance-system audit at the user's request: pulled the full `.claude/state/violation-log.jsonl` (123 entries since 2026-07-02) and diagnosed which blocks were genuine catches vs. doc/registry drift. Fixed one live instance in-session (`reviews/` ownership gap, via infra session). Logged 4 more findings — see "Governance Hardening — Backlog" below. Review: `reviews/pre-pilot-pm-review-moment3-v3.md`.
+
+**Previous Session:** Device Tester (2026-07-04) — RESUMED and COMPLETE. Confirmed `npm run demo` (backend + ngrok tunnel + Metro) still running from prior session — no restart needed. User logged in via Expo Go over the ngrok fixed domain (doctor `9999999999` + OTP `000000`) and landed cleanly on Patient Search (D2) — no `ERR_NGROK_6024`. 1/1 PASS, 0 bugs. Session: `reviews/ngrok-fix-device-test-session.md`. No Builder session required. Routed to PM Agent per NEXT SESSION block for the deferred Moment 3 v3 / project-closure decision.
 
 **Previous Session:** Device Tester (2026-07-04) — IN PROGRESS, session ended mid-test at user's request (switching to a fresh session for context-length reasons, not because of any blocker). Infra pre-flight passed all 4 checks. `npm run demo` started and left running (detached). User was given the Expo Go URL and instructed to log in as test doctor; session ended before their result came back. See NEXT SESSION block for exact resume point — next session must ask for the device result first, not restart pre-flight.
 
