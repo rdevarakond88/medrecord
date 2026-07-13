@@ -35,8 +35,7 @@
     "docs/api-contracts.md": {
       "owner": "PM Agent",
       "allowed_editors": [
-        "PM Agent",
-        "Backend Agent"
+        "PM Agent"
       ]
     },
     "docs/security-spec.md": {
@@ -60,8 +59,7 @@
     "docs/data-models.md": {
       "owner": "PM Agent",
       "allowed_editors": [
-        "PM Agent",
-        "Backend Agent"
+        "PM Agent"
       ]
     },
     "agents/agent-pm.md": {

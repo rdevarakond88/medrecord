@@ -113,13 +113,13 @@ violation, since no Backend Agent session has actually exploited the gap.
 is conditional ("allowed mechanically, forbidden by policy, unless a human
 explicitly overrides"). The registry can't express that middle state.
 
-**Decision:** Not yet made. Two options on the table: tighten the registry to
-PM-Agent-only for both files (forces an explicit ownership-registry change,
-itself an infra session, if Backend Agent ever legitimately needs write
-access — adds friction but makes the constraint mechanically real) or leave
-it as-is and rely on the written instruction (zero friction, but the
-protection only exists as long as every future Backend Agent session reads
-and honors its own spec file).
+**Decision: RESOLVED 2026-07-13.** Tightened the registry to PM-Agent-only for
+both files. `ownership-registry.json`'s `docs/api-contracts.md` and
+`docs/data-models.md` entries now list only `PM Agent` as an allowed editor
+(Backend Agent removed from both, via an infra session). If Backend Agent
+ever legitimately needs to change either file, that now requires an explicit
+ownership-registry change first — friction accepted as the cost of making
+the "don't touch these" policy mechanically real instead of an honor system.
 
 **Non-technical framing:** We found a door that's locked by a sign saying
 "do not open," but the mechanical lock underneath is unlocked. Nobody's
