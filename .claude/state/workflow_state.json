@@ -1,0 +1,12 @@
+{
+  "_comment": "Workflow sequencing state. Updated by the PostToolUse hook when Testing Agent writes testing-report.json. Read by agent-gate.sh during agent declaration to enforce the rework loop.",
+  "current_trace_id": "tr-eb347344",
+  "current_feature": null,
+  "current_stage": null,
+  "defects_open": false,
+  "required_next_agent": null,
+  "defect_count": 0,
+  "defects": [],
+  "last_testing_report": null,
+  "last_updated": null
+}

@@ -12,7 +12,9 @@
 
 import { pinnedFetch } from './pinnedFetch';
 
-export const API_BASE_URL = 'https://medrecord-api.onrender.com/v1';
+// Set by start-demo.sh via EXPO_PUBLIC_API_URL before Metro starts.
+// Falls back to the static ngrok domain if env var is absent.
+export const API_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://lunchbox-saddled-relock.ngrok-free.dev/v1');
 const BASE_URL = API_BASE_URL;
 
 export class ApiError extends Error {

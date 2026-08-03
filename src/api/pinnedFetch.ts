@@ -78,6 +78,11 @@ export async function pinnedFetch(
   url: string,
   init: PinnedRequestInit = {},
 ): Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }> {
+  // Backend is tunneled through ngrok's free static domain, which serves a
+  // browser-warning interstitial (ERR_NGROK_6024) instead of the real response
+  // when it detects a browser-like User-Agent — this header bypasses it.
+  const headers = { 'ngrok-skip-browser-warning': 'true', ...(init.headers ?? {}) };
+
   // Expo Go fallback — native module unavailable, use standard fetch (no cert pinning).
   // 30-second AbortController timeout prevents hangs on Render.com cold-starts.
   // AbortError is treated as a transient failure by the sync worker → reset to 'pending'.
@@ -87,7 +92,7 @@ export async function pinnedFetch(
     try {
       const res = await fetch(url, {
         method:  init.method ?? 'GET',
-        headers: init.headers ?? {},
+        headers,
         body:    init.body,
         signal:  controller.signal,
       });
@@ -103,7 +108,7 @@ export async function pinnedFetch(
 
   const response = await (sslFetch as any)(url, {
     method:          init.method ?? 'GET',
-    headers:         init.headers ?? {},
+    headers,
     body:            init.body,
     sslPinning:      { certs: API_CERT_NAMES },
     timeoutInterval: 30_000,
