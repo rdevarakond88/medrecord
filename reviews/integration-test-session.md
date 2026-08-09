@@ -388,3 +388,57 @@ Pre-flight: **PASS**
 **Handoff decision: Integration testing COMPLETE — no bugs found, all target fixes verified. Clear for project sign-off.**
 
 **SESSION COMPLETE — Integration testing COMPLETE. All 7 scenarios resolved (6 PASS / 1 SKIP). No open bugs.**
+
+---
+
+## Re-run — 2026-08-09 — Re-verification post-infra-migration (local WSL2 + ngrok)
+
+**Date:** 2026-08-09
+**Agent:** Integration Tester
+**Step:** 12 — Re-run after backend migration from Render to local WSL2 + fixed ngrok domain (2026-07-04). Purpose: confirm the 2026-05-27 clean pass still holds on the new infra, not fresh scope.
+
+### Infrastructure Pre-flight
+
+| Check | Result |
+|---|---|
+| Backend Status in project-state.md | LOCAL (WSL2 + ngrok) ✅ |
+| `curl --max-time 60 https://lunchbox-saddled-relock.ngrok-free.dev/v1/health` | HTTP 200 ✅ |
+| Doctor credentials (9999999999 / OTP 000000) | Login confirmed live ✅ |
+| Patient credentials (8888888888 / OTP 000000) | Login confirmed live ✅ |
+| `__DEV__` "Patient App →" button | Present, tapped live, switches correctly ✅ |
+| Both sides log in successfully | Confirmed live — doctor → doctor home, patient → timeline ✅ |
+
+Pre-flight: **PASS**
+
+### Scenario Results
+
+| # | Scenario | Result | Notes |
+|---|---|---|---|
+| 1 | Doctor creates new patient → patient can log in | **PASS ✅** | Fresh mobile 7333333333. No existing record found, D5 save succeeded, patient logged in immediately (confirms BUG-IT-1 fix — synchronous server registration — still holds), P2 loaded empty across all filter tabs, profile name matched. |
+| 2 | Doctor creates visit → patient sees it in timeline | **PASS ✅** | Patient 8888888888, chief complaint "Integration re-verify visit" — visible in D3 with Access Granted, and in patient timeline with matching note (confirms BUG-IT-2 fix still holds). |
+| 3 | Doctor requests consent → patient sees pending request | **PASS ✅** (same caveat as 2026-05-27 baseline) | Patient revoked access first to reset state. Doctor tapped Request Access, entered OTP 000000 directly, access granted immediately — consent flow is synchronous, no intermediate "pending request" card shown to patient. Consistent with prior verified behavior, not a new bug. |
+| 4 | Patient grants access → doctor sees records | **PASS ✅** | Covered by Scenario 3's synchronous grant — verified independently on patient side: "Your Doctors" screen showed the doctor with access granted and correct date. |
+| 5 | Patient denies access → doctor cannot see records | **SKIP** | Same reason as 2026-05-27 baseline — no reachable pending-request state to deny under the synchronous consent flow. |
+| 6 | Patient revokes access → doctor loses access | **PASS ✅** | Patient tapped Remove Access; doctor's screen for that patient flipped to "Request Access" (no-consent) view (confirms BUG-IT-4 fix still holds). |
+| 7 | Doctor creates visit after consent granted → patient sees it | **PASS ✅** | Re-granted consent (OTP 000000), created visit "Scenario 7 re-verify visit," appeared in patient timeline with today's date. |
+
+### Observations (not bugs)
+
+- Mid-session, doctor login was briefly blocked by an OTP rate limit ("too many OTP request") after repeated login/logout cycles during testing. Resolved by waiting a few minutes and retrying — consistent with expected rate-limiting behavior under heavy manual test traffic, not a functional defect. No impact on final scenario results.
+
+### Fixes Re-verified (holding on new infra)
+
+- BUG-IT-1 (patient login for doctor-created patient): still fixed ✅
+- BUG-IT-2 (doctor-created visit visible in patient timeline): still fixed ✅
+- BUG-IT-3 (consent state parity D3/P4): still fixed ✅ (implicit — no discrepancy observed)
+- BUG-IT-4 (patient revoke propagates to doctor): still fixed ✅
+
+### Session End
+
+**6 of 7 scenarios PASS. 0 FAIL. 1 SKIP.**
+
+**0 bugs found.**
+
+**Handoff decision: Integration testing COMPLETE — result on new infra (local WSL2 + ngrok) matches the 2026-05-27 baseline exactly (6 PASS / 1 SKIP, same SKIP reason). No regression from the hosting migration. Clear for PM Moment 2 sign-off.**
+
+**SESSION COMPLETE — Next: PM Agent — Moment 2 (Post-Flow Review) / governance backlog #6 decision.**

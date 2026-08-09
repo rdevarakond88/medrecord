@@ -5,31 +5,22 @@ _This file is updated at the end of every Claude Code session. Pass this file as
 
 ## NEXT SESSION
 ```
-Agent:  Integration Tester
-Step:   Step 12 — Integration Tester (re-run, post-infra-migration)
-Reason: 2026-08-09 PM Agent session picked up the hosting-model decision thread
-        (open since 2026-07-13). Resolved: keep local WSL2 + ngrok as-is — user
-        confirmed the "laptop must be on" constraint is acceptable (app doesn't
-        need 24/7 uptime), and the 2026-08-03 ngrok-blocked-by-ISP finding was
-        re-tested from a different network this session (curl to
-        https://lunchbox-saddled-relock.ngrok-free.dev/v1/health -> HTTP 200,
-        real backend JSON, no ngrok interstitial) — confirms the block was
-        Xfinity-Advanced-Security-specific, not a flaw in ngrok/the platform
-        itself. No migration needed. Hosting-decision thread CLOSED.
-        User then asked to verify doctor+patient login and cross-side data flow
-        end-to-end, since backend infra changed (local WSL2 + ngrok, 2026-07-04)
-        since the last completed Integration Tester run (2026-05-27, 6/7 PASS
-        0 FAIL 1 SKIP, reviews/integration-test-session.md). This is a
-        re-verification of that prior pass against the new infra, not fresh
-        scope. PM session could not hand off to Integration Tester mid-session —
-        agent-gate.sh correctly blocked the switch (NEXT SESSION doc still said
-        PM Agent) — so this update + a fresh `claude` restart is required.
-        Pre-flight already partially done this session: backend status LOCAL
-        confirmed, curl /v1/health -> 200 OK, doctor creds (9999999999/000000)
-        and patient creds (8888888888/000000) confirmed. Integration Tester
-        still owes pre-flight checks 5 (__DEV__ Patient App button — confirmed
-        present in src/screens/doctor/LoginScreen.tsx:641-647, not yet clicked
-        live) and 6 (both sides actually log in) before starting Scenario 1.
+Agent:  PM Agent
+Step:   PM Moment 2 — Post-Flow Review (governance backlog #6 decision)
+Reason: 2026-08-09 Integration Tester re-ran all 7 connected doctor/patient
+        scenarios live on the new infra (local WSL2 + ngrok) to re-verify the
+        2026-05-27 clean pass still holds after the 2026-07-04 backend
+        migration off Render. Result: 6/7 PASS, 0 FAIL, 1 SKIP — exact match
+        to the 2026-05-27 baseline, same SKIP reason (Scenario 5 — no
+        reachable pending-consent state to deny under the synchronous D9 OTP
+        flow). Zero new bugs. BUG-IT-1/2/3/4 fixes all re-confirmed holding.
+        One transient OTP rate-limit block hit mid-session (resolved by
+        waiting and retrying) — logged as an observation, not a bug. Full
+        detail: reviews/integration-test-session.md ("Re-run — 2026-08-09").
+        Integration testing declared COMPLETE — clear for PM Moment 2 sign-off.
+        Per this doc's own standing instruction below, since Integration
+        Tester found zero bugs, the next open item to offer the user is
+        governance backlog #6.
 Standing history (not this session's routing reason): PR #7 merged dev → main
         2026-08-03 brought main current with the Render offboarding + local
         backend/ngrok migration + governance hardening work. Governance
@@ -39,16 +30,15 @@ Standing history (not this session's routing reason): PR #7 merged dev → main
         actionable thread left: should infra-session-gate.sh's own scope widen
         to include CLAUDE.md/project-state.md, and should an agent be trusted to
         make that edit to itself unsupervised? See docs/governance-decisions.md.
-        If Integration Tester finds zero bugs and this doc's next routing isn't
-        otherwise updated, the next open item to offer the user is #6.
 ```
 _This block is the authoritative routing signal. Update it at the end of every session to point at the next required agent and step. Claude reads this block to self-route — never leave it blank or stale._
 
 ---
 
 ## Current Status
-**Phase:** POST-COMPLETION, PROJECT KEPT OPEN BY CHOICE — PR #7 merged dev → main (2026-08-03), bringing main current with the Render offboarding, local WSL2 backend + ngrok migration, and governance hardening work (previously only on dev since PR #6, 2026-05-30). All 14 screens built, QA-reviewed, security-audited, device-tested. Backend on local WSL2 (`npm run demo`) + ngrok free static domain (fixed URL, verified end-to-end on device 2026-07-04). PM Moment 3 v3 / project-closure review (2026-07-13) recommended closing — zero open CRITICAL/HIGH findings anywhere, every remaining gap is documented accepted debt or a deliberate cost decision. User chose to keep the project open. Governance Hardening backlog: #1, #2, #3, #4, #7, #9, #10 CLOSED; #5 and #8 OPEN, documented, non-blocking; #6 OPEN and the one actionable thread left — see `docs/governance-decisions.md`. Hosting-model decision CLOSED 2026-08-09 (see below) — no migration, current setup stays.
-**Last Updated:** 2026-08-09 (PM Agent — picked up the hosting-model decision thread. Re-tested the 2026-08-03 ngrok/ISP-block finding from a different network: `curl` to the fixed ngrok domain's `/v1/health` returned HTTP 200 with real backend JSON, no ngrok interstitial — confirms the earlier block was specific to the user's home Xfinity "Advanced Security" feature, not a flaw in ngrok or the hosting approach itself. User then confirmed the "laptop must be on" constraint is acceptable — the app doesn't need 24/7 uptime — which removes the main reason to migrate off local WSL2 + ngrok. Decision: keep current setup, thread closed. User next asked for an end-to-end doctor+patient login and data-flow verification given backend infra has changed since the last completed Integration Tester run (2026-05-27). Attempted to hand off to an Integration Tester session mid-conversation; `agent-gate.sh` correctly blocked it because this NEXT SESSION block still pointed at PM Agent — confirms backlog #3's finding that the sequencing gate works correctly, this time from the declaring-agent side rather than the rework side. Updated NEXT SESSION block to route to Integration Tester and trimmed stale PR #7 narrative out of it. Next session must restart `claude` fresh to declare cleanly.)
+**Phase:** POST-COMPLETION, PROJECT KEPT OPEN BY CHOICE — PR #7 merged dev → main (2026-08-03), bringing main current with the Render offboarding, local WSL2 backend + ngrok migration, and governance hardening work (previously only on dev since PR #6, 2026-05-30). All 14 screens built, QA-reviewed, security-audited, device-tested. Backend on local WSL2 (`npm run demo`) + ngrok free static domain (fixed URL, verified end-to-end on device 2026-07-04, re-verified end-to-end via full Integration Tester re-run 2026-08-09). PM Moment 3 v3 / project-closure review (2026-07-13) recommended closing — zero open CRITICAL/HIGH findings anywhere, every remaining gap is documented accepted debt or a deliberate cost decision. User chose to keep the project open. Governance Hardening backlog: #1, #2, #3, #4, #7, #9, #10 CLOSED; #5 and #8 OPEN, documented, non-blocking; #6 OPEN and the one actionable thread left — see `docs/governance-decisions.md`. Hosting-model decision CLOSED 2026-08-09 — no migration, current setup stays. Integration testing re-verified CLOSED 2026-08-09 — 6/7 PASS, 0 FAIL, 1 SKIP, zero new bugs, matches 2026-05-27 baseline exactly.
+**Last Updated:** 2026-08-09 (Integration Tester — re-ran all 7 connected doctor/patient scenarios live against the new local WSL2 + ngrok infra, per the prior PM session's handoff. Pre-flight completed live (doctor login, `__DEV__` Patient App switch, patient login all confirmed on-device). Result: 6/7 PASS, 0 FAIL, 1 SKIP — identical outcome to the 2026-05-27 baseline, same SKIP reason (Scenario 5, no reachable pending-consent state under the synchronous D9 OTP flow). All four previously-fixed bugs (BUG-IT-1 through BUG-IT-4) re-confirmed still fixed on the new infra. One transient OTP rate-limit block hit mid-session, resolved by waiting; logged as an observation, not a bug. Zero new bugs found — no Builder handoff needed. Full session detail appended to `reviews/integration-test-session.md`. Updated NEXT SESSION block to route to PM Agent for Moment 2 sign-off / governance backlog #6 decision, per this doc's own standing instruction.)
+**Previous:** 2026-08-09 (PM Agent — picked up the hosting-model decision thread. Re-tested the 2026-08-03 ngrok/ISP-block finding from a different network: `curl` to the fixed ngrok domain's `/v1/health` returned HTTP 200 with real backend JSON, no ngrok interstitial — confirms the earlier block was specific to the user's home Xfinity "Advanced Security" feature, not a flaw in ngrok or the hosting approach itself. User then confirmed the "laptop must be on" constraint is acceptable — the app doesn't need 24/7 uptime — which removes the main reason to migrate off local WSL2 + ngrok. Decision: keep current setup, thread closed. User next asked for an end-to-end doctor+patient login and data-flow verification given backend infra has changed since the last completed Integration Tester run (2026-05-27). Attempted to hand off to an Integration Tester session mid-conversation; `agent-gate.sh` correctly blocked it because this NEXT SESSION block still pointed at PM Agent — confirms backlog #3's finding that the sequencing gate works correctly, this time from the declaring-agent side rather than the rework side. Updated NEXT SESSION block to route to Integration Tester and trimmed stale PR #7 narrative out of it. Next session must restart `claude` fresh to declare cleanly.)
 **Previous:** 2026-08-03 (PM Agent — merged PR #7, dev → main. Session began as a status/history recap (Render offboarding) plus a GitHub-alignment check, which surfaced that `main` had never been updated since PR #6 — it still carried the hardcoded dead `medrecord-api.onrender.com` URL in `src/api/auth.ts` and `apiClient.ts` live on GitHub, 2+ months after `dev` fixed it. User approved opening a PR, conditional on verifying nothing would break: diffed `origin/main...origin/dev` (only file unique to main was a README `dev` never touches — no conflict risk); dry-ran the merge in an isolated git worktree (clean, no conflicts); typechecked the merged tree (same 12 pre-existing errors as current `dev`, all previously-documented, zero new); confirmed backend typechecks clean with its own deps installed. Opened PR #7, then merged on explicit user confirmation. Post-merge confirmed via `git grep` that `onrender.com` no longer appears in `main`'s `src/api/`. Also noted as debt, not blocking: `src/screens/patient/PatientAppointmentsScreen.tsx` exists on `dev`/now `main` but is unreferenced in any navigator — dead code from an abandoned P9 mockup.)
 
 **Last Session (superseded by above):** 2026-07-13 (PM Agent — resolved backlog #3: user asked what the two conflicting fixes on the table would trade off against each other; walking through it surfaced that both proposed fixes — auto-syncing the doc from automated state, or locking the doc during rework — had real flaws (bigger blast radius for hook bugs; guessing at "legitimate" next-agent values). Rather than pick a flawed fix, tested whether the *existing* override logic already handles the original incident: replayed the exact scenario (defect open, stale doc) against `agent-gate.sh`'s real check logic in a scratch copy. Confirmed the required agent gets through cleanly today, plus 4 more edge cases all behaved correctly. Closed #3 as verified/no-fix-needed rather than building new hook logic for a problem that doesn't actually reproduce. Also resolved backlog #9 earlier this session, revised same day: first tightened `ownership-registry.json` to PM-Agent-only based on the audit's unverified "gap never exploited" claim, then the user caught that this contradicted real practice; git history confirmed a legitimate pre-hook-system Backend Agent edit to `docs/api-contracts.md` (commit `b9e0325`). Reverted the registry, narrowed `agents/agent-backend.md`'s wording instead. `docs/governance-decisions.md` updated with the #9 correction.)
