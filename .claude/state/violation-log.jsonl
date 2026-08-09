@@ -283,3 +283,9 @@
 {"timestamp": "2026-08-09T21:58:00Z", "trace_id": "tr-eb347344", "event": "no_agent_declared", "agent": null, "tool": "Bash", "file": null, "detail": "tool=Bash path="}
 {"timestamp": "2026-08-09T22:01:33Z", "trace_id": "tr-eb347344", "event": "no_agent_declared", "agent": null, "tool": "Bash", "file": null, "detail": "tool=Bash path="}
 {"timestamp": "2026-08-09T22:01:41Z", "trace_id": "tr-eb347344", "event": "agent_declared", "agent": null, "tool": "Write", "file": "/tmp/.medrecord_agent", "detail": "agent=PM Agent"}
+{"timestamp": "2026-08-09T22:07:29Z", "trace_id": "tr-eb347344", "event": "bash_file_modify_allowed", "agent": "PM Agent", "tool": null, "file": null, "detail": "cmd=rm -f /tmp/.medrecord_agent; echo cleared"}
+{"timestamp": "2026-08-09T22:38:30Z", "trace_id": "tr-eb347344", "event": "session_start_context_injected", "agent": null, "tool": "SessionStart", "file": null, "detail": "state_ok=True defects_open=False"}
+{"timestamp": "2026-08-09T22:38:58Z", "trace_id": "tr-eb347344", "event": "no_agent_declared", "agent": null, "tool": "Bash", "file": null, "detail": "tool=Bash path="}
+{"timestamp": "2026-08-09T22:38:59Z", "trace_id": "tr-eb347344", "event": "no_agent_declared", "agent": null, "tool": "Bash", "file": null, "detail": "tool=Bash path="}
+{"timestamp": "2026-08-09T22:39:04Z", "trace_id": "tr-eb347344", "event": "agent_declared", "agent": null, "tool": "Write", "file": "/tmp/.medrecord_agent", "detail": "agent=PM Agent"}
+{"timestamp": "2026-08-09T22:39:44Z", "trace_id": "tr-eb347344", "event": "ownership_allow", "agent": "PM Agent", "tool": "Edit", "file": "/home/rdeva/medrecord/docs/project-state.md", "detail": "agent=PM Agent owner=shared file=docs/project-state.md"}
