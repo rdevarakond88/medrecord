@@ -235,6 +235,13 @@
         "PM Agent"
       ],
       "registered_at": ""
+    },
+    "/home/rdeva/.claude/projects/-home-rdeva-medrecord/memory/project_main_dev_sync_gap.md": {
+      "owner": "PM Agent",
+      "allowed_editors": [
+        "PM Agent"
+      ],
+      "registered_at": ""
     }
   }
 }
