@@ -159,3 +159,62 @@ which side of the mismatch was at fault produced a regression. Generalizes
 to: before resolving any "spec says X, system allows Y" finding, check
 which of X or Y reflects actual required behavior — don't assume the
 stricter reading is automatically the fix.
+
+---
+
+## 2026-08-09 — Resolved: infra mode allowlist widened, and who gets to make that edit
+
+**Situation:** Backlog #6 (see `docs/project-state.md`) tracked a real, narrow
+gap: an infra session's write scope was `.claude/` + `/tmp/` only, so a
+session fixing a hook-script bug couldn't also update `CLAUDE.md` or
+`docs/project-state.md` to reflect that fix — the exact split that happened
+on 2026-07-13, when the #2/#4 fixes had to be done as a separate,
+non-infra PM Agent session because they touched `CLAUDE.md`. Layered on top
+was the open question from the entry above ("does hook-system maintenance
+need its own agent?"): `infra-session-gate.sh` lives inside `.claude/`,
+which infra mode can already edit — so widening its own allowlist is an
+edit the agent could make to itself, unsupervised, from inside the same
+session that decided it wanted the wider scope.
+
+**Decision:** Widen the allowlist (substance) — yes, confirmed by the user
+after the gap was explained plainly (allowlist has 2 entries, add 2 more,
+nothing else changes). Who makes the edit (process) — the user was given
+three options: do it themselves, have the agent propose a diff for approval
+first, or have the agent make the edit directly inside an infra session with
+no extra approval step. **User chose the third option explicitly**, on the
+record, rather than the agent defaulting to it. `infra-session-gate.sh` was
+edited to add `CLAUDE.md` and `docs/project-state.md` by exact absolute
+path (not a broad `docs/` or root-level allow) to `.claude/` + `/tmp/`.
+
+**Verification, not just a read:** before closing this out, the new scope
+was tested for real inside the same infra session — an `Edit` to `CLAUDE.md`
+succeeded, reverted; an `Edit` to `docs/project-state.md` succeeded,
+reverted; an `Edit` to an unrelated file (`docs/product-vision.md`) was
+attempted and correctly BLOCKED with the updated error message. All three
+outcomes matched what the code change should produce. This follows the same
+discipline as the 2026-07-13 entry above ("Don't trust the read — verify") —
+the point of testing the negative case (still-blocked file) is that a
+widening fix that accidentally loosens *more* than intended would look
+identical to a correct fix if you only test the thing you meant to unblock.
+
+**Non-technical framing:** We found a rule that was too narrow (it blocked
+legitimate, routine work) and fixed it by widening it by exactly the two
+things that were missing — not by opening the door further than that. The
+harder part wasn't the fix itself, it was deciding who's allowed to make it,
+since the fix touches the very file that controls what the fixer can touch.
+Rather than the AI deciding that for itself, the person running the project
+was asked directly and made the call on the record.
+
+**Technical framing:** This is the practical resolution of the
+separation-of-duties question raised in the entry above, decided narrowly
+rather than by standing up new infrastructure: no new agent identity was
+created, no formal spec/declaration/End-of-Session protocol was built for
+infra mode (the recommendation in that entry remains just a
+recommendation). Instead, the specific instance of the risk — an agent
+widening its own permitted scope unsupervised — was surfaced explicitly to
+a human as a live decision with real alternatives (manual edit, proposed-diff
+review, direct self-edit) before being acted on, and the choice made is
+attributable to the user, not inferred or defaulted to by the agent. This
+generalizes to: when a system can't structurally prevent self-modification,
+the fallback is making the decision to allow it explicit and logged, not
+silent — a compensating control rather than an architectural one.
